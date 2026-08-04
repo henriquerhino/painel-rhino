@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Financeiro • Team Rhino + Framework</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0A0D14;--panel:#111725;--panel-2:#161E30;--line:#222C42;--line-soft:#1A2236;--txt:#EAF0FA;--txt-dim:#8A96B0;--txt-faint:#5A6788;--gold:#E8B24B;--gold-soft:rgba(232,178,75,.14);--up:#38D399;--up-soft:rgba(56,211,153,.13);--down:#FF6B5D;--down-soft:rgba(255,107,93,.13);--indigo:#6C7BF2;--indigo-soft:rgba(108,123,242,.14);--radius:16px;--shadow:0 10px 40px rgba(0,0,0,.4)}
+  *{box-sizing:border-box;margin:0;padding:0}html,body{height:100%}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;display:flex;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(900px 500px at 12% -8%,rgba(108,123,242,.10),transparent 60%),radial-gradient(800px 500px at 100% 0%,rgba(232,178,75,.06),transparent 55%)}
+  h1,h2,h3,.num{font-family:'Sora',sans-serif}.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .sidebar{width:250px;flex-shrink:0;position:sticky;top:0;height:100vh;background:linear-gradient(180deg,#0C111C,#0A0D14);border-right:1px solid var(--line-soft);display:flex;flex-direction:column;z-index:20}
+  .brand{display:flex;align-items:center;gap:12px;padding:22px 22px 20px}
+  .brand-mark{width:38px;height:38px;border-radius:11px;flex-shrink:0;background:linear-gradient(135deg,var(--gold),#C98A1E);display:grid;place-items:center;font-size:20px;box-shadow:0 6px 18px rgba(232,178,75,.28)}
+  .brand-name{font-family:'Sora';font-weight:700;font-size:15.5px;line-height:1.1}
+  .brand-sub{font-size:11px;color:var(--txt-faint);letter-spacing:.04em;text-transform:uppercase;margin-top:2px}
+  .nav{padding:8px 12px;display:flex;flex-direction:column;gap:2px;flex:1}
+  .nav-label{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--txt-faint);padding:14px 12px 6px}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:var(--txt-dim);font-size:14px;font-weight:500;cursor:pointer;border:1px solid transparent;transition:.16s}
+  .nav-item svg{width:18px;height:18px;flex-shrink:0}.nav-item:hover{background:var(--panel-2);color:var(--txt)}
+  .nav-item.active{background:var(--indigo-soft);color:#fff;border-color:rgba(108,123,242,.35)}.nav-item.active svg{color:var(--indigo)}
+  .nav-badge{margin-left:auto;font-size:11px;font-weight:700;background:var(--indigo);color:#fff;border-radius:20px;padding:1px 8px}
+  .side-foot{padding:14px;border-top:1px solid var(--line-soft)}
+  .user{display:flex;align-items:center;gap:10px;padding:8px;border-radius:10px}
+  .avatar{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2A3450,#3C4A70);display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff}
+  .user-name{font-size:13px;font-weight:600}.user-role{font-size:11px;color:var(--txt-faint)}
+  .main{flex:1;min-width:0;position:relative;z-index:1;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;gap:14px;padding:16px 30px;border-bottom:1px solid var(--line-soft);position:sticky;top:0;background:rgba(10,13,20,.82);backdrop-filter:blur(14px);z-index:15;flex-wrap:wrap}
+  .page-title{font-size:20px;font-weight:700}.page-sub{font-size:12.5px;color:var(--txt-dim);margin-top:2px}
+  .spacer{flex:1}
+  .status{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:9px;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--panel)}
+  .status .led{width:8px;height:8px;border-radius:50%}
+  .led-live{background:var(--up);box-shadow:0 0 0 4px var(--up-soft)}
+  .led-snap{background:var(--gold);box-shadow:0 0 0 4px var(--gold-soft)}
+  .led-load{background:var(--indigo);box-shadow:0 0 0 4px var(--indigo-soft);animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .month-select{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600}
+  .month-select select{background:transparent;border:none;color:var(--txt);font:inherit;font-weight:600;cursor:pointer;outline:none}
+  .month-select select option{background:var(--panel);color:var(--txt)}
+  .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--panel);color:var(--txt);font-family:'Inter';font-size:13px;font-weight:600;padding:9px 13px;border-radius:10px;cursor:pointer;transition:.15s}
+  .btn:hover{border-color:#33405f;background:var(--panel-2)}.btn svg{width:15px;height:15px}
+  .icon-btn{width:38px;height:38px;padding:0;justify-content:center}
+  .content{padding:26px 30px 60px;max-width:1340px;width:100%}
+  .view{display:none;animation:fade .35s ease}.view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .hero{background:radial-gradient(600px 200px at 90% 0%,rgba(232,178,75,.10),transparent 60%),linear-gradient(135deg,#141B2C,#0F1523);border:1px solid var(--line);border-radius:20px;padding:26px 28px;margin-bottom:22px;display:flex;flex-wrap:wrap;gap:24px;align-items:center;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .hero-main{flex:1;min-width:250px}
+  .hero-eyebrow{display:flex;align-items:center;gap:10px;color:var(--txt-dim);font-size:12.5px;font-weight:600}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--up);box-shadow:0 0 0 4px var(--up-soft)}
+  .hero-value{font-size:44px;font-weight:800;margin:10px 0 6px;letter-spacing:-.02em;display:flex;align-items:baseline;gap:10px}
+  .eye{cursor:pointer;color:var(--txt-faint);display:inline-flex;padding:6px;border-radius:8px;transition:.15s}.eye:hover{background:var(--panel-2);color:var(--txt)}
+  .hero-delta{font-size:13px;color:var(--txt-dim);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:12px;font-weight:700}
+  .chip.up{background:var(--up-soft);color:var(--up)}.chip.down{background:var(--down-soft);color:var(--down)}
+  .hero-spark{width:280px;height:80px;flex-shrink:0}@media(max-width:760px){.hero-spark{display:none}}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+  .kpi{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:18px 18px 16px;position:relative;overflow:hidden}
+  .kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .kpi-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center}.kpi-icon svg{width:17px;height:17px}
+  .ic-in{background:var(--up-soft);color:var(--up)}.ic-out{background:var(--down-soft);color:var(--down)}.ic-res{background:var(--gold-soft);color:var(--gold)}.ic-proj{background:var(--indigo-soft);color:var(--indigo)}
+  .kpi-label{font-size:12.5px;color:var(--txt-dim);font-weight:500}.kpi-value{font-size:23px;font-weight:700;margin:3px 0}.kpi-foot{font-size:11.5px;color:var(--txt-faint)}
+  .grid-2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-bottom:22px}
+  .grid-2b{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+  .card{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px}
+  .card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
+  .card-title{font-size:15px;font-weight:600}.card-title span{color:var(--txt-faint);font-weight:400;font-size:12.5px}
+  .legend{display:flex;gap:14px;font-size:12px;color:var(--txt-dim);flex-wrap:wrap}.legend i{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px}
+  .chart-wrap{position:relative;height:280px}.chart-sm{height:230px}
+  @media(max-width:960px){.grid-2,.grid-2b,.kpi-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:640px){.grid-2,.grid-2b,.kpi-grid{grid-template-columns:1fr}}
+  .table{width:100%;border-collapse:collapse}
+  .table th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--txt-faint);font-weight:600;padding:0 12px 12px;border-bottom:1px solid var(--line-soft)}
+  .table td{padding:12px;border-bottom:1px solid var(--line-soft);font-size:13.5px;vertical-align:middle}
+  .table tr:last-child td{border-bottom:none}.table tr:hover td{background:rgba(255,255,255,.015)}
+  .t-desc{font-weight:600;color:var(--txt)}
+  .cat-tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--txt-dim)}.cat-dot{width:8px;height:8px;border-radius:3px}
+  .val-in{color:var(--up);font-weight:700;font-variant-numeric:tabular-nums}.val-out{color:var(--down);font-weight:700;font-variant-numeric:tabular-nums}
+  .status-tag{font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:20px;display:inline-block}
+  .st-active{background:var(--up-soft);color:var(--up)}.st-cancel{background:var(--down-soft);color:var(--down)}.st-paused{background:var(--gold-soft);color:var(--gold)}
+  .prog-tag{font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px}.pg-rhino{background:var(--gold-soft);color:var(--gold)}.pg-fw{background:var(--indigo-soft);color:var(--indigo)}
+  .flowstrip{display:flex;gap:2px;align-items:flex-end;height:26px}.flowstrip i{flex:1;min-width:3px;border-radius:2px;background:var(--line);transition:.2s}
+  .goal{padding:15px 0;border-bottom:1px solid var(--line-soft)}.goal:last-child{border-bottom:none}
+  .goal-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px}.goal-name{font-size:13.5px;font-weight:600}.goal-val{font-size:12.5px;color:var(--txt-dim)}
+  .bar{height:9px;border-radius:20px;background:var(--line);overflow:hidden}.bar-fill{height:100%;border-radius:20px;transition:width .8s cubic-bezier(.2,.7,.2,1)}
+  .cat-row{display:flex;align-items:center;gap:14px;padding:11px 0;border-bottom:1px solid var(--line-soft)}.cat-row:last-child{border-bottom:none}
+  .cat-icon{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;font-size:16px}
+  .cat-info{flex:1;min-width:0}.cat-name{font-size:13.5px;font-weight:600}.cat-bar{height:6px;border-radius:20px;background:var(--line);margin-top:6px;overflow:hidden}
+  .cat-amount{text-align:right;flex-shrink:0}.cat-amount .v{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}.cat-amount .p{font-size:11.5px;color:var(--txt-faint)}
+  .insight{display:flex;gap:13px;padding:15px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line-soft);margin-bottom:12px}
+  .insight-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;flex-shrink:0}.insight-ic svg{width:17px;height:17px}
+  .insight h4{font-size:13.5px;font-weight:600;margin-bottom:3px}.insight p{font-size:12.5px;color:var(--txt-dim);line-height:1.5}.insight b{color:var(--txt);font-weight:700}
+  .copilot-head{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .copilot-orb{width:44px;height:44px;border-radius:13px;background:linear-gradient(135deg,var(--indigo),#8B5CF6);display:grid;place-items:center;box-shadow:0 8px 22px rgba(108,123,242,.35)}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap}.tab{padding:7px 14px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--txt-dim);font:inherit;font-weight:600;font-size:12.5px;cursor:pointer;transition:.15s}
+  .tab.on{background:var(--indigo-soft);border-color:rgba(108,123,242,.4);color:#fff}
+  .empty{text-align:center;padding:40px 20px;color:var(--txt-faint)}
+  .banner{display:none;align-items:center;gap:12px;background:var(--gold-soft);border:1px solid rgba(232,178,75,.3);border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:13px;color:var(--txt)}
+  .banner.show{display:flex}.banner svg{width:18px;height:18px;color:var(--gold);flex-shrink:0}
+  .banner a{color:var(--gold);text-decoration:underline;cursor:pointer}
+  .mobile-toggle{display:none}
+  @media(max-width:880px){.sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:.25s;box-shadow:var(--shadow)}.sidebar.open{transform:none}.mobile-toggle{display:inline-flex}.content{padding:20px 16px 50px}.topbar{padding:14px 16px}.hero-value{font-size:34px}}
+  .seg-toggle{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+  .seg-toggle button{padding:6px 13px;border-radius:8px;border:none;background:transparent;color:var(--txt-dim);font:inherit;font-weight:600;font-size:12.5px;cursor:pointer;transition:.15s}
+  .seg-toggle button.on{background:var(--indigo-soft);color:#fff}
+  .stat{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px;display:flex;gap:16px;align-items:center}
+  .stat-donut{width:76px;height:76px;flex-shrink:0;position:relative}
+  .stat-donut .ctr{position:absolute;inset:0;display:grid;place-items:center;font-family:'Sora';font-weight:800;font-size:18px}
+  .stat-body{min-width:0}
+  .stat-label{font-size:12.5px;color:var(--txt-dim);font-weight:500}
+  .stat-value{font-size:28px;font-weight:800;font-family:'Sora';letter-spacing:-.02em;margin:2px 0 3px;font-variant-numeric:tabular-nums}
+  .stat-foot{font-size:12px;color:var(--txt-faint)}
+  .gauge-wrap{position:relative;height:210px;display:grid;place-items:center}
+  .gauge-ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  .gauge-pct{font-family:'Sora';font-weight:800;font-size:38px;letter-spacing:-.02em}
+  .gauge-sub{font-size:12.5px;color:var(--txt-dim);margin-top:2px}
+  .weekbar{display:flex;gap:8px;margin-top:6px}
+  .weekseg{flex:1;text-align:center}
+  .weekseg .track{height:8px;border-radius:20px;background:var(--line);overflow:hidden;margin-bottom:7px}
+  .weekseg .track>i{display:block;height:100%;border-radius:20px;background:var(--gold);transition:width .7s}
+  .weekseg .wk{font-size:11px;color:var(--txt-faint);font-weight:600}
+  .weekseg .wv{font-size:12px;font-weight:700;margin-top:1px}
+  .weekseg.done .wv{color:var(--up)}.weekseg.now .wk{color:var(--gold)}
+  .split-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line-soft)}
+  .split-row:last-child{border-bottom:none}
+  .split-l{display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600}
+  .split-dot{width:10px;height:10px;border-radius:3px}
+  .alert{display:flex;gap:12px;padding:13px 15px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line-soft);margin-bottom:10px;align-items:flex-start}
+  .alert-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;font-size:15px}
+  .alert-tx{font-size:13px;line-height:1.5;color:var(--txt-dim)}.alert-tx b{color:var(--txt);font-weight:700}
+  .flip{cursor:pointer;user-select:none}.flip:hover{opacity:.7}
+  ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#232d44;border-radius:10px;border:2px solid var(--bg)}
+</style>
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="brand-mark">🦏</div><div><div class="brand-name">Painel Financeiro</div><div class="brand-sub">Team Rhino · Framework</div></div></div>
+  <nav class="nav" id="nav">
+    <div class="nav-label">Gestão</div>
+    <div class="nav-item active" data-view="overview"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Visão Geral</div>
+    <div class="nav-item" data-view="cashflow"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M3 17l5-5 4 3 8-8"/><path d="M21 4v5h-5"/></svg>Fluxo de Caixa</div>
+    <div class="nav-item" data-view="students"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M15 8a3 3 0 100-6M2 20a7 7 0 0114 0M16 14a7 7 0 016 6"/></svg>Alunos &amp; Fluxo<span class="nav-badge" id="badgeStu">0</span></div>
+    <div class="nav-item" data-view="expenses"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>Despesas</div>
+    <div class="nav-item" data-view="goals"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>Metas</div>
+    <div class="nav-label">Inteligência</div>
+    <div class="nav-item" data-view="copilot"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 3a5 5 0 015 5v1a4 4 0 010 8H7a4 4 0 010-8V8a5 5 0 015-5z"/><circle cx="9.5" cy="11" r="1"/><circle cx="14.5" cy="11" r="1"/></svg>Copiloto</div>
+  </nav>
+  <div class="side-foot"><div class="user"><div class="avatar">HS</div><div><div class="user-name">Henrique de Souza</div><div class="user-role">Administrador</div></div></div></div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="btn icon-btn mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    <div><div class="page-title" id="pageTitle">Visão Geral</div><div class="page-sub" id="pageSub">Panorama consolidado</div></div>
+    <div class="spacer"></div>
+    <div class="status" id="statusPill"><span class="led led-load"></span><span id="statusText">Carregando…</span></div>
+    <button class="btn icon-btn" id="refreshBtn" onclick="boot(true)" title="Atualizar agora"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-3-6.7L21 8M21 3v5h-5"/></svg></button>
+    <div class="seg-toggle" id="scopeToggle"><button class="on" data-s="consolidado" onclick="setScope('consolidado',this)">Consolidado</button><button data-s="empresa" onclick="setScope('empresa',this)">Empresa</button></div>
+    <div class="month-select"><svg width="15" height="15" fill="none" stroke="var(--txt-dim)" stroke-width="1.8" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg><select id="monthSel" onchange="switchMonth(+this.value)"></select></div>
+  </div>
+  <div class="content">
+    <div class="banner" id="snapBanner"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 9v4m0 4h.01M10.3 3.9l-8 14A2 2 0 004 21h16a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/></svg><div>Mostrando o <b>snapshot local</b> (não foi possível ler a planilha ao vivo). Para conectar, libere o acesso da planilha e recarregue. <a onclick="document.getElementById('view-copilot')&&go('copilot')">Como conectar ›</a></div></div>
+
+    <section class="view active" id="view-overview">
+      <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="stat">
+          <div class="stat-donut"><canvas id="stuDonut"></canvas><div class="ctr" id="stuDonutCtr" style="color:var(--gold)">0</div></div>
+          <div class="stat-body"><div class="stat-label">Alunos ativos</div><div class="stat-value num" id="ovStu">0</div><div class="stat-foot" id="ovStuFoot"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-donut"><canvas id="revMiniDonut"></canvas><div class="ctr" style="font-size:15px;color:var(--up)"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div></div>
+          <div class="stat-body"><div class="stat-label">Faturamento do mês</div><div class="stat-value num" id="ovRev">R$ 0</div><div class="stat-foot" id="ovRevFoot"></div></div>
+        </div>
+        <div class="stat">
+          <div class="stat-donut"><canvas id="resMiniDonut"></canvas><div class="ctr" style="font-size:15px;color:var(--gold)"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div></div>
+          <div class="stat-body"><div class="stat-label" id="ovResLabel">Lucro do negócio</div><div class="stat-value num" id="ovRes">R$ 0</div><div class="stat-foot" id="ovResFoot"></div></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Meta do mês <span id="metaSub"></span></div></div>
+          <div class="gauge-wrap"><canvas id="metaGauge"></canvas><div class="gauge-ctr"><div class="gauge-pct" id="metaPct">0%</div><div class="gauge-sub" id="metaGap"></div></div></div>
+          <div style="margin-top:6px"><div style="font-size:12.5px;color:var(--txt-dim);font-weight:600;margin-bottom:10px">Meta parcial por semana</div><div class="weekbar" id="weekbar"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><div class="card-title">Empresa x Pessoal <span>· despesas do mês</span></div></div>
+          <div class="chart-wrap chart-sm" style="height:200px"><canvas id="splitDonut"></canvas></div>
+          <div id="splitLegend" style="margin-top:8px"></div>
+        </div>
+      </div>
+      <div class="grid-2b">
+        <div class="card"><div class="card-head"><div class="card-title">Receita por origem <span>· mês</span></div></div><div class="chart-wrap chart-sm"><canvas id="revChart"></canvas></div><div id="revLegend" style="margin-top:10px"></div></div>
+        <div class="card"><div class="card-head"><div class="card-title">Alunos por programa</div><span class="tab" onclick="go('students')">Ver todos</span></div><div id="stuMini"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Alertas <span>· movimentos que merecem atenção</span></div></div>
+        <div id="alerts"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-cashflow">
+      <div class="card" style="margin-bottom:22px"><div class="card-head"><div class="card-title">Resultado acumulado <span>· mês a mês</span></div></div><div class="chart-wrap" style="height:320px"><canvas id="cumChart"></canvas></div></div>
+      <div class="card"><div class="card-head"><div class="card-title">Detalhamento mensal</div></div><table class="table"><thead><tr><th>Mês</th><th>Receita</th><th>Despesa</th><th>Resultado</th><th>Margem</th><th>Meta</th></tr></thead><tbody id="monthlyTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="view-students">
+      <div class="kpi-grid" style="margin-bottom:18px">
+        <div class="kpi"><div class="kpi-label">Alunos ativos</div><div class="kpi-value num" id="sActive">0</div><div class="kpi-foot" id="sActiveFoot"></div></div>
+        <div class="kpi"><div class="kpi-label">Recebido no ano</div><div class="kpi-value num" id="sRecv">R$ 0</div><div class="kpi-foot">Rhino + Framework</div></div>
+        <div class="kpi"><div class="kpi-label">Ticket médio ativo</div><div class="kpi-value num" id="sTicket">R$ 0</div><div class="kpi-foot">mensalidade típica</div></div>
+        <div class="kpi"><div class="kpi-label">Cancelados</div><div class="kpi-value num" id="sCancel">0</div><div class="kpi-foot">no período</div></div>
+      </div>
+      <div class="card"><div class="card-head"><div class="card-title">Todos os alunos <span id="stuSub"></span></div><div class="tabs"><button class="tab on" data-f="all" onclick="filterStu('all',this)">Todos</button><button class="tab" data-f="rhino" onclick="filterStu('rhino',this)">Rhino</button><button class="tab" data-f="fw" onclick="filterStu('fw',this)">Framework</button><button class="tab" data-f="active" onclick="filterStu('active',this)">Só ativos</button></div></div>
+        <table class="table"><thead><tr><th>Aluno</th><th>Programa</th><th>Status</th><th style="min-width:140px">Fluxo 2026</th><th style="text-align:right">Mensalidade</th><th style="text-align:right">Recebido</th></tr></thead><tbody id="stuTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="view-expenses">
+      <div class="grid-2">
+        <div class="card"><div class="card-head"><div class="card-title">Composição das despesas <span>· mês</span></div></div><div class="chart-wrap"><canvas id="expDonut"></canvas></div><div id="expDonutLegend" style="margin-top:10px"></div></div>
+        <div class="card"><div class="card-head"><div class="card-title">Grupos de despesa</div></div><div id="expGroups"></div></div>
+      </div>
+      <div class="card"><div class="card-head"><div class="card-title">Lançamentos do mês <span id="expSub"></span></div><span style="font-size:11.5px;color:var(--txt-faint)">clique na etiqueta p/ reclassificar</span></div><table class="table"><thead><tr><th>Descrição</th><th>Grupo</th><th>Classe</th><th style="text-align:right">Valor</th></tr></thead><tbody id="expTable"></tbody></table></div>
+    </section>
+
+    <section class="view" id="view-goals">
+      <div class="card" style="margin-bottom:22px"><div class="card-head"><div class="card-title">Objetivo x Realizado <span>· 2026</span></div><div class="legend"><span><i style="background:var(--indigo)"></i>Objetivo</span><span><i style="background:var(--gold)"></i>Realizado</span></div></div><div class="chart-wrap" style="height:300px"><canvas id="goalChart"></canvas></div></div>
+      <div class="card"><div class="card-head"><div class="card-title">Metas do mês selecionado</div></div><div id="goalsWrap"></div></div>
+    </section>
+
+    <section class="view" id="view-copilot">
+      <div class="card">
+        <div class="copilot-head"><div class="copilot-orb"><svg width="22" height="22" fill="none" stroke="#fff" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 3a5 5 0 015 5v1a4 4 0 010 8H7a4 4 0 010-8V8a5 5 0 015-5z"/><circle cx="9.5" cy="11" r="1" fill="#fff"/><circle cx="14.5" cy="11" r="1" fill="#fff"/></svg></div><div><div class="card-title" style="font-size:17px">Copiloto Financeiro</div><div class="page-sub">Leitura automática dos números da planilha</div></div></div>
+        <div id="insights"></div>
+      </div>
+      <div class="card" style="margin-top:22px">
+        <div class="card-title" style="margin-bottom:10px">Conexão com a planilha</div>
+        <p style="font-size:13px;color:var(--txt-dim);line-height:1.6">Este painel lê a planilha <b>PLANILHA FINANCEIRA E RESULTADOS 2026</b> em tempo real. Para o painel publicado (GitHub) conseguir ler, a planilha precisa estar compartilhada como <b>"qualquer pessoa com o link: leitor"</b>. Enquanto isso não acontece, ele usa o snapshot embutido. O passo a passo completo está no arquivo <b>README</b> que acompanha o painel.</p>
+        <div id="connInfo" style="font-size:12.5px;color:var(--txt-faint);margin-top:10px"></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const CONFIG = {
+  sheetId: '1WsgpupBx_CXdEf_zI1vUXjAemtuUQdGNJ2eje2Er4Sc',
+  tabResultado: 'Planilha financeira - RESULTADO',
+  tabFramework: 'FRAMEWORK',
+  urlResultado: '', // opcional: cole aqui a URL CSV "publicar na web" da Aba 1
+  urlFramework: '', // opcional: idem Aba 2
+};
+const EMBED = { aba1: `PLANILHA FINANCEIRA,,,,,,,,,,,,
+,,,,,,,,,,,,
+RECEITAS,JANEIRO,FEVEREIRO,MARÇO,ABRIL,MAIO,JUNHO,JULHO,AGOSTO,SETEMBRO,OUTUBRO,NOVEMBRO,DEZEMBRO
+Recebimento Consultoria,16375.48,13779.18,21176.83,21863.93,10088.64,20577.45,22240.44,300.0,,,,
+Recebimento Mentoria,12954.16,11218.8,4185.1,3000.0,19419.8,9500.0,3000.0,,,,,
+Recebimento FRAMEWORK,19239.14,18750,31018.7,25795.5,27725.0,39419.0,38645.2,5394,,,,
+Pendente Mentorias (Fluxo),,0.0,0.0,0.0,,,3075.0,22725.0,,,,
+CAIXA Consultoria + Mentoria (Henrique),,,,21933.24,13171.78,,,14391.52,,,,100000.0
+CAIXA Mentoria (Framework),,,,,,,,,,,,
+TOTAL,48568.78,43747.98,56380.63,72592.67,70405.22,69496.45,66960.64,42810.52,0,0,0,100000
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+DESPESAS,JANEIRO,FEVEREIRO,MARÇO,ABRIL,MAIO,JUNHO,JULHO,AGOSTO,SETEMBRO,OUTUBRO,NOVEMBRO,DEZEMBRO
+Despesas de casa & Henrique (fixos),,,,,,,,,,,,
+,,,,,,,,,,,,
+Aluguel SP - 05,4655.85,4655.85,4713.0,4674.9,4674.9,4674.9,4674.9,4655.85,4655.85,4655.85,4655.85,4655.85
+Condominio SP - 05,975.38,1056.02,1068.2,1033.04,1050.55,1051.59,1049.98,1051.59,1051.59,1051.59,1051.59,1051.59
+Aluguel REC - 23,3000.0,3000.0,3000.0,3000.0,3000.0,3000.0,3000.0,3000.0,3000.0,3000.0,3000.0,3000.0
+Energia,233.34,186.08,173.4,209.24,210.25,169.32,160.05,200.0,200.0,200.0,200.0,200.0
+Financiamento - 05,5081.61,4499.37,4601.86,4593.6,4499.37,4499.37,4499.37,4499.37,4499.37,4499.37,4499.37,4499.37
+Financiamento BMW (encerrado fev/26),2376.35,2228.94,,,,,,,,,,
+,,,,,,,,,,,,
+Total,16322.53,15626.26,13556.46,13510.78,13435.07,13395.18,13384.3,13406.81,13406.81,13406.81,13406.81,13406.81
+,,,,,,,,,,,,
+Despesas com cartões,,,,,,,,,,,,
+,,,,,,,,,,,,
+Santander Platinum PJ (Empresa) - 25,650.71,927.94,657.48,0.0,0.0,0.0,0.0,0.0,,,,
+Santander Gold PJ (Mercado e Lazer) - 15,2905.44,2311.3,2792.38,2741.23,6890.0,6271.07,6095.56,6212.61,,,,
+Santander PF (Mercado e Lazer) - 05,1514.96,1504.94,1189.38,131.9,182.55,166.0,77.86,170.5,,,,
+Cartão NU PJ (Empresa) - 01,279.04,260.0,0.0,1942.88,1830.32,1581.0,2426.45,1598.26,,,,
+Cartão NU PF (Suplementos) - 01,898.5,633.27,1130.97,241.22,53.46,128.16,142.38,470.47,,,,
+Cartão Visa ITAU (Uso geral) - 20,7000.0,6611.26,2805.0,9481.73,11648.32,8616.64,8200.81,6054.58,4439.86,2811.5,,
+Cartão INTER PF (Uso geral) - 15,2683.0,,7030.07,5671.0,4491.52,3675.61,5920.16,5732.64,,,,
+Cartão ML (Compras)) - 05,480.82,369.25,1005.41,600.64,681.66,728.77,597.21,755.85,,,,
+Cartão PAN (Uso geral) - 05 ,640.0,798.71,491.44,785.97,784.33,895.83,488.97,488.97,,,,
+Sams Club (Suplementos) - 21,703.73,130.55,182.38,96.41,335.0,300.0,300.0,300.0,,,,
+Sicredi PJ (Uso pessoal) - 08,714.0,0.0,0.0,0.0,0.0,2728.03,7.14,1879.54,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+Total,18470.2,13547.22,17284.51,21692.98,26897.16,25091.11,24256.54,23663.42,4439.86,2811.5,0,0
+,,,,,,,,,,,,
+Colaboradores & Investimentos,,,,,,,,,,,,
+,,,,,,,,1000.0,,,,
+Mentorias,1150.0,,,,1500.0,3000.0,,,,,,
+Ana Felicio - 5 e 25,400.0,2000.0,2000.0,2000.0,1000.0,1500.0,1000.0,2000.0,2000.0,2000.0,2000.0,2000.0
+Marcos Cavalcanti - 5 e 25,,1200.0,1200.0,1200.0,1200.0,600.0,0.0,0.0,0.0,0.0,0.0,0.0
+Nexus (Mylena) - 10,1800.0,2500.0,,750.0,,,,,,,,
+Aclão - 10,800.0,,,,,,500.0,,,,,
+João - Framework - 25,1200.0,1200.0,1200.0,,3000.0,4500.0,10000.0,,,,,
+Flowize - 25,289.9,300.0,287.0,287.0,287.0,287.0,287.0,287.0,287.0,287.0,287.0,287.0
+Consultoria de moda - 25,500.0,500.0,500.0,500.0,500.0,500.0,500.0,500.0,500.0,,,
+Contador - 5,650.0,650.0,650.0,850,650.0,650.0,750.0,750.0,750.0,750.0,750.0,750.0
+Vivo - 15,190.0,190.0,190.0,193.91,203.0,220,203.0,190.0,190.0,190.0,190.0,190.0
+Caixa Postal - 5,79.9,79.9,83.89,83.89,83.89,83.89,83.89,83.89,83.89,83.89,83.89,83.89
+Aplicativo TreinoIO - 5,169.15,169.15,165.17,165.17,155.22,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+Taxas Santander,296.64,242.85,447.7,28.4,29.96,,0.0,0.0,0.0,0.0,0.0,0.0
+Impostos ,,,1500.0,750.0,3853.18,,3296.62,,,,,
+INSS,,,,,,,696.59,,,,,
+Repasse terapia,,550.0,,,,,,,,,,
+Terapia- Henrique,,650.0,700.0,650.0,650,650.0,650.0,650.0,,,,
+Diarista,,,,,,360.0,360.0,360.0,,,,
+Ferramentas (Calpt + typeforms + opus),,,300.0,250.0,280.95,350.0,331.82,350.0,,,,
+Repasse Jefferson (cada 3 meses),,,,8610.0,,,4030.0,,,,,
+,,,,,,,,,,,,
+Total,7525.59,10231.9,9223.76,16318.37,13393.2,12700.89,22688.92,5170.89,3810.89,3310.89,3310.89,3310.89
+,,,,,,,,,,,,
+Carteira de investimentos,,,,5000.0,3000.0,,,,,,,
+Despesas extras,361.19,1251.15,1763.38,2888.76,3325.89,1621.72,1125.1,,,,,
+"Provisões financeiras (IPVA, manutenções)",,,,,,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0
+,,,,,,,,,,,,
+Total,361.19,1251.15,1763.38,7888.76,6325.89,2621.72,,,,,,
+,,,,,,,,,,,,
+TOTAL DAS DESPESAS,42679.51,40656.53,41828.11,59410.89,60051.32,53808.9,61454.86,42241.12,21657.56,19529.2,16717.7,16717.7
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+META & RESULTADOS,JANEIRO,FEVEREIRO,MARÇO,ABRIL,MAIO,JUNHO,JULHO,AGOSTO,SETEMBRO,OUTUBRO,NOVEMBRO,DEZEMBRO
+Objetivo,50000.0,50000.0,50000.0,50000.0,60000.0,60000.0,60000.0,60000.0,50000.0,50000.0,50000.0,50000.0
+Realizado,48568.78,43747.98,56380.63,50649.43,57233.44,,,,,,,
+Saldo,5889.27,3091.45,14552.52,-8761.46,,,,,,,,
+Caixa,,5889.27,,,,,,,,,,
+Carteira de investimentos,,,,,,,,,,,,
+,,,,,,,,,,,,
+BALANÇO,Fevereiro,Março,Abril,Maio,Junho,Julho,Agosto,Setembro,Outubro,Novembro,Dezembro,
+,,,,,,,,,,,,
+ENTRADAS,43747.98,56380.63,50659.43,57233.44,69496.45,63885.64,5694,,,,,
+BALANÇO REAL,3091.45,14552.52,-8751.46,-2817.88,15687.55,2430.78,-36547.12,,,,,
+DESPESAS TOTAIS,40656.53,41828.11,59410.89,60051.32,53808.9,61454.86,42241.12,,,,,
+DESPESAS PAGAS ,40656.53,41828.11,59410.89,60051.32,53808.9,61454.86,4068.73,,,,,
+SALDO A PAGAR ,0,0,0,0,0,0,38172.39,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+,,,,,,,,,,,,
+Carteiras de investimento,JANEIRO,FEVEREIRO,MARÇO,ABRIL,MAIO,JUNHO,JULHO,AGOSTO,SETEMBRO,OUTUBRO,NOVEMBRO,DEZEMBRO
+,,,,,,,,,,,,
+XP,,,,,,33889.89,,,,,,
+Sicredi,,,,,,8000.0,,,,,,
+Nubank,,,,,,365.0,,,,,,
+,,,,,,,,,,,,
+TOTAL,,,,,,42254.89,0,0,0,0,0,0`, aba2: `PLANILHA DE CONTROLE DE MENTORADOS,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+RECEITAS,JANEIRO,FEVEREIRO,MARÇO,ABRIL,MAIO,JUNHO,JULHO,AGOSTO,SETEMBRO,OUTUBRO,NOVEMBRO,DEZEMBRO,,,,
+Recebimento Consultoria,16375.48,,,,,,,,,,,,,,,
+Recebimento Mentoria,12954.16,11218.8,4185.1,,,,,,,,,,,,,
+Recebimento FRAMEWORK,19239.14,20150.0,14900.0,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+CAIXA Consultoria + Mentoria (Henrique),,1660.29,,,,,,,,,,,,,,
+CAIXA Mentoria (Framework),,16239.35,,,,,,,,,,,,,,
+TOTAL,48568.78,49268.44,19085.1,0,0,0,0,0,0,0,0,0,,,,
+,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Mentoria RHINO,JANEIRO,FEVEREIRO,MARÇO,ABRIL,MAIO,JUNHO,JULHO,AGOSTO,SETEMBRO,OUTUBRO,NOVEMBRO,DEZEMBRO,,,,
+,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Brendho 05/05,1500.0,0.0,,,2000.0,,,,,,,,,,,
+Bruce ,3000.0,1000.0,1000.0,1000.0,1000.0,1000.0,,,,,,,,,,
+Hudson,3000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,,,,
+Gabriel Borges 25/04,0.0,0.0,,,2000.0,1000.0,1000.0,1000.0,,,,,,,,
+Amanda Gomes 19/04,0.0,0.0,,,7419.8,,,,,,,,,,,
+Leonardo Valencio 21/05,0.0,0.0,,,5000.0,,,,,,,,,,,
+Victor Monteiro 16/04,0.0,0.0,,,,,,,,,,,,,,
+Yago Felipe,2000.0,1000.0,1000.0,1000.0,1000.0,,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,,,,
+Luca Wallace 03/05,,5000.0,,,,,,,,,,,,,,
+Gabriel de Souza Borges- 6 aulas,,,,,,2500.0,,,,,,,,,,
+Lucas- 6 aulas,,,,,,3000.0,,,,,,,,,,
+Antoni Esteven Chaves Rodriguez,,,,,,3000.0,,,,,,,,,,
+Jaqueline Alcantra,0.0,0.0,,,,,,,,,,,,,,
+Luis Porto (Cancelado) ,2454.16,1218.8,1185.1,0.0,0.0,,,,,,,,,,,
+Jonathan Felipe (Cancelado),0.0,2000.0,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+TOTAL,11954.16,11218.8,4185.1,3000,19419.8,11500,3000,3000,2000,2000,2000,2000,,,,
+ENTRADAS ATÉ O MOMENTO,,,,,19419.8,9500,3000,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Mentoria FrameWork,JANEIRO,FEVEREIRO,MARÇO,ABRIL,MAIO,JUNHO,JULHO,AGOSTO,SETEMBRO,OUTUBRO,NOVEMBRO,DEZEMBRO,,,,
+,,,,,,,,,,,,,,,,
+Lucas Benini (C),-,3000.0,5000.0,,,,,,,,,,,,,
+Henrique Bento (C),-,3000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,,,,,,,
+Bruno Ferreira (C),-,2000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,,,,,,,
+Siléia Gomes (C),-,3000.0,1750.0,1750.0,1750.0,1750.0,,,,,7300,,,,,
+William Jr (C),3000.0,1200.0,1200.0,1200.0,1200.0,1200.0,1200.0,,,,,,,,,
+Kayky Pintondo (C),2000.0,1350.0,1350.0,1250.0,1350.0,1450.0,1350.0,,,,,,,,,
+Eduardo Berticelli (C),5000.0,1000.0,,0.0,0.0,0.0,0.0,,,,,,,,,
+Bianca Godoy (C),3000.0,1200.0,1200.0,1200.0,1200.0,1200.0,1000.0,,,,,,,,,
+Fernando (C),,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,,,,,
+Gabriel Henrique (C),2000.0,2000.0,-,4000.0,2000.0,0.0,,,,,,,,,,
+George Augusto P. Duarte (C),,,2000.0,1400.0,1400.0,1400.0,1400.0,1400.0,1400.0,,,,,,,
+Nathan Lima Costa (C),,,3000.0,,1500.0,1500.0,,2100.0,,,,,,,,
+Felipe Dos Santos (C),,,9118.7,0.0,0.0,0.0,,,,,,,,,,
+Willian Jefferson da Silva (C),,,,2000.0,1350.0,1350.0,1350.0,1350.0,1350.0,1350.0,,,,,,
+Alanir Salles Junior (C),,,,2000.0,1575.0,1575.0,1575.0,1575.0,1575.0,,,,,,,
+Eduardo H. Marques L. (C),,,,,2000.0,2000.0,1000.0,1200.0,1200.0,1200.0,1200.0,,,,,
+Lucas de Oliveira Figueiredo (C),,,,,3000.0,,1500.0,1500.0,1500.0,1500.0,1500.0,,,,,
+Gustavo Fernandes Ordine (C),,,,,2000.0,,1600.0,1600.0,1600.0,1600.0,1600.0,,,,,
+Pedro Antonio Ferreira Rodrigues ,,,,,3000.0,1500.0,1500.0,1500.0,1500.0,1500.0,,,,,,
+João Lucas Alves Gomes ,,,,,,5000.0,,,,,,,,,,
+Yuri Soares Wolffgramm ,,,,,,2000.0,,,,,,,,,,
+Kelvyn,,,,,,3000.0,1170.0,,,,,,,,,
+Stefano Thiago,,,,,,2600.0,,,,,,,,,,
+Júlio César Serpa Domingos,,,,,,7644.0,,,,,,,,,,
+Ricardo Kercovsky Fachetti,,,,,,0.0,0.0,0.0,1875.0,1875.0,,,,,,
+André Ricardo Machado,,,,,,3000.0,2000.0,2000.0,2000.0,,,,,,,
+Guilherme Medeiros Nicochelli ,,,,,,,3000.0,1500.0,1500.0,1500.0,1500.0,1500.0,1500.0,,,
+Lucas Oliveira Marques,,,,,,,11575.2,pg julho,,,,,,,,
+Gabriel Nogueira de Jesus Silva,,,,,,,3000.0,,,,,,,,,
+Guilherme Maestre Custódio ,,,,,,,3000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0,1000.0
+Alexandre Vieira da Silva ,,,,,,,,2697.0,,,,,,,,
+Diego do Carmo Maciel,,,,,,,,2697.0,,,,,,,,
+Davi Xavier (Cancelado),0.0,1400.0,1400.0,1400.0,1400.0,1400.0,,,,,,,,,,
+Amauri Toledo da Silva J. (Cancelado),,,,2000.0,0.0,0.0,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+TOTAL,15000,20150,29018.7,21200,27725,42569,40220.2,25119,19500,12525,15100,2500,,,,
+ENTRADAS ATÉ O MOMENTO,,18750,29018.7,17800,27725,39569,38645.2,5394,,,,,,,,
+,,,,,,,,,,,,,,,,
+Mentoria + framework,,34968.8,33203.8,20800,47144.8,49069,41645.2,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Custos Framework,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Aluguel REC,3000.0,3000.0,3000.0,3000.0,3000.0,3000.0,,,,,,,,,,
+Felicio,,1600.0,1600.0,1600.0,1600.0,1600.0,,,,,,,,,,
+Impostos (6%),0.0,0.0,0.0,0.0,0.0,0.0,,,,,,,,,,
+Plataforma Klubs,297.0,297.0,297.0,297.0,297.0,297.0,,,,,,,,,,
+Cal.com,,150.0,150.0,150.0,150.0,150.0,,,,,,,,,,
+Typeform,,150.0,150.0,150.0,150.0,150.0,,,,,,,,,,
+João Pedro,,,,4500.0,3000.0,3000.0,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+TOTAL,3297,5197,5197,9697,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+RELAÇÃO,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Mês,JAN,FEV,MAR,ABR,MAI,JUN,JUL,,,,,,,,,
+Entradas,15000,18750,29018.7,20800,47144.8,49069,41645.2,,,,,,,,,
+Despesas,3297,5197,5197,9697,8197,8197,0,,,,,,,,,
+Saldo,11703,13553,23821.7,11103,38947.8,40872,41645.2,,,,,,,,,
+Liquido total,99128.5,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Faturamento até: 10/04,62768.7,,,,,,,,,,,,,,,
+Despesas até: Abril/26,23388,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,
+Henrique,0.75,74346.375,,,,,,,,,,,,,,
+Jefferson,0.25,24782.125,8610.0,,,,,,,,,,,,,` };
+
+/* ================= HELPERS ================= */
+const BRL0 = v => 'R$ ' + Math.round(Math.abs(v)).toLocaleString('pt-BR');
+const BRLs = v => (v<0?'-':'') + BRL0(v);
+const MFULL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MSHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function num(v){ if(v==null) return 0; let s=String(v).replace(/R\$|\s/g,'').trim(); if(s===''||s==='-') return 0;
+  if(s.indexOf(',')>-1 && (s.indexOf('.')===-1 || s.lastIndexOf(',')>s.lastIndexOf('.'))) s=s.replace(/\./g,'').replace(',','.');
+  const n=parseFloat(s); return isNaN(n)?0:n; }
+function parseCSV(text){ const rows=[]; let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else { if(c==='"') q=true; else if(c===','){row.push(f);f='';} else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';} else if(c!=='\r') f+=c; } }
+  if(f!==''||row.length){row.push(f);rows.push(row);} return rows; }
+const norm = s => (s||'').trim().toLowerCase();
+
+/* ================= PARSERS (rótulo, não posição) ================= */
+function rowVals(row){ const o=[]; for(let c=1;c<=12;c++) o.push(num(row?row[c]:0)); return o; }
+function findRow(grid,label){ const L=norm(label); return grid.find(r=>norm(r[0])===L); }
+
+function parseAba1(grid){
+  const R={ consultoria:rowVals(findRow(grid,'Recebimento Consultoria')),
+            mentoria:rowVals(findRow(grid,'Recebimento Mentoria')),
+            framework:rowVals(findRow(grid,'Recebimento FRAMEWORK')) };
+  // 4 linhas "Total" (case-sensitive) = casa, cartões, colaboradores, extras
+  const totalIdx=[]; grid.forEach((r,i)=>{ if((r[0]||'').trim()==='Total') totalIdx.push(i); });
+  const grp = k => totalIdx[k]!=null ? rowVals(grid[totalIdx[k]]) : new Array(12).fill(0);
+  const D={ casa:grp(0), cartoes:grp(1), colaboradores:grp(2), extras:grp(3) };
+  const totalDesp = rowVals(findRow(grid,'TOTAL DAS DESPESAS'));
+  const metaObj = rowVals(findRow(grid,'Objetivo'));
+  const metaReal = rowVals(findRow(grid,'Realizado'));
+  // itens por grupo (entre fronteiras)
+  const casaStart = grid.findIndex(r=>norm(r[0]).indexOf('despesas de casa')>-1);
+  const bounds=[ [casaStart>-1?casaStart+1:0, totalIdx[0]],
+                 [totalIdx[0]+1, totalIdx[1]], [totalIdx[1]+1, totalIdx[2]], [totalIdx[2]+1, totalIdx[3]] ];
+  const items = bounds.map(([a,b])=>{ const arr=[]; if(a==null||b==null) return arr;
+    for(let i=a;i<b;i++){ const r=grid[i]; const nome=(r&&r[0]||'').trim(); if(!nome) continue;
+      const v=rowVals(r); if(v.reduce((s,x)=>s+x,0)>0) arr.push({nome,vals:v}); } return arr; });
+  return { receitas:R, despesas_grupos:D, total_despesas:totalDesp, meta_objetivo:metaObj, meta_realizado:metaReal,
+           itens:{casa:items[0]||[],cartoes:items[1]||[],colaboradores:items[2]||[],extras:items[3]||[]} };
+}
+
+function parseStudents(grid, headerLabel, grupo){
+  const start = grid.findIndex(r=>norm(r[0])===norm(headerLabel));
+  if(start<0) return [];
+  let end = grid.length;
+  for(let i=start+1;i<grid.length;i++){ if((grid[i][0]||'').trim().toUpperCase()==='TOTAL'){ end=i; break; } }
+  const out=[];
+  for(let i=start+1;i<end;i++){ const r=grid[i]; let nome=(r[0]||'').trim();
+    if(!nome || norm(nome)==='entradas até o momento') continue;
+    const pays=[]; for(let c=1;c<=16;c++) pays.push(num(r[c]));
+    const hasAny = r.slice(1,17).some(x=>(x||'').trim()!=='');
+    if(pays.reduce((s,x)=>s+x,0)===0 && !hasAny) continue;
+    const cancel = norm(nome).indexOf('cancel')>-1;
+    const months=pays.slice(0,12);
+    let last=-1; for(let m=0;m<12;m++) if(months[m]>0) last=m;
+    const futur = pays.slice(12).some(x=>x>0);
+    const ativo = !cancel && (months[5]>0||months[6]>0||months[7]>0||months.slice(8).some(x=>x>0)||futur);
+    let mensal = last>=0?months[last]:(pays.slice(12).find(x=>x>0)||0);
+    nome = nome.replace(/\(cancelado\)/i,'').replace(/\(cance.*$/i,'').replace(/\(c\)/i,'').trim();
+    out.push({nome,grupo,pays,total:pays.reduce((s,x)=>s+x,0),mensal,last,cancel,ativo});
+  }
+  return out;
+}
+function parseAba2(grid){
+  return { rhino: parseStudents(grid,'Mentoria RHINO','RHINO'),
+           framework: parseStudents(grid,'Mentoria FrameWork','FRAMEWORK') };
+}
+
+/* ================= FETCH / BOOT ================= */
+let DATA=null, ALUNOS=[], current=6, balanceHidden=false, stuFilter='all', charts={}, ACTIVE_MONTHS=[];
+function gviz(tab){ return `https://docs.google.com/spreadsheets/d/${CONFIG.sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}&t=${Date.now()}`; }
+async function fetchTab(tab, override){
+  const url = override || gviz(tab);
+  const res = await fetch(url); if(!res.ok) throw new Error('HTTP '+res.status);
+  const t = await res.text();
+  if(t.trim().charAt(0)==='<') throw new Error('sem acesso público'); // veio HTML de login
+  return t;
+}
+function setStatus(state){
+  const pill=document.getElementById('statusPill'), txt=document.getElementById('statusText');
+  const led=pill.querySelector('.led'); led.className='led';
+  if(state==='live'){ led.classList.add('led-live'); txt.textContent='Ao vivo · '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); document.getElementById('snapBanner').classList.remove('show'); }
+  else if(state==='load'){ led.classList.add('led-load'); txt.textContent='Carregando…'; }
+  else { led.classList.add('led-snap'); txt.textContent='Snapshot local'; document.getElementById('snapBanner').classList.add('show'); }
+}
+async function boot(force){
+  setStatus('load');
+  let c1=EMBED.aba1, c2=EMBED.aba2, live=false;
+  try{
+    const [a,b]=await Promise.all([fetchTab(CONFIG.tabResultado,CONFIG.urlResultado), fetchTab(CONFIG.tabFramework,CONFIG.urlFramework)]);
+    c1=a; c2=b; live=true;
+  }catch(e){ live=false; }
+  DATA={ aba1:parseAba1(parseCSV(c1)), aba2:parseAba2(parseCSV(c2)) };
+  ALUNOS=[...DATA.aba2.rhino, ...DATA.aba2.framework];
+  // meses com dados
+  ACTIVE_MONTHS=[]; for(let i=0;i<12;i++){ if(revMonth(i)>0||expMonth(i)>0) ACTIVE_MONTHS.push(i); }
+  const full = ACTIVE_MONTHS.filter(i=>revMonth(i)>10000);
+  current = (full.length?full[full.length-1]:(ACTIVE_MONTHS[ACTIVE_MONTHS.length-1]||0));
+  const sel=document.getElementById('monthSel');
+  sel.innerHTML=ACTIVE_MONTHS.map(i=>`<option value="${i}" ${i===current?'selected':''}>${MFULL[i]}/26</option>`).join('');
+  document.getElementById('connInfo').innerHTML = `ID da planilha: <code>${CONFIG.sheetId}</code><br>Status atual: <b style="color:${live?'var(--up)':'var(--gold)'}">${live?'lendo ao vivo ✓':'usando snapshot (acesso não liberado)'}</b>`;
+  setStatus(live?'live':'snap');
+  render();
+}
+
+/* ================= CLASSIFICAÇÃO EMPRESA x PESSOAL ================= */
+let OVERRIDES={}; try{ OVERRIDES=JSON.parse(localStorage.getItem('rhino_classif')||'{}'); }catch(e){}
+function saveOverrides(){ try{ localStorage.setItem('rhino_classif',JSON.stringify(OVERRIDES)); }catch(e){} }
+function classify(nome){
+  if(OVERRIDES[nome]) return OVERRIDES[nome];
+  const n=(nome||'').toLowerCase();
+  if(/mercado e lazer|uso pessoal|suplementos|\(compras|uso geral/.test(n)) return 'pessoa';
+  if(/aluguel sp|condomin|energia|financiamento|bmw|terapia|diarista|carteira de invest|despesas extras|provis|moda|\(pf/.test(n)) return 'pessoa';
+  if(/\(empresa\)|framework|ana felic|marcos|nexus|mylena|acl[ãa]o|jo[ãa]o|flowize|contador|caixa postal|treinoio|treino\.io|taxas santander|imposto|inss|ferramentas|jefferson|aluguel rec|vivo|mentorias/.test(n)) return 'empresa';
+  return 'empresa';
+}
+function flipClassify(nome){ const cur=classify(nome); OVERRIDES[nome]=(cur==='empresa'?'pessoa':'empresa'); saveOverrides(); render(); }
+
+/* ================= DERIVAÇÕES ================= */
+let scope='consolidado';
+function revMonth(i){ if(!DATA) return 0; const r=DATA.aba1.receitas; return (r.consultoria[i]||0)+(r.mentoria[i]||0)+(r.framework[i]||0); }
+function expTotal(i){ if(!DATA) return 0; return DATA.aba1.total_despesas[i]||0; }
+function classifiedTotals(i){ let emp=0,pes=0; if(!DATA) return {emp,pes};
+  Object.keys(GROUPS).forEach(k=>{ (DATA.aba1.itens[k]||[]).forEach(it=>{ const v=it.vals[i]||0; if(v<=0) return; if(classify(it.nome)==='pessoa') pes+=v; else emp+=v; }); });
+  return {emp,pes}; }
+function expEmpresa(i){ return classifiedTotals(i).emp; }
+function expPessoa(i){ return classifiedTotals(i).pes; }
+function expMonth(i){ return scope==='empresa' ? expEmpresa(i) : expTotal(i); }
+function resMonth(i){ return revMonth(i)-expMonth(i); }
+function acc(i){ let s=0; for(let k=0;k<=i;k++) s+=resMonth(k); return s; }
+function groupTotal(k,i){ return DATA.aba1.despesas_grupos[k][i]||0; }
+function set(id,v){ const e=document.getElementById(id); if(e) e.textContent=v; }
+const REAL_MONTH=new Date().getMonth();
+function setScope(s,el){ scope=s; document.querySelectorAll('#scopeToggle button').forEach(b=>b.classList.remove('on')); el.classList.add('on'); render(); }
+
+const GROUPS={ casa:{name:'Casa & Henrique (fixos)',color:'#FF6B5D',ic:'🏠'}, cartoes:{name:'Cartões',color:'#F59E5B',ic:'💳'},
+  colaboradores:{name:'Colaboradores & Ferramentas',color:'#A78BFA',ic:'👥'}, extras:{name:'Extras & Provisões',color:'#94A3B8',ic:'📦'} };
+const REVCATS={ consultoria:{name:'Consultoria Team Rhino',color:'#38D399'}, mentoria:{name:'Mentoria Rhino',color:'#E8B24B'}, framework:{name:'Mentoria Framework',color:'#6C7BF2'} };
+
+/* ================= RENDER ================= */
+function render(){
+  renderOverviewStats(); renderMeta(); renderSplit(); renderRevLegend(); renderStuMini(); renderAlerts();
+  document.getElementById('badgeStu').textContent=ALUNOS.filter(a=>a.ativo).length;
+  renderStudents(); renderExpenses(); renderGoals(); renderMonthly(); renderInsights(); drawCharts();
+}
+function renderOverviewStats(){
+  const ativos=ALUNOS.filter(a=>a.ativo), rh=ativos.filter(a=>a.grupo==='RHINO').length, fw=ativos.length-rh;
+  set('ovStu',ativos.length); document.getElementById('stuDonutCtr').textContent=ativos.length;
+  document.getElementById('ovStuFoot').textContent=`${rh} Rhino · ${fw} Framework`;
+  const inV=revMonth(current), prevIn=current>0?revMonth(current-1):inV, gi=prevIn?((inV-prevIn)/prevIn*100):0;
+  set('ovRev',BRL0(inV));
+  document.getElementById('ovRevFoot').innerHTML=`${MFULL[current]} · <span class="chip ${gi>=0?'up':'down'}">${gi>=0?'▲':'▼'} ${Math.abs(gi).toFixed(0)}%</span> vs ${MSHORT[Math.max(0,current-1)]}`;
+  const resV=resMonth(current), margin=inV?resV/inV*100:0;
+  document.getElementById('ovResLabel').textContent = scope==='empresa'?'Lucro do negócio':'Resultado do mês';
+  set('ovRes',BRLs(resV));
+  document.getElementById('ovResFoot').innerHTML=`Margem <b style="color:var(--gold)">${margin.toFixed(1)}%</b> · ${scope==='empresa'?'sem custos pessoais':'consolidado'}`;
+}
+function renderMeta(){
+  const meta=DATA.aba1.meta_objetivo[current]||60000, realized=revMonth(current), pct=meta?realized/meta*100:0;
+  document.getElementById('metaSub').textContent=`· ${MFULL[current]}`;
+  document.getElementById('metaPct').textContent=Math.round(pct)+'%';
+  document.getElementById('metaGap').innerHTML = realized>=meta ? `superou em ${BRL0(realized-meta)} 🎯` : `faltam <b style="color:var(--txt)">${BRL0(meta-realized)}</b> de ${BRL0(meta)}`;
+  // semanas: checkpoints cumulativos 25/50/75/100%
+  const isCur=current===REAL_MONTH;
+  let curWeek = isCur ? Math.min(4,Math.ceil(new Date().getDate()/7)) : (current>REAL_MONTH?0:4);
+  const wb=document.getElementById('weekbar');
+  wb.innerHTML=[1,2,3,4].map(w=>{
+    const target=meta*w/4, prevTarget=meta*(w-1)/4;
+    const segFill=Math.max(0,Math.min(1,(realized-prevTarget)/(meta/4)))*100;
+    const done=realized>=target;
+    const cls=(done?'done ':'')+(isCur&&w===curWeek?'now ':'');
+    return `<div class="weekseg ${cls}"><div class="track"><i style="width:${segFill}%;background:${done?'var(--up)':'var(--gold)'}"></i></div><div class="wk">S${w}${isCur&&w===curWeek?' · agora':''}</div><div class="wv">${done?'✓ ':''}${BRL0(target)}</div></div>`;
+  }).join('');
+}
+function renderSplit(){
+  const emp=expEmpresa(current), pes=expPessoa(current), tot=emp+pes||1;
+  const inV=revMonth(current), lucro=inV-emp;
+  document.getElementById('splitLegend').innerHTML=
+    `<div class="split-row"><div class="split-l"><span class="split-dot" style="background:var(--indigo)"></span>Empresa</div><div><b class="num">${BRL0(emp)}</b> <span style="color:var(--txt-faint);font-size:12px">${(emp/tot*100).toFixed(0)}%</span></div></div>`+
+    `<div class="split-row"><div class="split-l"><span class="split-dot" style="background:var(--down)"></span>Pessoal</div><div><b class="num">${BRL0(pes)}</b> <span style="color:var(--txt-faint);font-size:12px">${(pes/tot*100).toFixed(0)}%</span></div></div>`+
+    `<div class="split-row"><div class="split-l" style="color:var(--gold)">Lucro do negócio</div><div><b class="num" style="color:var(--gold)">${BRLs(lucro)}</b></div></div>`;
+}
+function renderAlerts(){
+  const A=[], inV=revMonth(current), outV=expTotal(current), i=current;
+  // 1. meta
+  const meta=DATA.aba1.meta_objetivo[i]||60000;
+  if(inV>=meta) A.push(['up','🎯',`<b>Meta batida.</b> Faturamento de <b>${BRL0(inV)}</b> superou a meta de ${BRL0(meta)}.`]);
+  else A.push(['info','🎯',`Faltam <b>${BRL0(meta-inV)}</b> para bater a meta de ${BRL0(meta)} em ${MFULL[i]}.`]);
+  // 2. entrada: variação por origem vs mês anterior
+  if(i>0){ ['framework','consultoria','mentoria'].forEach(k=>{
+    const cur=DATA.aba1.receitas[k][i], prev=DATA.aba1.receitas[k][i-1];
+    if(prev>0){ const d=(cur-prev)/prev*100; const nm={framework:'Mentoria Framework',consultoria:'Consultoria',mentoria:'Mentoria Rhino'}[k];
+      if(d<=-25) A.push(['down','📉',`<b>${nm}</b> caiu <b>${Math.abs(d).toFixed(0)}%</b> vs ${MSHORT[i-1]} (${BRL0(prev)} → ${BRL0(cur)}).`]);
+      else if(d>=30) A.push(['up','📈',`<b>${nm}</b> cresceu <b>+${d.toFixed(0)}%</b> vs ${MSHORT[i-1]} (${BRL0(cur)}).`]); } }); }
+  // 3. maior despesa do mês
+  let items=[]; Object.keys(GROUPS).forEach(k=>(DATA.aba1.itens[k]||[]).forEach(it=>{ if((it.vals[i]||0)>0) items.push(it); }));
+  items.sort((a,b)=>(b.vals[i]||0)-(a.vals[i]||0));
+  if(items[0]) A.push(['info','💸',`Maior saída do mês: <b>${items[0].nome}</b> com <b>${BRL0(items[0].vals[i])}</b>.`]);
+  // 4. despesa que disparou vs mês anterior
+  if(i>0){ for(const it of items){ const cur=it.vals[i]||0, prev=it.vals[i-1]||0; if(prev>300 && cur/prev>=1.4){ A.push(['down','⚠️',`<b>${it.nome}</b> subiu <b>${((cur/prev-1)*100).toFixed(0)}%</b> vs ${MSHORT[i-1]} (${BRL0(prev)} → ${BRL0(cur)}).`]); break; } } }
+  // 5. peso pessoal
+  const pes=expPessoa(i); if(outV>0) A.push(['info','🏠',`Despesas pessoais foram <b>${(pes/outV*100).toFixed(0)}%</b> das saídas (${BRL0(pes)}). Lucro real do negócio: <b>${BRLs(inV-expEmpresa(i))}</b>.`]);
+  const col={up:['var(--up)','var(--up-soft)'],down:['var(--down)','var(--down-soft)'],info:['var(--indigo)','var(--indigo-soft)']};
+  document.getElementById('alerts').innerHTML=A.map(([t,ic,tx])=>`<div class="alert"><div class="alert-ic" style="background:${col[t][1]}">${ic}</div><div class="alert-tx">${tx}</div></div>`).join('');
+}
+function renderRevLegend(){ const inV=revMonth(current);
+  document.getElementById('revLegend').innerHTML=Object.entries(REVCATS).map(([k,c])=>{ const v=DATA.aba1.receitas[k][current],p=inV?v/inV*100:0;
+    return `<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--txt-dim);padding:4px 0"><span style="width:9px;height:9px;border-radius:3px;background:${c.color}"></span>${c.name}<span style="margin-left:auto;color:var(--txt);font-weight:600">${balanceHidden?'••••':BRL0(v)} <span style="color:var(--txt-faint);font-weight:400">${p.toFixed(0)}%</span></span></div>`; }).join(''); }
+function renderExpMini(){ const out=expMonth(current);
+  document.getElementById('expMini').innerHTML=Object.entries(GROUPS).map(([k,g])=>{ const v=groupTotal(k,current),p=out?v/out*100:0;
+    return `<div class="cat-row"><div class="cat-icon" style="background:${g.color}22">${g.ic}</div><div class="cat-info"><div class="cat-name">${g.name}</div><div class="cat-bar"><div style="height:100%;width:${p}%;background:${g.color};border-radius:20px"></div></div></div><div class="cat-amount"><div class="v">${balanceHidden?'••••':BRL0(v)}</div><div class="p">${p.toFixed(0)}%</div></div></div>`; }).join(''); }
+function renderStuMini(){ const rh=ALUNOS.filter(a=>a.grupo==='RHINO'&&a.ativo), fw=ALUNOS.filter(a=>a.grupo==='FRAMEWORK'&&a.ativo);
+  const rhR=rh.reduce((s,a)=>s+a.total,0), fwR=fw.reduce((s,a)=>s+a.total,0);
+  document.getElementById('stuMini').innerHTML=[['Mentoria Rhino',rh.length,rhR,'var(--gold)'],['Mentoria Framework',fw.length,fwR,'var(--indigo)']].map(([n,c,r,col])=>`<div class="cat-row"><div class="cat-icon" style="background:${col}22;color:${col};font-weight:800;font-size:15px">${c}</div><div class="cat-info"><div class="cat-name">${n}</div><div style="font-size:11.5px;color:var(--txt-faint);margin-top:2px">${c} alunos ativos</div></div><div class="cat-amount"><div class="v">${balanceHidden?'••••':BRL0(r)}</div><div class="p">recebido</div></div></div>`).join(''); }
+function flowStrip(pays){ const max=Math.max(...pays.slice(0,12),1);
+  return `<div class="flowstrip">${pays.slice(0,12).map((v,i)=>{ const h=v>0?Math.max(18,v/max*100):6; const col=v>0?(i===current?'var(--gold)':'var(--indigo)'):'var(--line)'; return `<i style="height:${h}%;background:${col}" title="${MSHORT[i]}: ${v>0?BRL0(v):'-'}"></i>`; }).join('')}</div>`; }
+function renderStudents(){ let list=[...ALUNOS];
+  if(stuFilter==='rhino') list=list.filter(a=>a.grupo==='RHINO'); else if(stuFilter==='fw') list=list.filter(a=>a.grupo==='FRAMEWORK'); else if(stuFilter==='active') list=list.filter(a=>a.ativo);
+  list.sort((a,b)=>(b.ativo-a.ativo)||(b.total-a.total));
+  const ativos=ALUNOS.filter(a=>a.ativo), canc=ALUNOS.filter(a=>a.cancel), totalRecv=ALUNOS.reduce((s,a)=>s+a.total,0);
+  const mens=ativos.map(a=>a.mensal).filter(v=>v>0).sort((a,b)=>a-b); const ticket=mens.length?mens[Math.floor(mens.length/2)]:0;
+  set('sActive',ativos.length); document.getElementById('sActiveFoot').textContent=`${ALUNOS.length} no total`;
+  set('sRecv',balanceHidden?'••••':BRL0(totalRecv)); set('sTicket',balanceHidden?'••••':BRL0(ticket)); set('sCancel',canc.length);
+  document.getElementById('stuSub').textContent=`· ${list.length} exibidos`;
+  document.getElementById('stuTable').innerHTML=list.map(a=>{
+    const st=a.cancel?`<span class="status-tag st-cancel">Cancelado</span>`:a.ativo?`<span class="status-tag st-active">Ativo</span>`:`<span class="status-tag st-paused">Inativo</span>`;
+    const pg=a.grupo==='RHINO'?`<span class="prog-tag pg-rhino">Rhino</span>`:`<span class="prog-tag pg-fw">Framework</span>`;
+    return `<tr><td class="t-desc">${a.nome}</td><td>${pg}</td><td>${st}</td><td>${flowStrip(a.pays)}</td><td style="text-align:right"><span class="num" style="color:var(--txt-dim)">${a.mensal>0?BRL0(a.mensal):'—'}</span></td><td style="text-align:right"><span class="val-in">${balanceHidden?'••••':BRL0(a.total)}</span></td></tr>`; }).join('')
+    || `<tr><td class="empty" colspan="6">Nenhum aluno neste filtro</td></tr>`; }
+function filterStu(f,el){ stuFilter=f; document.querySelectorAll('#view-students .tab').forEach(t=>t.classList.remove('on')); el.classList.add('on'); renderStudents(); }
+function renderExpenses(){ const out=expMonth(current);
+  document.getElementById('expGroups').innerHTML=Object.entries(GROUPS).map(([k,g])=>{ const v=groupTotal(k,current),p=out?v/out*100:0;
+    return `<div class="cat-row"><div class="cat-icon" style="background:${g.color}22">${g.ic}</div><div class="cat-info"><div class="cat-name">${g.name}</div><div class="cat-bar"><div style="height:100%;width:${p}%;background:${g.color};border-radius:20px"></div></div></div><div class="cat-amount"><div class="v">${balanceHidden?'••••':BRL0(v)}</div><div class="p">${p.toFixed(0)}%</div></div></div>`; }).join('');
+  let rows=[]; Object.entries(GROUPS).forEach(([k,g])=>{ (DATA.aba1.itens[k]||[]).forEach(it=>{ const v=it.vals[current]; if(v>0) rows.push({nome:it.nome,grupo:g.name,color:g.color,v}); }); });
+  rows.sort((a,b)=>b.v-a.v);
+  const emp=expEmpresa(current), pes=expPessoa(current);
+  document.getElementById('expSub').textContent=`· ${MFULL[current]} · empresa ${BRL0(emp)} · pessoal ${BRL0(pes)}`;
+  document.getElementById('expTable').innerHTML=rows.length?rows.map(r=>{ const cls=classify(r.nome), isEmp=cls==='empresa';
+    const tag=`<span class="prog-tag ${isEmp?'pg-fw':'pg-rhino'} flip" onclick="flipClassify('${r.nome.replace(/'/g,"\\'")}')" title="clique para trocar">${isEmp?'Empresa':'Pessoal'}</span>`;
+    return `<tr><td class="t-desc">${r.nome}</td><td><span class="cat-tag"><span class="cat-dot" style="background:${r.color}"></span>${r.grupo}</span></td><td>${tag}</td><td style="text-align:right"><span class="val-out">${BRL0(r.v)}</span></td></tr>`; }).join(''):`<tr><td class="empty" colspan="4">Sem lançamentos detalhados neste mês</td></tr>`; }
+function renderMonthly(){ document.getElementById('monthlyTable').innerHTML=ACTIVE_MONTHS.map(i=>{ const inV=revMonth(i),outV=expMonth(i),r=inV-outV,mg=inV?r/inV*100:0,meta=DATA.aba1.meta_objetivo[i]||0,hit=meta?inV/meta*100:0;
+  return `<tr><td class="t-desc">${MSHORT[i]}</td><td><span class="val-in">${BRL0(inV)}</span></td><td><span class="val-out">${BRL0(outV)}</span></td><td><span class="val-${r>=0?'in':'out'}">${BRLs(r)}</span></td><td><b style="color:var(--gold)">${mg.toFixed(1)}%</b></td><td>${meta?`<span style="color:${hit>=100?'var(--up)':'var(--txt-dim)'}">${hit.toFixed(0)}% de ${BRL0(meta)}</span>`:'<span style="color:var(--txt-faint)">—</span>'}</td></tr>`; }).join(''); }
+function renderGoals(){ const inV=revMonth(current),meta=DATA.aba1.meta_objetivo[current]||0;
+  const goals=[{name:`Meta de faturamento · ${MSHORT[current]}`,cur:inV,target:meta||60000,color:'var(--indigo)'},
+    {name:'Receita Framework no ano',cur:DATA.aba1.receitas.framework.reduce((s,v)=>s+v,0),target:300000,color:'var(--gold)'},
+    {name:'Margem do mês',cur:Math.max(0,resMonth(current)),target:inV*0.35,color:'var(--up)'}];
+  document.getElementById('goalsWrap').innerHTML=goals.map(g=>{ const p=Math.min(100,g.target?g.cur/g.target*100:0);
+    return `<div class="goal"><div class="goal-top"><span class="goal-name">${g.name}</span><span class="goal-val">${balanceHidden?'••••':BRL0(g.cur)} <span style="color:var(--txt-faint)">/ ${BRL0(g.target)}</span></span></div><div class="bar"><div class="bar-fill" style="width:${p}%;background:${g.color}"></div></div></div>`; }).join(''); }
+function renderInsights(){ const inV=revMonth(current),outV=expMonth(current),resV=resMonth(current),margin=inV?resV/inV*100:0;
+  const prev=current>0?resMonth(current-1):resV,g=prev?((resV-prev)/Math.abs(prev)*100):0;
+  const gs=Object.entries(GROUPS).map(([k,gr])=>[gr.name,groupTotal(k,current)]).sort((a,b)=>b[1]-a[1]);
+  const ativos=ALUNOS.filter(a=>a.ativo),canc=ALUNOS.filter(a=>a.cancel);
+  const fwShare=inV?DATA.aba1.receitas.framework[current]/inV*100:0, consShare=inV?DATA.aba1.receitas.consultoria[current]/inV*100:0;
+  let best=ACTIVE_MONTHS[0]; ACTIVE_MONTHS.forEach(i=>{ if(revMonth(i)>revMonth(best)) best=i; });
+  const ins=[
+    {c:'var(--up)',bg:'var(--up-soft)',ic:'M12 19V5M5 12l7-7 7 7',h:'Resultado do mês',p:`Em ${MFULL[current]} entrou <b>${BRL0(inV)}</b> e saiu <b>${BRL0(outV)}</b>, sobrando <b>${BRLs(resV)}</b> (margem de <b>${margin.toFixed(1)}%</b>). ${g>=0?`Melhorou <b>+${g.toFixed(0)}%</b> vs o mês anterior.`:`Caiu <b>${g.toFixed(0)}%</b> vs o mês anterior — olho nas saídas.`}`},
+    {c:'var(--indigo)',bg:'var(--indigo-soft)',ic:'M3 17l5-5 4 3 8-8',h:'A Framework carrega a receita',p:`A Mentoria Framework foi <b>${fwShare.toFixed(0)}%</b> da receita do mês (${BRL0(DATA.aba1.receitas.framework[current])}), contra <b>${consShare.toFixed(0)}%</b> da consultoria. O produto de escala é o motor principal.`},
+    {c:'var(--down)',bg:'var(--down-soft)',ic:'M12 5v14M5 12l7 7 7-7',h:'Maior peso nas despesas',p:`<b>${gs[0][0]}</b> consumiu <b>${BRL0(gs[0][1])}</b> (${(gs[0][1]/outV*100).toFixed(0)}% das saídas). Primeiro lugar pra revisar se quiser proteger a margem.`},
+    {c:'var(--gold)',bg:'var(--gold-soft)',ic:'M12 8v4l3 2',h:'Base de alunos',p:`Você tem <b>${ativos.length}</b> alunos ativos e <b>${canc.length}</b> cancelamentos no período. Melhor mês de receita até agora: <b>${MFULL[best]}</b>, com <b>${BRL0(revMonth(best))}</b>.`}];
+  document.getElementById('insights').innerHTML=ins.map(i=>`<div class="insight"><div class="insight-ic" style="background:${i.bg};color:${i.c}"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="${i.ic}"/></svg></div><div><h4>${i.h}</h4><p>${i.p}</p></div></div>`).join(''); }
+
+/* ================= CHARTS ================= */
+Chart.defaults.font.family="'Inter',sans-serif"; Chart.defaults.color='#5A6788'; const grid='rgba(255,255,255,.05)';
+function drawCharts(){ Object.values(charts).forEach(c=>c&&c.destroy());
+  const labels=ACTIVE_MONTHS.map(i=>MSHORT[i]), ins=ACTIVE_MONTHS.map(revMonth), outs=ACTIVE_MONTHS.map(expMonth), res=ACTIVE_MONTHS.map(resMonth), accs=ACTIVE_MONTHS.map(acc);
+  const ring=(id,data,colors,cut='72%')=>{ const el=document.getElementById(id); if(!el) return; charts[id]=new Chart(el,{type:'doughnut',data:{datasets:[{data,backgroundColor:colors,borderColor:'#111725',borderWidth:2,hoverOffset:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:cut,plugins:{legend:{display:false},tooltip:{enabled:false}}}}); };
+  const at=ALUNOS.filter(a=>a.ativo); ring('stuDonut',[at.filter(a=>a.grupo==='RHINO').length||0.001,at.filter(a=>a.grupo==='FRAMEWORK').length||0.001],['#E8B24B','#6C7BF2']);
+  const rq=[DATA.aba1.receitas.consultoria[current],DATA.aba1.receitas.mentoria[current],DATA.aba1.receitas.framework[current]]; ring('revMiniDonut',rq.map(x=>x||0.001),['#38D399','#E8B24B','#6C7BF2']);
+  const rv=revMonth(current),rs=Math.max(0,resMonth(current)); ring('resMiniDonut',[rs||0.001,Math.max(0.001,rv-rs)],['#E8B24B','#222C42']);
+  // gauge de meta
+  const meta=DATA.aba1.meta_objetivo[current]||60000, real=revMonth(current), done=Math.min(real,meta), rem=Math.max(0,meta-real);
+  const mg=document.getElementById('metaGauge'); if(mg) charts.metaGauge=new Chart(mg,{type:'doughnut',data:{datasets:[{data:[done,rem||(real>=meta?0.001:0)],backgroundColor:[real>=meta?'#38D399':'#E8B24B','#1A2236'],borderColor:'#111725',borderWidth:2,circumference:270,rotation:225}]},options:{responsive:true,maintainAspectRatio:false,cutout:'74%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+  // split empresa x pessoal
+  const emp=expEmpresa(current),pes=expPessoa(current); const sd=document.getElementById('splitDonut');
+  if(sd) charts.split=new Chart(sd,{type:'doughnut',data:{labels:['Empresa','Pessoal'],datasets:[{data:[emp||0.001,pes||0.001],backgroundColor:['#6C7BF2','#FF6B5D'],borderColor:'#111725',borderWidth:3,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${BRL0(c.raw)}`}}}}});
+  const rc=document.getElementById('revChart'); const rvals=[DATA.aba1.receitas.consultoria[current],DATA.aba1.receitas.mentoria[current],DATA.aba1.receitas.framework[current]];
+  charts.rev=new Chart(rc,{type:'doughnut',data:{labels:['Consultoria','Mentoria Rhino','Framework'],datasets:[{data:rvals,backgroundColor:['#38D399','#E8B24B','#6C7BF2'],borderColor:'#111725',borderWidth:3,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'66%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${BRL0(c.raw)}`}}}}});
+  const cc=document.getElementById('cumChart'); if(cc) charts.cum=new Chart(cc,{type:'line',data:{labels,datasets:[{label:'Acumulado',data:accs,borderColor:'#E8B24B',borderWidth:3,tension:.35,pointRadius:4,pointBackgroundColor:'#E8B24B',fill:true,backgroundColor:c=>{const gg=c.chart.ctx.createLinearGradient(0,0,0,300);gg.addColorStop(0,'rgba(232,178,75,.25)');gg.addColorStop(1,'rgba(232,178,75,0)');return gg;}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${BRLs(c.raw)}`}}},scales:{x:{grid:{display:false}},y:{grid:{color:grid},ticks:{callback:v=>'R$'+(v/1000)+'k'}}}}});
+  const ed=document.getElementById('expDonut'); if(ed){ const evals=Object.keys(GROUPS).map(k=>groupTotal(k,current));
+    charts.exp=new Chart(ed,{type:'doughnut',data:{labels:Object.values(GROUPS).map(g=>g.name),datasets:[{data:evals,backgroundColor:Object.values(GROUPS).map(g=>g.color),borderColor:'#111725',borderWidth:3,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.label}: ${BRL0(c.raw)}`}}}}});
+    document.getElementById('expDonutLegend').innerHTML=Object.entries(GROUPS).map(([k,g])=>{ const v=groupTotal(k,current); return `<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--txt-dim);padding:3px 0"><span style="width:9px;height:9px;border-radius:3px;background:${g.color}"></span>${g.name}<span style="margin-left:auto;color:var(--txt);font-weight:600">${balanceHidden?'••••':BRL0(v)}</span></div>`; }).join(''); }
+  const gc=document.getElementById('goalChart'); if(gc){ const obj=ACTIVE_MONTHS.map(i=>DATA.aba1.meta_objetivo[i]||0);
+    charts.goal=new Chart(gc,{data:{labels,datasets:[{type:'bar',label:'Objetivo',data:obj,backgroundColor:'rgba(108,123,242,.35)',borderColor:'#6C7BF2',borderWidth:1.5,borderRadius:6,barPercentage:.7,categoryPercentage:.7},{type:'bar',label:'Realizado',data:ins,backgroundColor:'#E8B24B',borderRadius:6,barPercentage:.7,categoryPercentage:.7}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${BRL0(c.raw)}`}}},scales:{x:{grid:{display:false}},y:{grid:{color:grid},ticks:{callback:v=>'R$'+(v/1000)+'k'}}}}}); } }
+
+/* ================= NAV / UI ================= */
+const TITLES={overview:['Visão Geral','Panorama consolidado'],cashflow:['Fluxo de Caixa','Receita, despesa e resultado mês a mês'],students:['Alunos & Fluxo','Todos os alunos e fluxo de pagamento'],expenses:['Despesas','Grupos e lançamentos do mês'],goals:['Metas','Objetivo x realizado ao longo do ano'],copilot:['Copiloto','Análise automática e conexão']};
+function go(v){ document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===v));
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+v));
+  document.getElementById('pageTitle').textContent=TITLES[v][0]; document.getElementById('pageSub').textContent=TITLES[v][1];
+  document.getElementById('sidebar').classList.remove('open'); window.scrollTo({top:0,behavior:'smooth'}); setTimeout(drawCharts,60); }
+document.getElementById('nav').addEventListener('click',e=>{const it=e.target.closest('.nav-item');if(it)go(it.dataset.view)});
+function switchMonth(m){current=m;render();}
+function toggleBalance(){ balanceHidden=!balanceHidden; render(); }
+boot();
+</script>
+</body>
+</html>
