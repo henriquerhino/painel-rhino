@@ -3,24 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Team Rhino • Lançamentos</title>
+<title>Team Rhino • Painel & Lançamentos</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0A0D14;--panel:#111725;--panel-2:#161E30;--line:#222C42;--line-soft:#1A2236;--txt:#EAF0FA;--txt-dim:#8A96B0;--txt-faint:#5A6788;--gold:#E8B24B;--up:#38D399;--up-soft:rgba(56,211,153,.13);--down:#FF6B5D;--down-soft:rgba(255,107,93,.13);--indigo:#6C7BF2;--indigo-soft:rgba(108,123,242,.14);--radius:14px}
+  :root{--bg:#0A0D14;--panel:#111725;--panel-2:#161E30;--line:#222C42;--line-soft:#1A2236;--txt:#EAF0FA;--txt-dim:#8A96B0;--txt-faint:#5A6788;--gold:#E8B24B;--gold-soft:rgba(232,178,75,.14);--up:#38D399;--up-soft:rgba(56,211,153,.13);--down:#FF6B5D;--down-soft:rgba(255,107,93,.13);--indigo:#6C7BF2;--indigo-soft:rgba(108,123,242,.14);--radius:14px}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;min-height:100vh}
   body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(900px 500px at 12% -8%,rgba(108,123,242,.10),transparent 60%),radial-gradient(800px 500px at 100% 0%,rgba(232,178,75,.06),transparent 55%)}
   h1,h2,h3,.num{font-family:'Sora',sans-serif}.num{font-variant-numeric:tabular-nums}
-  .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:22px 20px 60px}
-  /* LOGIN */
+  .wrap{position:relative;z-index:1;max-width:1160px;margin:0 auto;padding:22px 20px 60px}
   .login{min-height:100vh;display:grid;place-items:center;position:relative;z-index:1;padding:20px}
   .login-card{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
   .login-mark{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,var(--gold),#C98A1E);display:grid;place-items:center;font-size:24px;margin-bottom:18px}
   .login h1{font-size:20px;font-weight:700}.login p{font-size:13px;color:var(--txt-dim);margin:4px 0 22px}
-  label{display:block;font-size:12.5px;color:var(--txt-dim);font-weight:600;margin:14px 0 6px}
-  input,select{width:100%;padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--txt);font:inherit;outline:none}
+  label{display:block;font-size:12px;color:var(--txt-dim);font-weight:600;margin:0 0 6px}
+  input,select{width:100%;padding:11px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--txt);font:inherit;outline:none}
   input:focus,select:focus{border-color:var(--indigo)}
   select option{background:var(--panel)}
   .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:10px;border:none;background:var(--gold);color:#1a1305;font:inherit;font-weight:700;cursor:pointer;transition:.15s}
@@ -28,17 +28,20 @@
   .btn-full{width:100%;margin-top:22px}
   .btn-ghost{background:var(--panel);border:1px solid var(--line);color:var(--txt)}
   .btn-sm{padding:8px 12px;font-size:13px}
-  .msg{font-size:12.5px;padding:10px 12px;border-radius:9px;margin-top:14px;display:none}
+  .msg{font-size:12.5px;padding:10px 12px;border-radius:9px;margin:14px 0 0;display:none}
   .msg.err{display:block;background:var(--down-soft);color:var(--down);border:1px solid rgba(255,107,93,.3)}
   .msg.ok{display:block;background:var(--up-soft);color:var(--up);border:1px solid rgba(56,211,153,.3)}
-  /* APP */
   .app{display:none}
-  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
   .brand{display:flex;align-items:center;gap:11px}
   .brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--gold),#C98A1E);display:grid;place-items:center;font-size:20px}
   .brand-name{font-family:'Sora';font-weight:700;font-size:15px}.brand-sub{font-size:11px;color:var(--txt-faint)}
-  .spacer{flex:1}
-  .who{font-size:12.5px;color:var(--txt-dim)}
+  .spacer{flex:1}.who{font-size:12.5px;color:var(--txt-dim)}
+  .month{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:600;font-size:13px}
+  .month select{border:none;background:transparent;padding:0;width:auto}
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+  .seg button{padding:7px 13px;border-radius:8px;border:none;background:transparent;color:var(--txt-dim);font:inherit;font-weight:600;font-size:12.5px;cursor:pointer;transition:.15s}
+  .seg button.on{background:var(--indigo-soft);color:#fff}
   .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:22px;flex-wrap:wrap}
   .tab{padding:9px 16px;border-radius:9px;border:none;background:transparent;color:var(--txt-dim);font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;transition:.15s}
   .tab.on{background:var(--indigo-soft);color:#fff}
@@ -46,260 +49,364 @@
   @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
   .card{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px;margin-bottom:18px}
   .card-title{font-size:15px;font-weight:600;margin-bottom:16px}
+  .card-title span{color:var(--txt-faint);font-weight:400;font-size:12.5px}
   .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
   @media(max-width:720px){.kpis{grid-template-columns:1fr 1fr}}
-  .kpi{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden}
+  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--edge,transparent)}
+  .kpi.in{--edge:var(--up)}.kpi.out{--edge:var(--down)}.kpi.res{--edge:var(--gold)}.kpi.due{--edge:var(--indigo)}
   .kpi-l{font-size:12px;color:var(--txt-dim)}.kpi-v{font-size:22px;font-weight:800;font-family:'Sora';margin-top:4px;font-variant-numeric:tabular-nums}.kpi-f{font-size:11px;color:var(--txt-faint);margin-top:3px}
-  .form-grid{display:grid;grid-template-columns:130px 1fr 1fr 130px;gap:12px;align-items:end}
+  .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:18px}
+  .grid2b{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+  @media(max-width:800px){.grid2,.grid2b{grid-template-columns:1fr}}
+  .chart-wrap{position:relative;height:250px}.chart-sm{height:210px}.chart-lg{height:280px}
+  .gauge-wrap{position:relative;height:180px;display:grid;place-items:center}
+  .gauge-ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+  .gauge-pct{font-family:'Sora';font-weight:800;font-size:32px}.gauge-sub{font-size:12px;color:var(--txt-dim);margin-top:2px}
+  .legend-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--txt-dim);padding:4px 0}
+  .legend-row .d{width:9px;height:9px;border-radius:3px}.legend-row b{margin-left:auto;color:var(--txt)}
+  .alert{display:flex;gap:11px;padding:12px 14px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line-soft);margin-bottom:9px}
+  .alert-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;font-size:14px}
+  .alert-tx{font-size:12.5px;color:var(--txt-dim);line-height:1.5}.alert-tx b{color:var(--txt)}
+  .form-grid{display:grid;grid-template-columns:120px 1fr 1fr 120px;gap:12px;align-items:end}
   @media(max-width:720px){.form-grid{grid-template-columns:1fr 1fr}}
   .form-grid .full{grid-column:1/-1}
   table{width:100%;border-collapse:collapse}
-  th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--txt-faint);font-weight:600;padding:0 10px 10px;border-bottom:1px solid var(--line-soft)}
-  td{padding:11px 10px;border-bottom:1px solid var(--line-soft);font-size:13.5px}
+  th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--txt-faint);font-weight:600;padding:0 10px 10px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+  td{padding:10px;border-bottom:1px solid var(--line-soft);font-size:13px;vertical-align:middle}
   tr:last-child td{border-bottom:none}
   .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
   .pill-in{background:var(--up-soft);color:var(--up)}.pill-out{background:var(--down-soft);color:var(--down)}
   .pill-emp{background:var(--indigo-soft);color:var(--indigo)}.pill-pes{background:var(--down-soft);color:var(--down)}
+  .pill-pago{background:var(--up-soft);color:var(--up);cursor:pointer}.pill-pend{background:var(--gold-soft);color:var(--gold);cursor:pointer}
   .val-in{color:var(--up);font-weight:700}.val-out{color:var(--down);font-weight:700}
-  .mini{width:66px;padding:7px;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--txt);font:inherit;font-weight:700;font-variant-numeric:tabular-nums}
+  .mini{width:58px;padding:7px;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--txt);font:inherit;font-weight:700;font-variant-numeric:tabular-nums}
+  .selrow{padding:6px 8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--txt);font:inherit;font-size:12.5px;width:auto}
   .x{cursor:pointer;color:var(--txt-faint);font-weight:700;padding:4px 8px;border-radius:6px}.x:hover{background:var(--down-soft);color:var(--down)}
   .empty{text-align:center;color:var(--txt-faint);padding:30px}
-  .loading{text-align:center;color:var(--txt-dim);padding:40px}
-  .month{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:600;font-size:13px}
-  .month select{border:none;background:transparent;padding:0;width:auto}
   .chk{width:auto;cursor:pointer}
-  .bar{height:7px;border-radius:20px;background:var(--line);overflow:hidden;min-width:80px}.bar>i{display:block;height:100%;border-radius:20px}
+  .bar{height:7px;border-radius:20px;background:var(--line);overflow:hidden;min-width:70px}.bar>i{display:block;height:100%;border-radius:20px}
+  .switch-lbl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--txt-dim)}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div class="login" id="loginView">
   <div class="login-card">
     <div class="login-mark">🦏</div>
     <h1>Painel Team Rhino</h1>
-    <p>Entre para lançar e acompanhar os números.</p>
+    <p>Entre para acompanhar e lançar os números.</p>
     <label>E-mail</label>
     <input id="email" type="email" autocomplete="username" placeholder="voce@email.com">
-    <label>Senha</label>
+    <label style="margin-top:14px">Senha</label>
     <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="btn btn-full" id="loginBtn" onclick="doLogin()">Entrar</button>
     <div class="msg" id="loginMsg"></div>
   </div>
 </div>
 
-<!-- APP -->
 <div class="app wrap" id="appView">
   <div class="topbar">
-    <div class="brand"><div class="brand-mark">🦏</div><div><div class="brand-name">Painel Team Rhino</div><div class="brand-sub">Lançamentos & Calls</div></div></div>
+    <div class="brand"><div class="brand-mark">🦏</div><div><div class="brand-name">Painel Team Rhino</div><div class="brand-sub">Framework & Mentoria Rhino</div></div></div>
     <div class="spacer"></div>
+    <div class="seg" id="scopeSeg"><button class="on" data-s="tudo" onclick="setScope('tudo',this)">Tudo</button><button data-s="empresa" onclick="setScope('empresa',this)">Empresa</button><button data-s="pessoal" onclick="setScope('pessoal',this)">Pessoal</button></div>
     <div class="month"><span style="color:var(--txt-dim)">Mês</span><select id="monthSel" onchange="renderAll()"></select></div>
     <span class="who" id="whoAmI"></span>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sair</button>
   </div>
-
   <div class="msg" id="appMsg"></div>
-
   <div class="tabs">
-    <button class="tab on" data-v="resumo" onclick="tab('resumo',this)">Resumo</button>
+    <button class="tab on" data-v="dash" onclick="tab('dash',this)">Dashboard</button>
     <button class="tab" data-v="lanc" onclick="tab('lanc',this)">Lançamentos</button>
+    <button class="tab" data-v="fixos" onclick="tab('fixos',this)">Fixos</button>
     <button class="tab" data-v="alunos" onclick="tab('alunos',this)">Alunos &amp; Calls</button>
   </div>
 
-  <!-- RESUMO -->
-  <section class="view on" id="v-resumo">
+  <section class="view on" id="v-dash">
     <div class="kpis">
-      <div class="kpi"><div class="kpi-l">Faturamento do mês</div><div class="kpi-v num" id="kFat">—</div><div class="kpi-f" id="kFatF"></div></div>
-      <div class="kpi"><div class="kpi-l">Despesa do mês</div><div class="kpi-v num" id="kDesp">—</div><div class="kpi-f" id="kDespF"></div></div>
-      <div class="kpi"><div class="kpi-l">Resultado</div><div class="kpi-v num" id="kRes">—</div><div class="kpi-f" id="kResF"></div></div>
-      <div class="kpi"><div class="kpi-l">Calls a fazer</div><div class="kpi-v num" id="kCalls">—</div><div class="kpi-f" id="kCallsF"></div></div>
+      <div class="kpi in"><div class="kpi-l">Recebimentos</div><div class="kpi-v num" id="kFat">—</div><div class="kpi-f" id="kFatF"></div></div>
+      <div class="kpi out"><div class="kpi-l">Gastos</div><div class="kpi-v num" id="kDesp">—</div><div class="kpi-f" id="kDespF"></div></div>
+      <div class="kpi res"><div class="kpi-l">Resultado</div><div class="kpi-v num" id="kRes">—</div><div class="kpi-f" id="kResF"></div></div>
+      <div class="kpi due"><div class="kpi-l">A pagar no mês</div><div class="kpi-v num" id="kDue">—</div><div class="kpi-f" id="kDueF"></div></div>
     </div>
-    <div class="card">
-      <div class="card-title">Alunos e movimento</div>
-      <div id="resumoBody" class="loading">Carregando…</div>
+    <div class="card"><div class="card-title">Evolução do saldo <span>· acumulado no mês, dia a dia</span></div><div class="chart-wrap chart-lg"><canvas id="saldoChart"></canvas></div></div>
+    <div class="grid2">
+      <div class="card"><div class="card-title">Fluxo de caixa <span>· 2026</span></div><div class="chart-wrap"><canvas id="flowChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Meta do mês</div><div class="gauge-wrap"><canvas id="metaGauge"></canvas><div class="gauge-ctr"><div class="gauge-pct" id="metaPct">0%</div><div class="gauge-sub" id="metaGap"></div></div></div></div>
     </div>
+    <div class="grid2b">
+      <div class="card"><div class="card-title">Empresa x Pessoal <span>· despesas do mês</span></div><div class="chart-wrap chart-sm"><canvas id="splitChart"></canvas></div><div id="splitLegend" style="margin-top:8px"></div></div>
+      <div class="card"><div class="card-title">Receita por origem <span>· mês</span></div><div class="chart-wrap chart-sm"><canvas id="revChart"></canvas></div><div id="revLegend" style="margin-top:8px"></div></div>
+    </div>
+    <div class="card"><div class="card-title">Alertas</div><div id="alerts"></div></div>
+    <div class="card" style="background:var(--panel-2)"><div style="font-size:12px;color:var(--txt-faint);line-height:1.6"><b style="color:var(--txt-dim)">Próximos do Finest (é só pedir):</b> gastos fixos com recorrência automática (repetem todo mês), cartões de crédito com parcelamento, e seções de bancos / cofrinhos / investimentos.</div></div>
   </section>
 
-  <!-- LANÇAMENTOS -->
   <section class="view" id="v-lanc">
     <div class="card">
-      <div class="card-title">Novo lançamento</div>
+      <div class="card-title">Novo lançamento <span>· receita de consultoria/avulsa não precisa de aluno</span></div>
       <div class="form-grid">
         <div><label>Data</label><input id="fData" type="date"></div>
         <div><label>Tipo</label><select id="fTipo" onchange="updateCatOptions()"><option value="entrada">Entrada</option><option value="despesa">Despesa</option></select></div>
-        <div><label>Categoria</label><select id="fCat"></select></div>
+        <div><label>Categoria</label><select id="fCat" onchange="suggestEscopo()"></select></div>
         <div><label>Escopo</label><select id="fEscopo"><option value="empresa">Empresa</option><option value="pessoal">Pessoal</option></select></div>
-        <div class="full"><label>Descrição (opcional)</label><input id="fDesc" placeholder="ex.: mensalidade Framework — Bruno"></div>
+        <div class="full"><label>Descrição (opcional)</label><input id="fDesc" placeholder="ex.: consultoria João · aula avulsa · aluguel"></div>
         <div><label>Valor (R$)</label><input id="fValor" type="number" step="0.01" min="0" placeholder="0,00"></div>
-        <div style="grid-column:2/-1;display:flex;align-items:end"><button class="btn" style="width:100%" id="addBtn" onclick="addLanc()">Adicionar lançamento</button></div>
+        <div class="switch-lbl" style="align-self:end;padding-bottom:11px"><input class="chk" id="fPago" type="checkbox" checked><label style="margin:0">Já pago / quitado</label></div>
+        <div style="display:flex;align-items:end"><button class="btn" style="width:100%" id="addBtn" onclick="addLanc()">Adicionar</button></div>
       </div>
       <div class="msg" id="lancMsg"></div>
     </div>
     <div class="card">
       <div class="card-title" id="lancListTitle">Lançamentos do mês</div>
-      <div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Escopo</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody id="lancTable"></tbody></table></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Escopo</th><th style="text-align:center">Status</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody id="lancTable"></tbody></table></div>
     </div>
   </section>
 
-  <!-- ALUNOS -->
+  <section class="view" id="v-fixos">
+    <div class="card" id="gerarCard" style="display:none;border-color:rgba(232,178,75,.35);background:linear-gradient(180deg,var(--gold-soft),transparent)">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        <div style="font-size:22px">🔁</div>
+        <div style="flex:1;min-width:200px"><div style="font-weight:700;font-size:14px" id="gerarTitle"></div><div style="font-size:12.5px;color:var(--txt-dim)" id="gerarSub"></div></div>
+        <button class="btn" id="gerarBtn" onclick="gerarMes()">Gerar lançamentos do mês</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Novo gasto/recebimento fixo <span>· cadastre uma vez, repete todo mês</span></div>
+      <div class="form-grid">
+        <div><label>Tipo</label><select id="rTipo" onchange="updateRecCat()"><option value="despesa">Despesa</option><option value="entrada">Entrada</option></select></div>
+        <div><label>Categoria</label><select id="rCat"></select></div>
+        <div><label>Descrição</label><input id="rDesc" placeholder="ex.: Aluguel · Ana · Ferramentas"></div>
+        <div><label>Dia venc.</label><input id="rDia" type="number" min="1" max="31" placeholder="10"></div>
+        <div><label>Valor (R$)</label><input id="rValor" type="number" step="0.01" min="0" placeholder="0,00"></div>
+        <div><label>Escopo</label><select id="rEscopo"><option value="empresa">Empresa</option><option value="pessoal">Pessoal</option></select></div>
+        <div style="grid-column:3/-1;display:flex;align-items:end"><button class="btn" style="width:100%" id="rAddBtn" onclick="addRec()">Adicionar fixo</button></div>
+      </div>
+      <div class="msg" id="recMsg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Fixos cadastrados <span>· ✕ remove · desmarque para pausar</span></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Descrição</th><th>Tipo</th><th>Categoria</th><th>Escopo</th><th style="text-align:center">Dia</th><th style="text-align:right">Valor</th><th style="text-align:center">Ativo</th><th style="text-align:center" id="recMesTh">Este mês</th><th></th></tr></thead><tbody id="recTable"></tbody></table></div>
+    </div>
+  </section>
+
   <section class="view" id="v-alunos">
     <div class="card">
-      <div class="card-title">Alunos &amp; Calls <span style="color:var(--txt-faint);font-weight:400;font-size:12.5px">· edite direto nas caixas, salva automático</span></div>
-      <div style="overflow-x:auto"><table><thead><tr><th>Aluno</th><th>Programa</th><th style="text-align:center">Ativo</th><th style="text-align:right">Mensalidade</th><th style="text-align:center">Calls contr.</th><th style="text-align:center">Feitas</th><th style="min-width:90px">Progresso</th><th style="text-align:center">Faltam</th></tr></thead><tbody id="alunosTable"></tbody></table></div>
+      <div class="card-title">Novo aluno</div>
+      <div class="form-grid">
+        <div><label>Nome</label><input id="aNome" placeholder="Nome do aluno"></div>
+        <div><label>Programa</label><select id="aProg"><option value="framework">Framework</option><option value="rhino">Mentoria Rhino</option></select></div>
+        <div><label>Mensalidade</label><input id="aMens" type="number" step="0.01" min="0" placeholder="0,00"></div>
+        <div><label>Vencimento (dia)</label><input id="aVenc" type="number" min="1" max="31" placeholder="ex.: 10"></div>
+        <div class="switch-lbl" style="padding-bottom:2px"><input class="chk" id="aCall" type="checkbox"><label style="margin:0">Tem call mensal</label></div>
+        <div style="grid-column:2/-1;display:flex;align-items:end"><button class="btn" style="width:100%" id="aAddBtn" onclick="addAluno()">Adicionar aluno</button></div>
+      </div>
+      <div class="msg" id="alunoMsg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Alunos &amp; Calls <span>· edite direto, salva automático · ✕ remove</span></div>
+      <div class="tabs" style="margin-bottom:16px"><button class="tab on" data-af="ativos" onclick="filterAlunos('ativos',this)">Ativos</button><button class="tab" data-af="todos" onclick="filterAlunos('todos',this)">Todos</button></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Aluno</th><th>Programa</th><th style="text-align:center">Ativo</th><th style="text-align:center">Venc.</th><th style="text-align:right">Mensal.</th><th style="text-align:center">Call</th><th style="text-align:center">Contr.</th><th style="text-align:center">Feitas</th><th style="min-width:80px">Prog.</th><th style="text-align:center">Faltam</th><th></th></tr></thead><tbody id="alunosTable"></tbody></table></div>
     </div>
   </section>
 </div>
 
 <script>
-/* ===== CONFIG ===== */
-const SB_URL = 'https://fcwxkelokmqwmivjembv.supabase.co';
-const SB_KEY = 'sb_publishable_eo9wQ05w390iA0V13ACSqg_Lihy643Q';
-let sb;
-try { sb = supabase.createClient(SB_URL, SB_KEY); }
-catch(e){ document.getElementById('loginMsg').className='msg err'; document.getElementById('loginMsg').textContent='Não foi possível iniciar a conexão. Recarregue a página.'; }
+const SB_URL='https://fcwxkelokmqwmivjembv.supabase.co';
+const SB_KEY='sb_publishable_eo9wQ05w390iA0V13ACSqg_Lihy643Q';
+let sb; try{ sb=supabase.createClient(SB_URL,SB_KEY); }catch(e){}
 
-/* ===== HELPERS ===== */
-const BRL0 = v => 'R$ ' + Math.round(v||0).toLocaleString('pt-BR');
-const BRLs = v => (v<0?'-':'') + BRL0(Math.abs(v));
+const BRL0=v=>'R$ '+Math.round(v||0).toLocaleString('pt-BR');
+const BRLs=v=>(v<0?'-':'')+BRL0(Math.abs(v));
 const MFULL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const CATS={ entrada:['Consultoria','Mentoria Rhino','Mentoria Framework','Outros'],
-             despesa:['Casa & Henrique','Cartões','Colaboradores','Extras','Impostos','Ferramentas','Outros'] };
-let LANC=[], ALUNOS=[], METAS={};
-const $ = id => document.getElementById(id);
-function showMsg(id,text,ok){ const e=$(id); e.className='msg '+(ok?'ok':'err'); e.textContent=text; if(ok) setTimeout(()=>{e.className='msg';},3000); }
+const MSHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+const CATS={ entrada:['Consultoria','Aulas avulsas','Mentoria Rhino','Mentoria Framework','Outros'],
+             despesa:['Despesas fixas','Despesas com cartão','Despesas com a empresa','Investimentos','Despesas extras'] };
+let LANC=[],ALUNOS=[],METAS={},RECS=[],charts={},alunoFilter='ativos',scope='tudo';
+const $=id=>document.getElementById(id);
+function showMsg(id,t,ok){const e=$(id);e.className='msg '+(ok?'ok':'err');e.textContent=t;if(ok)setTimeout(()=>{e.className='msg';},3000);}
 
-/* ===== AUTH ===== */
-async function init(){
-  if(!sb) return;
-  const { data:{ session } } = await sb.auth.getSession();
-  if(session) enterApp(session); else showLogin();
-  sb.auth.onAuthStateChange((_e,s)=>{ if(s) enterApp(s); else showLogin(); });
-}
-function showLogin(){ $('loginView').style.display='grid'; $('appView').style.display='none'; }
-async function doLogin(){
-  const email=$('email').value.trim(), password=$('password').value;
-  if(!email||!password){ showMsg('loginMsg','Preencha e-mail e senha.'); return; }
-  $('loginBtn').disabled=true; $('loginBtn').textContent='Entrando…';
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  $('loginBtn').disabled=false; $('loginBtn').textContent='Entrar';
-  if(error){ showMsg('loginMsg', error.message==='Invalid login credentials'?'E-mail ou senha incorretos. Confira se o usuário foi criado no Supabase.':error.message); }
-}
+async function init(){ if(!sb){$('loginMsg').className='msg err';$('loginMsg').textContent='Falha ao iniciar conexão. Recarregue.';return;}
+  const {data:{session}}=await sb.auth.getSession(); if(session)enterApp(session);else showLogin();
+  sb.auth.onAuthStateChange((_e,s)=>{ if(s)enterApp(s); else showLogin(); }); }
+function showLogin(){$('loginView').style.display='grid';$('appView').style.display='none';}
+async function doLogin(){ const email=$('email').value.trim(),password=$('password').value;
+  if(!email||!password){showMsg('loginMsg','Preencha e-mail e senha.');return;}
+  $('loginBtn').disabled=true;$('loginBtn').textContent='Entrando…';
+  const {error}=await sb.auth.signInWithPassword({email,password});
+  $('loginBtn').disabled=false;$('loginBtn').textContent='Entrar';
+  if(error)showMsg('loginMsg',error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message); }
 async function doLogout(){ await sb.auth.signOut(); }
-async function enterApp(session){
-  $('loginView').style.display='none'; $('appView').style.display='block';
-  $('whoAmI').textContent = session.user.email;
-  $('fData').value = new Date().toISOString().slice(0,10);
-  buildMonths(); updateCatOptions();
-  await loadAll();
-}
+async function enterApp(session){ $('loginView').style.display='none';$('appView').style.display='block';
+  $('whoAmI').textContent=session.user.email; $('fData').value=new Date().toISOString().slice(0,10);
+  buildMonths(); updateCatOptions(); updateRecCat(); await loadAll(); }
+function setScope(s,el){ scope=s; document.querySelectorAll('#scopeSeg button').forEach(b=>b.classList.remove('on')); el.classList.add('on'); renderDash(); }
 
-/* ===== DATA ===== */
-async function loadAll(){
-  try{
-    const [l,a,m] = await Promise.all([
-      sb.from('lancamentos').select('*').order('data',{ascending:false}),
-      sb.from('alunos').select('*').order('nome'),
-      sb.from('metas').select('*')
-    ]);
-    if(l.error) throw l.error; if(a.error) throw a.error; if(m.error) throw m.error;
-    LANC=l.data||[]; ALUNOS=a.data||[]; METAS={}; (m.data||[]).forEach(x=>METAS[x.ano_mes]=x.objetivo);
-    $('appMsg').className='msg';
-    renderAll();
-  }catch(e){ showMsg('appMsg','Erro ao carregar dados: '+e.message+'. Verifique se você rodou o schema.sql e se as políticas de acesso estão ativas.'); }
-}
-function buildMonths(){
-  const sel=$('monthSel'); const now=new Date();
-  let opts='';
-  for(let mo=0;mo<12;mo++){ const ym='2026-'+String(mo+1).padStart(2,'0'); const seld=(mo===now.getMonth())?'selected':''; opts+=`<option value="${ym}" ${seld}>${MFULL[mo]}/26</option>`; }
-  sel.innerHTML=opts;
-}
-function updateCatOptions(){ const t=$('fTipo').value; $('fCat').innerHTML=CATS[t].map(c=>`<option>${c}</option>`).join(''); $('fEscopo').value = t==='entrada'?'empresa':'empresa'; }
+async function loadAll(){ try{
+  const [l,a,m]=await Promise.all([
+    sb.from('lancamentos').select('*').order('data',{ascending:false}),
+    sb.from('alunos').select('*').order('nome'),
+    sb.from('metas').select('*')]);
+  if(l.error)throw l.error; if(a.error)throw a.error; if(m.error)throw m.error;
+  LANC=l.data||[]; ALUNOS=a.data||[]; METAS={}; (m.data||[]).forEach(x=>METAS[x.ano_mes]=+x.objetivo);
+  try{ const r=await sb.from('recorrencias').select('*').order('descricao'); RECS=r.error?[]:(r.data||[]); }catch(_){ RECS=[]; }
+  $('appMsg').className='msg'; renderAll();
+}catch(e){ showMsg('appMsg','Erro ao carregar: '+e.message); } }
+function buildMonths(){ const sel=$('monthSel'),now=new Date();let o='';
+  for(let mo=0;mo<12;mo++){const ym='2026-'+String(mo+1).padStart(2,'0');o+=`<option value="${ym}" ${mo===now.getMonth()?'selected':''}>${MFULL[mo]}/26</option>`;}
+  sel.innerHTML=o; }
+function updateCatOptions(){ const t=$('fTipo').value; $('fCat').innerHTML=CATS[t].map(c=>`<option>${c}</option>`).join(''); suggestEscopo(); }
+function suggestEscopo(){ const t=$('fTipo').value,c=$('fCat').value;
+  $('fEscopo').value=(t==='entrada'||c==='Despesas com a empresa')?'empresa':'pessoal'; }
 
-/* ===== ACTIONS ===== */
-async function addLanc(){
-  const data=$('fData').value, tipo=$('fTipo').value, categoria=$('fCat').value, descricao=$('fDesc').value.trim(), valor=parseFloat($('fValor').value), escopo=$('fEscopo').value;
-  if(!data){ showMsg('lancMsg','Escolha a data.'); return; }
-  if(!(valor>0)){ showMsg('lancMsg','Informe um valor maior que zero.'); return; }
-  $('addBtn').disabled=true;
-  const { error } = await sb.from('lancamentos').insert({ data, tipo, categoria, descricao, valor, escopo });
-  $('addBtn').disabled=false;
-  if(error){ showMsg('lancMsg','Não salvou: '+error.message); return; }
-  showMsg('lancMsg','Lançamento adicionado.',true);
-  $('fValor').value=''; $('fDesc').value='';
-  await loadAll();
-}
-async function delLanc(id){
-  const { error } = await sb.from('lancamentos').delete().eq('id',id);
-  if(error){ showMsg('appMsg','Não excluiu: '+error.message); return; }
-  await loadAll();
-}
-let saveTimer;
-async function saveAluno(id, field, value){
-  const patch={}; patch[field] = (field==='ativo') ? value : (field==='mensalidade'? (parseFloat(value)||0) : (parseInt(value)||0));
-  const a=ALUNOS.find(x=>x.id===id); if(a) a[field]=patch[field];
-  renderAlunos(); renderResumo();
-  const { error } = await sb.from('alunos').update(patch).eq('id',id);
-  if(error) showMsg('appMsg','Não salvou o aluno: '+error.message);
-}
-
-/* ===== RENDER ===== */
 function ym(){ return $('monthSel').value; }
-function lancDoMes(){ const m=ym(); return LANC.filter(x=>(x.data||'').slice(0,7)===m); }
-function renderAll(){ renderResumo(); renderLanc(); renderAlunos(); }
+function moIdx(){ return +ym().slice(5)-1; }
+function inScope(r){ if(scope==='tudo')return true; return (r.escopo||'empresa')===scope; }
+function agg(){ const rev={consultoria:Array(12).fill(0),mentoria:Array(12).fill(0),framework:Array(12).fill(0)};
+  const receb=Array(12).fill(0),desp=Array(12).fill(0),despEmp=Array(12).fill(0),despPes=Array(12).fill(0),porCat={};
+  const cur=moIdx(); let dueOpen=0; const dailyNet={};
+  LANC.forEach(r=>{ const mo=+String(r.data||'').slice(5,7)-1; if(mo<0||mo>11)return; const v=+r.valor||0; const sc=inScope(r);
+    const day=+String(r.data||'').slice(8,10);
+    if(r.tipo==='entrada'){ if(sc){ receb[mo]+=v; if(r.categoria==='Mentoria Framework')rev.framework[mo]+=v; else if(r.categoria==='Mentoria Rhino')rev.mentoria[mo]+=v; else rev.consultoria[mo]+=v; if(mo===cur)dailyNet[day]=(dailyNet[day]||0)+v; } }
+    else { if(sc){ desp[mo]+=v; if(mo===cur){ porCat[r.categoria]=(porCat[r.categoria]||0)+v; dailyNet[day]=(dailyNet[day]||0)-v; if(r.pago===false)dueOpen+=v; } }
+           (r.escopo==='pessoal'?despPes:despEmp)[mo]+=v; } });
+  return {rev,receb,desp,despEmp,despPes,porCat,dueOpen,dailyNet}; }
+function revMonth(A,i){ return A.receb[i]; }
 
-function renderResumo(){
-  const rows=lancDoMes();
-  const fat=rows.filter(r=>r.tipo==='entrada').reduce((s,r)=>s+ +r.valor,0);
-  const desp=rows.filter(r=>r.tipo==='despesa').reduce((s,r)=>s+ +r.valor,0);
-  const res=fat-desp, meta=METAS[ym()]||0;
-  $('kFat').textContent=BRL0(fat); $('kFatF').textContent = meta?`meta ${BRL0(meta)} · ${(fat/meta*100||0).toFixed(0)}%`:'';
-  $('kDesp').textContent=BRL0(desp);
-  const emp=rows.filter(r=>r.tipo==='despesa'&&r.escopo==='empresa').reduce((s,r)=>s+ +r.valor,0);
-  const pes=desp-emp; $('kDespF').textContent=`empresa ${BRL0(emp)} · pessoal ${BRL0(pes)}`;
-  $('kRes').textContent=BRLs(res); $('kRes').style.color=res>=0?'var(--up)':'var(--down)';
-  $('kResF').textContent=`margem ${fat?(res/fat*100).toFixed(0):0}%`;
-  const ativos=ALUNOS.filter(a=>a.ativo);
-  const contr=ativos.reduce((s,a)=>s+(a.calls_contratadas||0),0), feitas=ativos.reduce((s,a)=>s+(a.calls_feitas||0),0);
-  $('kCalls').textContent=Math.max(0,contr-feitas); $('kCallsF').textContent=`${feitas}/${contr} feitas`;
-  const rh=ativos.filter(a=>a.programa==='rhino').length, fw=ativos.length-rh;
-  $('resumoBody').className=''; $('resumoBody').innerHTML=
-    `<div style="display:flex;gap:24px;flex-wrap:wrap;font-size:13.5px;color:var(--txt-dim)">
-      <div><b style="color:var(--txt);font-size:20px;font-family:Sora">${ativos.length}</b> alunos ativos</div>
-      <div><b style="color:var(--gold)">${rh}</b> Rhino · <b style="color:var(--indigo)">${fw}</b> Framework</div>
-      <div><b style="color:var(--txt)">${rows.length}</b> lançamentos em ${MFULL[+ym().slice(5)-1]}</div>
-    </div>`;
-}
-function renderLanc(){
-  const rows=lancDoMes();
-  $('lancListTitle').textContent=`Lançamentos de ${MFULL[+ym().slice(5)-1]}/26 · ${rows.length}`;
-  $('lancTable').innerHTML = rows.length ? rows.map(r=>`
-    <tr><td class="num">${(r.data||'').slice(8,10)}/${(r.data||'').slice(5,7)}</td>
+function renderAll(){ renderDash(); renderLanc(); renderFixos(); renderAlunos(); }
+function lancDoMes(){ const m=ym(); return LANC.filter(x=>(x.data||'').slice(0,7)===m); }
+
+function renderDash(){ const A=agg(),i=moIdx(),fat=A.receb[i],desp=A.desp[i],res=fat-desp,meta=METAS[ym()]||0,emp=A.despEmp[i],pes=A.despPes[i];
+  $('kFat').textContent=BRL0(fat); $('kFatF').textContent=(scope==='tudo'?'entradas do mês':'escopo '+scope);
+  $('kDesp').textContent=BRL0(desp); $('kDespF').textContent=(scope==='tudo'?`empresa ${BRL0(emp)} · pessoal ${BRL0(pes)}`:'gastos '+scope);
+  $('kRes').textContent=BRLs(res); $('kRes').style.color=res>=0?'var(--up)':'var(--down)'; $('kResF').textContent=`margem ${fat?(res/fat*100).toFixed(0):0}%`;
+  $('kDue').textContent=BRL0(A.dueOpen); $('kDueF').textContent=A.dueOpen>0?'despesas pendentes':'tudo quitado ✓';
+  renderAlerts(A,i); drawCharts(A,i); }
+function renderAlerts(A,i){ const fat=A.receb[i],desp=A.desp[i],res=fat-desp,meta=METAS[ym()]||0,pes=A.despPes[i],S=[];
+  if(A.dueOpen>0)S.push(['info','⏳',`<b>${BRL0(A.dueOpen)}</b> em despesas ainda a pagar neste mês. Marque como pago quando quitar.`]);
+  if(fat>0){ if(meta&&fat>=meta)S.push(['up','🎯',`<b>Meta batida.</b> Recebimentos de <b>${BRL0(fat)}</b> superaram ${BRL0(meta)}.`]);
+    else if(meta)S.push(['info','🎯',`Faltam <b>${BRL0(meta-fat)}</b> para a meta de ${BRL0(meta)}.`]); }
+  S.push([res>=0?'up':'down',res>=0?'💰':'🔻',`Resultado de <b>${BRLs(res)}</b> no mês (margem ${fat?(res/fat*100).toFixed(0):0}%).`]);
+  if(desp>0&&scope==='tudo')S.push(['info','🏠',`Despesas pessoais são <b>${(pes/desp*100).toFixed(0)}%</b> das saídas (${BRL0(pes)}).`]);
+  const cats=Object.entries(A.porCat).sort((a,b)=>b[1]-a[1]); if(cats[0])S.push(['info','💸',`Maior grupo de despesa: <b>${cats[0][0]}</b> (${BRL0(cats[0][1])}).`]);
+  const ativos=ALUNOS.filter(a=>a.ativo),contr=ativos.reduce((s,a)=>s+(a.calls_contratadas||0),0),fei=ativos.reduce((s,a)=>s+(a.calls_feitas||0),0);
+  if(contr>0)S.push([contr-fei>0?'info':'up','📞',`Calls: <b>${fei}/${contr}</b> feitas · <b>${Math.max(0,contr-fei)}</b> a fazer.`]);
+  const col={up:'var(--up-soft)',down:'var(--down-soft)',info:'var(--indigo-soft)'};
+  if(fat===0&&desp===0)$('alerts').innerHTML=`<div class="empty">Nenhum lançamento em ${MFULL[i]} neste escopo. Adicione na aba Lançamentos.</div>`;
+  else $('alerts').innerHTML=S.map(([t,ic,tx])=>`<div class="alert"><div class="alert-ic" style="background:${col[t]}">${ic}</div><div class="alert-tx">${tx}</div></div>`).join(''); }
+
+Chart.defaults.font.family="'Inter',sans-serif"; Chart.defaults.color='#5A6788'; const GRID='rgba(255,255,255,.05)';
+function drawCharts(A,cur){ Object.values(charts).forEach(c=>c&&c.destroy());
+  // evolução do saldo diária
+  const dim=new Date(2026,cur+1,0).getDate(); const days=[],saldo=[]; let acc=0;
+  for(let d=1;d<=dim;d++){ acc+=(A.dailyNet[d]||0); days.push(String(d).padStart(2,'0')+'/'+String(cur+1).padStart(2,'0')); saldo.push(acc); }
+  charts.saldo=new Chart($('saldoChart'),{type:'line',data:{labels:days,datasets:[{label:'Saldo acumulado',data:saldo,borderColor:'#E8B24B',borderWidth:2.5,tension:.3,pointRadius:0,fill:true,backgroundColor:c=>{const g=c.chart.ctx.createLinearGradient(0,0,0,280);g.addColorStop(0,'rgba(232,178,75,.22)');g.addColorStop(1,'rgba(232,178,75,0)');return g;}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+BRLs(c.raw)}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:12}},y:{grid:{color:GRID},ticks:{callback:v=>'R$'+(v/1000).toFixed(0)+'k'}}}}});
+  // fluxo mensal
+  const labels=MSHORT,ins=labels.map((_,i)=>A.receb[i]),outs=A.desp;
+  charts.flow=new Chart($('flowChart'),{data:{labels,datasets:[
+    {type:'bar',label:'Receita',data:ins,backgroundColor:'#38D399',borderRadius:5,barPercentage:.62,categoryPercentage:.74},
+    {type:'bar',label:'Despesa',data:outs,backgroundColor:'#FF6B5D',borderRadius:5,barPercentage:.62,categoryPercentage:.74},
+    {type:'line',label:'Resultado',data:labels.map((_,i)=>A.receb[i]-A.desp[i]),borderColor:'#E8B24B',borderWidth:2.5,tension:.35,pointRadius:2}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+BRLs(c.raw)}}},scales:{x:{grid:{display:false}},y:{grid:{color:GRID},ticks:{callback:v=>'R$'+(v/1000)+'k'}}}}});
+  const meta=METAS[ym()]||60000,real=A.receb[cur],done=Math.min(real,meta),rem=Math.max(0,meta-real),pct=meta?real/meta*100:0;
+  $('metaPct').textContent=Math.round(pct)+'%'; $('metaGap').innerHTML=real>=meta?'meta batida 🎯':`faltam ${BRL0(meta-real)}`;
+  charts.meta=new Chart($('metaGauge'),{type:'doughnut',data:{datasets:[{data:[done,rem||(real>=meta?0.001:1)],backgroundColor:[real>=meta?'#38D399':'#E8B24B','#1A2236'],borderColor:'#111725',borderWidth:2,circumference:270,rotation:225}]},options:{responsive:true,maintainAspectRatio:false,cutout:'74%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+  const emp=A.despEmp[cur],pes=A.despPes[cur],tot=emp+pes||1;
+  charts.split=new Chart($('splitChart'),{type:'doughnut',data:{labels:['Empresa','Pessoal'],datasets:[{data:[emp||0.001,pes||0.001],backgroundColor:['#6C7BF2','#FF6B5D'],borderColor:'#111725',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+BRL0(c.raw)}}}}});
+  $('splitLegend').innerHTML=`<div class="legend-row"><span class="d" style="background:#6C7BF2"></span>Empresa<b>${BRL0(emp)} · ${(emp/tot*100).toFixed(0)}%</b></div><div class="legend-row"><span class="d" style="background:#FF6B5D"></span>Pessoal<b>${BRL0(pes)} · ${(pes/tot*100).toFixed(0)}%</b></div>`;
+  const rq=[A.rev.consultoria[cur],A.rev.mentoria[cur],A.rev.framework[cur]],rt=rq.reduce((s,x)=>s+x,0)||1,rc=['#38D399','#E8B24B','#6C7BF2'],rn=['Consultoria/Avulsa','Mentoria Rhino','Framework'];
+  charts.rev=new Chart($('revChart'),{type:'doughnut',data:{labels:rn,datasets:[{data:rq.map(x=>x||0.001),backgroundColor:rc,borderColor:'#111725',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+BRL0(c.raw)}}}}});
+  $('revLegend').innerHTML=rn.map((n,k)=>`<div class="legend-row"><span class="d" style="background:${rc[k]}"></span>${n}<b>${BRL0(rq[k])} · ${(rq[k]/rt*100).toFixed(0)}%</b></div>`).join(''); }
+
+async function addLanc(){ const data=$('fData').value,tipo=$('fTipo').value,categoria=$('fCat').value,descricao=$('fDesc').value.trim(),valor=parseFloat($('fValor').value),escopo=$('fEscopo').value,pago=$('fPago').checked;
+  if(!data){showMsg('lancMsg','Escolha a data.');return;} if(!(valor>0)){showMsg('lancMsg','Informe um valor maior que zero.');return;}
+  $('addBtn').disabled=true; const {error}=await sb.from('lancamentos').insert({data,tipo,categoria,descricao,valor,escopo,pago}); $('addBtn').disabled=false;
+  if(error){showMsg('lancMsg','Não salvou: '+error.message+(error.message.includes('pago')?' — rode a migração supabase-migracao-3.sql.':''));return;}
+  showMsg('lancMsg','Lançamento adicionado.',true); $('fValor').value='';$('fDesc').value=''; await loadAll(); }
+async function delLanc(id){ if(!confirm('Excluir este lançamento?'))return; const {error}=await sb.from('lancamentos').delete().eq('id',id); if(error){showMsg('appMsg','Não excluiu: '+error.message);return;} await loadAll(); }
+async function togglePago(id,atual){ const {error}=await sb.from('lancamentos').update({pago:!atual}).eq('id',id); if(error){showMsg('appMsg','Não atualizou: '+error.message);return;} const r=LANC.find(x=>x.id===id); if(r)r.pago=!atual; renderLanc(); renderDash(); }
+function renderLanc(){ const rows=lancDoMes(); $('lancListTitle').textContent=`Lançamentos de ${MFULL[moIdx()]}/26 · ${rows.length}`;
+  $('lancTable').innerHTML=rows.length?rows.map(r=>{ const pago=r.pago!==false;
+    return `<tr>
+    <td class="num">${(r.data||'').slice(8,10)}/${(r.data||'').slice(5,7)}</td>
     <td><span class="pill ${r.tipo==='entrada'?'pill-in':'pill-out'}">${r.tipo==='entrada'?'Entrada':'Despesa'}</span></td>
     <td>${r.categoria||''}</td><td style="color:var(--txt-dim)">${r.descricao||'—'}</td>
     <td><span class="pill ${r.escopo==='pessoal'?'pill-pes':'pill-emp'}">${r.escopo==='pessoal'?'Pessoal':'Empresa'}</span></td>
+    <td style="text-align:center"><span class="pill ${pago?'pill-pago':'pill-pend'}" onclick="togglePago('${r.id}',${pago})" title="clique para alternar">${pago?'Pago':'A pagar'}</span></td>
     <td style="text-align:right"><span class="${r.tipo==='entrada'?'val-in':'val-out'} num">${BRL0(r.valor)}</span></td>
-    <td style="text-align:right"><span class="x" onclick="delLanc('${r.id}')" title="excluir">✕</span></td></tr>`).join('')
-    : `<tr><td class="empty" colspan="7">Nenhum lançamento em ${MFULL[+ym().slice(5)-1]}. Adicione o primeiro acima.</td></tr>`;
-}
-function renderAlunos(){
-  const list=[...ALUNOS].sort((a,b)=>(b.ativo-a.ativo)||a.nome.localeCompare(b.nome));
-  $('alunosTable').innerHTML = list.length ? list.map(a=>{
-    const c=a.calls_contratadas||0, f=a.calls_feitas||0, falta=Math.max(0,c-f), p=c?Math.min(100,f/c*100):0;
+    <td style="text-align:right"><span class="x" onclick="delLanc('${r.id}')">✕</span></td></tr>`; }).join('')
+    :`<tr><td class="empty" colspan="8">Nenhum lançamento em ${MFULL[moIdx()]}. Adicione o primeiro acima.</td></tr>`; }
+
+async function addAluno(){ const nome=$('aNome').value.trim(),programa=$('aProg').value,mensalidade=parseFloat($('aMens').value)||0,venc=parseInt($('aVenc').value)||null,tem_call=$('aCall').checked;
+  if(!nome){showMsg('alunoMsg','Informe o nome.');return;}
+  $('aAddBtn').disabled=true; const {error}=await sb.from('alunos').insert({nome,programa,mensalidade,vencimento:venc,tem_call,ativo:true,calls_contratadas:0,calls_feitas:0}); $('aAddBtn').disabled=false;
+  if(error){showMsg('alunoMsg','Não salvou: '+error.message+(error.message.includes('vencimento')?' — rode a migração supabase-migracao-2.sql.':''));return;}
+  showMsg('alunoMsg','Aluno adicionado.',true); $('aNome').value='';$('aMens').value='';$('aVenc').value='';$('aCall').checked=false; await loadAll(); }
+async function delAluno(id,nome){ if(!confirm('Remover '+nome+'? Isso apaga o aluno. Para só pausar, desmarque "Ativo".'))return; const {error}=await sb.from('alunos').delete().eq('id',id); if(error){showMsg('appMsg','Não removeu: '+error.message);return;} await loadAll(); }
+async function saveAluno(id,field,value){ const patch={}; patch[field]=(field==='ativo'||field==='tem_call')?value:(field==='mensalidade'?(parseFloat(value)||0):(field==='programa'?value:(parseInt(value)||null)));
+  const a=ALUNOS.find(x=>x.id===id); if(a)a[field]=patch[field]; renderAlunos(); renderDash();
+  const {error}=await sb.from('alunos').update(patch).eq('id',id); if(error)showMsg('appMsg','Não salvou o aluno: '+error.message); }
+function filterAlunos(f,el){ alunoFilter=f; document.querySelectorAll('#v-alunos .tab').forEach(t=>t.classList.remove('on')); el.classList.add('on'); renderAlunos(); }
+function renderAlunos(){ let list=[...ALUNOS]; if(alunoFilter==='ativos')list=list.filter(a=>a.ativo);
+  list.sort((a,b)=>(b.ativo-a.ativo)||a.nome.localeCompare(b.nome));
+  $('alunosTable').innerHTML=list.length?list.map(a=>{ const c=a.calls_contratadas||0,f=a.calls_feitas||0,falta=Math.max(0,c-f),p=c?Math.min(100,f/c*100):0;
     return `<tr>
-      <td class="num" style="font-weight:600">${a.nome}${a.tem_call?' <span class="pill pill-emp" style="font-size:9px">C</span>':''}</td>
-      <td><span class="pill ${a.programa==='rhino'?'pill-emp':'pill-emp'}" style="background:${a.programa==='rhino'?'var(--gold-soft,rgba(232,178,75,.14))':'var(--indigo-soft)'};color:${a.programa==='rhino'?'var(--gold)':'var(--indigo)'}">${a.programa==='rhino'?'Rhino':'Framework'}</span></td>
+      <td style="font-weight:600">${a.nome}</td>
+      <td><select class="selrow" onchange="saveAluno('${a.id}','programa',this.value)"><option value="framework" ${a.programa==='framework'?'selected':''}>Framework</option><option value="rhino" ${a.programa==='rhino'?'selected':''}>Rhino</option></select></td>
       <td style="text-align:center"><input class="chk" type="checkbox" ${a.ativo?'checked':''} onchange="saveAluno('${a.id}','ativo',this.checked)"></td>
-      <td style="text-align:right"><input class="mini" style="width:90px;text-align:right" type="number" step="0.01" value="${a.mensalidade||0}" onchange="saveAluno('${a.id}','mensalidade',this.value)"></td>
+      <td style="text-align:center"><input class="mini" style="width:46px" type="number" min="1" max="31" value="${a.vencimento||''}" onchange="saveAluno('${a.id}','vencimento',this.value)"></td>
+      <td style="text-align:right"><input class="mini" style="width:84px;text-align:right" type="number" step="0.01" value="${a.mensalidade||0}" onchange="saveAluno('${a.id}','mensalidade',this.value)"></td>
+      <td style="text-align:center"><input class="chk" type="checkbox" ${a.tem_call?'checked':''} onchange="saveAluno('${a.id}','tem_call',this.checked)"></td>
       <td style="text-align:center"><input class="mini" type="number" min="0" value="${c}" onchange="saveAluno('${a.id}','calls_contratadas',this.value)"></td>
       <td style="text-align:center"><input class="mini" type="number" min="0" value="${f}" onchange="saveAluno('${a.id}','calls_feitas',this.value)"></td>
       <td><div class="bar"><i style="width:${p}%;background:${falta===0&&c>0?'var(--up)':'var(--gold)'}"></i></div></td>
-      <td style="text-align:center"><b class="num" style="color:${falta>0?'var(--gold)':'var(--up)'}">${falta}</b></td></tr>`;
-  }).join('') : `<tr><td class="empty" colspan="8">Nenhum aluno encontrado. Rode o schema.sql no Supabase.</td></tr>`;
-}
+      <td style="text-align:center"><b class="num" style="color:${falta>0?'var(--gold)':'var(--up)'}">${falta}</b></td>
+      <td style="text-align:center"><span class="x" onclick="delAluno('${a.id}','${(a.nome||'').replace(/'/g,'')}')">✕</span></td></tr>`; }).join('')
+    :`<tr><td class="empty" colspan="11">Nenhum aluno. Adicione acima.</td></tr>`; }
 
-/* ===== NAV ===== */
-function tab(v,el){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
-  document.querySelectorAll('.view').forEach(s=>s.classList.remove('on')); $('v-'+v).classList.add('on'); }
+/* ===== RECORRÊNCIAS (fixos) ===== */
+function updateRecCat(){ const t=$('rTipo').value; $('rCat').innerHTML=CATS[t].map(c=>`<option>${c}</option>`).join(''); $('rEscopo').value=(t==='entrada'||$('rCat').value==='Despesas com a empresa')?'empresa':'pessoal'; }
+function recLancadaNoMes(rec,m){ return LANC.some(l=>l.recorrencia_id===rec.id && (l.data||'').slice(0,7)===m); }
+function renderFixos(){ const m=ym(),mi=moIdx();
+  $('recMesTh').textContent=MSHORT[mi];
+  const ativos=RECS.filter(r=>r.ativo), pend=ativos.filter(r=>!recLancadaNoMes(r,m));
+  const gc=$('gerarCard');
+  if(RECS.length===0){ gc.style.display='none'; }
+  else if(pend.length>0){ gc.style.display='block'; $('gerarTitle').textContent=`${pend.length} fixo${pend.length>1?'s':''} ainda não lançado${pend.length>1?'s':''} em ${MFULL[mi]}`;
+    const soma=pend.reduce((s,r)=>s+ (r.tipo==='despesa'?+r.valor:0),0);
+    $('gerarSub').textContent=`Gera os lançamentos de ${MFULL[mi]} de uma vez (${BRL0(soma)} em despesas fixas). Não duplica o que já existe.`; }
+  else { gc.style.display='block'; $('gerarTitle').textContent=`Tudo lançado em ${MFULL[mi]} ✓`; $('gerarSub').textContent='Os fixos ativos já foram gerados neste mês.'; }
+  $('recTable').innerHTML=RECS.length?RECS.map(r=>{ const feito=recLancadaNoMes(r,m);
+    return `<tr>
+      <td style="font-weight:600">${r.descricao}</td>
+      <td><span class="pill ${r.tipo==='entrada'?'pill-in':'pill-out'}">${r.tipo==='entrada'?'Entrada':'Despesa'}</span></td>
+      <td>${r.categoria}</td>
+      <td><span class="pill ${r.escopo==='pessoal'?'pill-pes':'pill-emp'}">${r.escopo==='pessoal'?'Pessoal':'Empresa'}</span></td>
+      <td style="text-align:center" class="num">${r.dia||'—'}</td>
+      <td style="text-align:right"><span class="${r.tipo==='entrada'?'val-in':'val-out'} num">${BRL0(r.valor)}</span></td>
+      <td style="text-align:center"><input class="chk" type="checkbox" ${r.ativo?'checked':''} onchange="saveRec('${r.id}','ativo',this.checked)"></td>
+      <td style="text-align:center">${feito?'<span class="pill pill-pago">lançado</span>':(r.ativo?'<span class="pill pill-pend">pendente</span>':'<span style="color:var(--txt-faint)">—</span>')}</td>
+      <td style="text-align:center"><span class="x" onclick="delRec('${r.id}','${(r.descricao||'').replace(/'/g,'')}')">✕</span></td></tr>`; }).join('')
+    :`<tr><td class="empty" colspan="9">Nenhum fixo cadastrado. Adicione acima para automatizar seus lançamentos mensais.</td></tr>`; }
+async function addRec(){ const tipo=$('rTipo').value,categoria=$('rCat').value,descricao=$('rDesc').value.trim(),valor=parseFloat($('rValor').value),escopo=$('rEscopo').value,dia=parseInt($('rDia').value)||null;
+  if(!descricao){showMsg('recMsg','Informe a descrição.');return;} if(!(valor>0)){showMsg('recMsg','Informe um valor maior que zero.');return;}
+  $('rAddBtn').disabled=true; const {error}=await sb.from('recorrencias').insert({tipo,categoria,descricao,valor,escopo,dia,ativo:true}); $('rAddBtn').disabled=false;
+  if(error){showMsg('recMsg','Não salvou: '+error.message+(error.message.includes('recorrencias')||error.message.includes('does not exist')?' — rode a migração supabase-migracao-4.sql.':''));return;}
+  showMsg('recMsg','Fixo adicionado.',true); $('rDesc').value='';$('rValor').value='';$('rDia').value=''; await loadAll(); }
+async function delRec(id,nome){ if(!confirm('Remover o fixo "'+nome+'"? Os lançamentos já gerados continuam.'))return; const {error}=await sb.from('recorrencias').delete().eq('id',id); if(error){showMsg('appMsg','Não removeu: '+error.message);return;} await loadAll(); }
+async function saveRec(id,field,value){ const patch={}; patch[field]=value; const r=RECS.find(x=>x.id===id); if(r)r[field]=value; renderFixos();
+  const {error}=await sb.from('recorrencias').update(patch).eq('id',id); if(error)showMsg('appMsg','Não salvou: '+error.message); }
+async function gerarMes(){ const m=ym(),mi=moIdx(),dim=new Date(2026,mi+1,0).getDate();
+  const pend=RECS.filter(r=>r.ativo && !recLancadaNoMes(r,m));
+  if(pend.length===0){ showMsg('appMsg','Nada a gerar: os fixos já estão lançados neste mês.',true); return; }
+  const rows=pend.map(r=>{ const d=Math.min(r.dia||1,dim); const data=`${m}-${String(d).padStart(2,'0')}`;
+    return {data,tipo:r.tipo,categoria:r.categoria,descricao:r.descricao,valor:r.valor,escopo:r.escopo,pago:r.tipo==='entrada',recorrencia_id:r.id}; });
+  $('gerarBtn').disabled=true; const {error}=await sb.from('lancamentos').insert(rows); $('gerarBtn').disabled=false;
+  if(error){showMsg('appMsg','Não gerou: '+error.message);return;}
+  showMsg('appMsg',`${rows.length} lançamento(s) fixo(s) gerado(s) em ${MFULL[mi]}.`,true); await loadAll(); }
+
+function tab(v,el){ document.querySelectorAll('.tabs .tab[data-v]').forEach(t=>t.classList.remove('on')); el.classList.add('on');
+  document.querySelectorAll('.view').forEach(s=>s.classList.remove('on')); $('v-'+v).classList.add('on'); if(v==='dash')setTimeout(()=>renderDash(),50); }
 
 init();
 </script>
