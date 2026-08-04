@@ -132,6 +132,12 @@
   .alert-ic{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;font-size:15px}
   .alert-tx{font-size:13px;line-height:1.5;color:var(--txt-dim)}.alert-tx b{color:var(--txt);font-weight:700}
   .flip{cursor:pointer;user-select:none}.flip:hover{opacity:.7}
+  .call-inp{width:64px;padding:7px;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--txt);font:inherit;font-weight:700;font-variant-numeric:tabular-nums;outline:none}
+  .call-inp:focus{border-color:var(--indigo)}
+  .assist-num{font-family:'Sora';font-weight:800;font-size:30px;letter-spacing:-.02em}
+  .assist-line{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line-soft);font-size:13.5px}
+  .assist-line:last-child{border-bottom:none}
+  .assist-line b{font-variant-numeric:tabular-nums}
   ::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#232d44;border-radius:10px;border:2px solid var(--bg)}
 </style>
 </head>
@@ -145,7 +151,9 @@
     <div class="nav-item" data-view="students"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M15 8a3 3 0 100-6M2 20a7 7 0 0114 0M16 14a7 7 0 016 6"/></svg>Alunos &amp; Fluxo<span class="nav-badge" id="badgeStu">0</span></div>
     <div class="nav-item" data-view="expenses"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>Despesas</div>
     <div class="nav-item" data-view="goals"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg>Metas</div>
+    <div class="nav-item" data-view="calls"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M15.5 3.5a5 5 0 010 7M18 1a9 9 0 010 12M3 5.5C3 14 10 21 18.5 21a2 2 0 002-1.7l.4-2.3a1.5 1.5 0 00-1-1.7l-3-1a1.5 1.5 0 00-1.6.5l-.8 1a12 12 0 01-4.7-4.7l1-.8a1.5 1.5 0 00.5-1.6l-1-3A1.5 1.5 0 007.5 3H5.2A2 2 0 003 5.5z"/></svg>Calls</div>
     <div class="nav-label">Inteligência</div>
+    <div class="nav-item" data-view="assistant"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2l2.4 5.4L20 8l-4 4 1 6-5-3-5 3 1-6-4-4 5.6-.6L12 2z"/></svg>Assistente</div>
     <div class="nav-item" data-view="copilot"><svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 3a5 5 0 015 5v1a4 4 0 010 8H7a4 4 0 010-8V8a5 5 0 015-5z"/><circle cx="9.5" cy="11" r="1"/><circle cx="14.5" cy="11" r="1"/></svg>Copiloto</div>
   </nav>
   <div class="side-foot"><div class="user"><div class="avatar">HS</div><div><div class="user-name">Henrique de Souza</div><div class="user-role">Administrador</div></div></div></div>
@@ -230,7 +238,34 @@
       <div class="card"><div class="card-head"><div class="card-title">Metas do mês selecionado</div></div><div id="goalsWrap"></div></div>
     </section>
 
-    <section class="view" id="view-copilot">
+    <section class="view" id="view-calls">
+      <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:18px">
+        <div class="kpi"><div class="kpi-label">Clientes com call</div><div class="kpi-value num" id="cCli">0</div><div class="kpi-foot">marcados com (C)</div></div>
+        <div class="kpi"><div class="kpi-label">Calls contratadas</div><div class="kpi-value num" id="cContr">0</div><div class="kpi-foot">total do período</div></div>
+        <div class="kpi"><div class="kpi-label">Calls realizadas</div><div class="kpi-value num" id="cFeitas">0</div><div class="kpi-foot" id="cFeitasFoot"></div></div>
+        <div class="kpi"><div class="kpi-label">Calls a fazer</div><div class="kpi-value num" id="cFaltam">0</div><div class="kpi-foot">pendentes de agenda</div></div>
+      </div>
+      <div class="card">
+        <div class="card-head"><div class="card-title">Controle de calls <span id="callsSub"></span></div>
+          <div class="tabs"><button class="tab on" data-cf="call" onclick="filterCalls('call',this)">Com call (C)</button><button class="tab" data-cf="all" onclick="filterCalls('all',this)">Todos ativos</button></div>
+        </div>
+        <table class="table"><thead><tr><th>Aluno</th><th>Programa</th><th style="text-align:center">Contratadas</th><th style="text-align:center">Feitas</th><th style="min-width:120px">Progresso</th><th style="text-align:center">Faltam</th></tr></thead><tbody id="callsTable"></tbody></table>
+        <p style="font-size:11.5px;color:var(--txt-faint);margin-top:14px">Edite os números direto nas caixas. Fica salvo neste navegador; no app com login, sincroniza entre você e a Ana.</p>
+      </div>
+    </section>
+
+    <section class="view" id="view-assistant">
+      <div class="card" style="margin-bottom:22px">
+        <div class="copilot-head"><div class="copilot-orb" style="background:linear-gradient(135deg,var(--gold),#C98A1E)"><svg width="22" height="22" fill="none" stroke="#1a1305" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 2l2.4 5.4L20 8l-4 4 1 6-5-3-5 3 1-6-4-4 5.6-.6L12 2z"/></svg></div><div><div class="card-title" style="font-size:17px">Assistente Financeiro</div><div class="page-sub">Diagnóstico e caminhos a partir dos seus números</div></div></div>
+        <div id="assistDiag"></div>
+      </div>
+      <div class="grid-2b">
+        <div class="card"><div class="card-head"><div class="card-title">Reserva de emergência</div></div><div id="assistReserve"></div></div>
+        <div class="card"><div class="card-head"><div class="card-title">O que fazer com a sobra</div></div><div id="assistSurplus"></div></div>
+      </div>
+      <div class="card" style="margin-top:22px"><div class="card-head"><div class="card-title">Onde dá pra melhorar</div></div><div id="assistActions"></div></div>
+      <div class="card" style="margin-top:22px;background:var(--panel-2)"><div style="font-size:12px;color:var(--txt-faint);line-height:1.6">Este assistente é educativo e usa apenas os seus números. Não sou consultor financeiro ou de investimentos licenciado — para decisões de alocação, aporte ou produtos específicos, vale confirmar com um profissional. As sugestões são princípios gerais adaptados ao seu caixa, não recomendações personalizadas de investimento.</div></div>
+    </section>
       <div class="card">
         <div class="copilot-head"><div class="copilot-orb"><svg width="22" height="22" fill="none" stroke="#fff" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 3a5 5 0 015 5v1a4 4 0 010 8H7a4 4 0 010-8V8a5 5 0 015-5z"/><circle cx="9.5" cy="11" r="1" fill="#fff"/><circle cx="14.5" cy="11" r="1" fill="#fff"/></svg></div><div><div class="card-title" style="font-size:17px">Copiloto Financeiro</div><div class="page-sub">Leitura automática dos números da planilha</div></div></div>
         <div id="insights"></div>
@@ -507,13 +542,15 @@ function parseStudents(grid, headerLabel, grupo){
     const hasAny = r.slice(1,17).some(x=>(x||'').trim()!=='');
     if(pays.reduce((s,x)=>s+x,0)===0 && !hasAny) continue;
     const cancel = norm(nome).indexOf('cancel')>-1;
+    const temCall = /\(c\)/i.test(nome);           // (C) = cliente com call mensal
     const months=pays.slice(0,12);
     let last=-1; for(let m=0;m<12;m++) if(months[m]>0) last=m;
     const futur = pays.slice(12).some(x=>x>0);
-    const ativo = !cancel && (months[5]>0||months[6]>0||months[7]>0||months.slice(8).some(x=>x>0)||futur);
+    // (C) é cliente ativo com call, mesmo que tenha pago adiantado (último pgto há meses)
+    const ativo = !cancel && (temCall || months[5]>0||months[6]>0||months[7]>0||months.slice(8).some(x=>x>0)||futur);
     let mensal = last>=0?months[last]:(pays.slice(12).find(x=>x>0)||0);
-    nome = nome.replace(/\(cancelado\)/i,'').replace(/\(cance.*$/i,'').replace(/\(c\)/i,'').trim();
-    out.push({nome,grupo,pays,total:pays.reduce((s,x)=>s+x,0),mensal,last,cancel,ativo});
+    nome = nome.replace(/\(cancelado\)/i,'').replace(/\(cance.*$/i,'').replace(/\(c\)/i,'').replace(/\s+-\s*\d+.*$/,'').replace(/\s+\d{1,2}\/\d{1,2}.*$/,'').trim();
+    out.push({nome,grupo,pays,total:pays.reduce((s,x)=>s+x,0),mensal,last,cancel,temCall,ativo});
   }
   return out;
 }
@@ -597,7 +634,7 @@ const REVCATS={ consultoria:{name:'Consultoria Team Rhino',color:'#38D399'}, men
 function render(){
   renderOverviewStats(); renderMeta(); renderSplit(); renderRevLegend(); renderStuMini(); renderAlerts();
   document.getElementById('badgeStu').textContent=ALUNOS.filter(a=>a.ativo).length;
-  renderStudents(); renderExpenses(); renderGoals(); renderMonthly(); renderInsights(); drawCharts();
+  renderStudents(); renderExpenses(); renderGoals(); renderMonthly(); renderInsights(); renderCalls(); renderAssistant(); drawCharts();
 }
 function renderOverviewStats(){
   const ativos=ALUNOS.filter(a=>a.ativo), rh=ativos.filter(a=>a.grupo==='RHINO').length, fw=ativos.length-rh;
@@ -654,7 +691,7 @@ function buildSignals(i){
   if(i>=1){ const avg=avgRev(i,3); if(avg>0){ const d=(inV-avg)/avg*100;
     S.push({t:d>=0?'up':'down',ic:d>=0?'📈':'📉',h:'Tendência',p:`Receita <b>${d>=0?'+':''}${d.toFixed(0)}%</b> ${d>=0?'acima':'abaixo'} da média dos últimos meses (${BRL0(avg)}). ${d<=-15?'Sinal de atenção.':d>=15?'Aceleração real.':'Dentro do normal.'}`}); } }
   // churn: pararam de pagar
-  const churn=ALUNOS.filter(a=>!a.cancel && a.last>=0 && a.last<=i-2 && a.total>0 && !a.pays.slice(i-1).some(x=>x>0)).sort((a,b)=>b.total-a.total);
+  const churn=ALUNOS.filter(a=>!a.cancel && !a.temCall && a.last>=0 && a.last<=i-2 && a.total>0 && !a.pays.slice(i-1).some(x=>x>0)).sort((a,b)=>b.total-a.total);
   if(churn.length){ const ex=churn.slice(0,2).map(a=>`${a.nome} (parou em ${MSHORT[a.last]})`).join(', ');
     S.push({t:'down',ic:'🚪',h:'Risco de churn',p:`<b>${churn.length}</b> aluno${churn.length>1?'s':''} ${churn.length>1?'pagavam e sumiram':'pagava e sumiu'} há 2+ meses: ${ex}${churn.length>2?` e +${churn.length-2}`:''}. Vale um contato.`}); }
   // a receber futuro (contratado)
@@ -725,6 +762,79 @@ function renderInsights(){
   const S=buildSignals(current);
   document.getElementById('insights').innerHTML=S.map(s=>`<div class="insight"><div class="insight-ic" style="background:${SIG_COL[s.t][1]};color:${SIG_COL[s.t][0]};font-size:16px">${s.ic}</div><div><h4>${s.h}</h4><p>${s.p}</p></div></div>`).join(''); }
 
+/* ================= CALLS ================= */
+let CALLS={}; try{ CALLS=JSON.parse(localStorage.getItem('rhino_calls')||'{}'); }catch(e){}
+function saveCalls(){ try{ localStorage.setItem('rhino_calls',JSON.stringify(CALLS)); }catch(e){} }
+function callOf(n){ return CALLS[n]||{contr:0,feitas:0}; }
+const escJs = s => (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+function setCall(n,f,v){ const c=callOf(n); c[f]=Math.max(0,parseInt(v)||0); CALLS[n]=c; saveCalls(); renderCalls(); }
+let callFilter='call';
+function filterCalls(f,el){ callFilter=f; document.querySelectorAll('#view-calls .tab').forEach(t=>t.classList.remove('on')); el.classList.add('on'); renderCalls(); }
+function renderCalls(){
+  let list=ALUNOS.filter(a=>a.ativo);
+  if(callFilter==='call') list=list.filter(a=>a.temCall);
+  list.sort((a,b)=>(b.temCall-a.temCall)||a.nome.localeCompare(b.nome));
+  let tc=0,tf=0;
+  const rows=list.map(a=>{ const c=callOf(a.nome); tc+=c.contr; tf+=c.feitas; const falta=Math.max(0,c.contr-c.feitas); const p=c.contr?Math.min(100,c.feitas/c.contr*100):0;
+    const pg=a.grupo==='RHINO'?`<span class="prog-tag pg-rhino">Rhino</span>`:`<span class="prog-tag pg-fw">Framework</span>`;
+    return `<tr><td class="t-desc">${a.nome}${a.temCall?' <span class="prog-tag pg-fw" style="font-size:9px;padding:1px 6px">C</span>':''}</td><td>${pg}</td>
+      <td style="text-align:center"><input class="call-inp" type="number" min="0" value="${c.contr}" onchange="setCall('${escJs(a.nome)}','contr',this.value)"></td>
+      <td style="text-align:center"><input class="call-inp" type="number" min="0" value="${c.feitas}" onchange="setCall('${escJs(a.nome)}','feitas',this.value)"></td>
+      <td><div class="bar"><div class="bar-fill" style="width:${p}%;background:${falta===0&&c.contr>0?'var(--up)':'var(--gold)'}"></div></div></td>
+      <td style="text-align:center"><b class="num" style="color:${falta>0?'var(--gold)':'var(--up)'}">${falta}</b></td></tr>`; }).join('');
+  document.getElementById('callsTable').innerHTML=rows||`<tr><td class="empty" colspan="6">Nenhum aluno neste filtro</td></tr>`;
+  set('cCli',ALUNOS.filter(a=>a.temCall&&a.ativo).length); set('cContr',tc); set('cFeitas',tf); set('cFaltam',Math.max(0,tc-tf));
+  document.getElementById('cFeitasFoot').textContent=tc?`${(tf/tc*100).toFixed(0)}% do contratado`:'preencha ao lado';
+  document.getElementById('callsSub').textContent=`· ${list.length} alunos`;
+}
+
+/* ================= ASSISTENTE FINANCEIRO ================= */
+function avgOf(fn,i,n=3){ let s=0,c=0; for(let k=Math.max(0,i-n+1);k<=i;k++){ s+=fn(k); c++; } return c?s/c:0; }
+function renderAssistant(){
+  const i=current, inV=revMonth(i), empExp=expEmpresa(i), totExp=expTotal(i), pesExp=expPessoa(i);
+  const lucroNeg=inV-empExp, resCons=inV-totExp, mCons=inV?resCons/inV*100:0, mNeg=inV?lucroNeg/inV*100:0;
+  const avgTot=avgOf(expTotal,i), avgEmp=avgOf(expEmpresa,i), avgIn=avgOf(revMonth,i);
+  const fwShare=inV?DATA.aba1.receitas.framework[i]/inV*100:0;
+  // Diagnóstico (cards)
+  const diag=[];
+  diag.push({t:mCons>=15?'up':(mCons>=0?'info':'down'),ic:'🩺',h:'Saúde da margem',
+    p:`Margem consolidada de <b>${mCons.toFixed(1)}%</b>. O negócio em si roda com <b>${mNeg.toFixed(0)}%</b> de margem (lucro de <b>${BRL0(lucroNeg)}</b>), mas o consolidado fica apertado porque a vida pessoal consome quase tudo. ${mCons<10?'A alavanca principal não é faturar mais — é o custo pessoal.':'Estrutura saudável, dá pra acelerar reserva e aportes.'}`});
+  diag.push({t:'down',ic:'🏠',h:'Peso pessoal sobre o negócio',
+    p:`As despesas pessoais são <b>${totExp?(pesExp/totExp*100).toFixed(0):0}%</b> das saídas (<b>${BRL0(pesExp)}</b>/mês). É o dobro do que a empresa gasta pra operar. Cada real cortado aqui vira lucro consolidado direto.`});
+  diag.push({t:fwShare>65?'down':'info',ic:'🎯',h:'Concentração de receita',
+    p:`A Framework é <b>${fwShare.toFixed(0)}%</b> do faturamento. ${fwShare>65?'Concentração alta: se ela oscila, o mês inteiro oscila. Vale ter um segundo motor (consultoria ou produto) mais forte.':'Distribuição razoável entre as frentes.'}`});
+  document.getElementById('assistDiag').innerHTML=diag.map(s=>`<div class="insight"><div class="insight-ic" style="background:${SIG_COL[s.t][1]};color:${SIG_COL[s.t][0]};font-size:16px">${s.ic}</div><div><h4>${s.h}</h4><p>${s.p}</p></div></div>`).join('');
+  // Reserva de emergência
+  const r3=avgTot*3, r6=avgTot*6, sobra=avgIn-avgTot;
+  const mesesPra3 = sobra>0? Math.ceil(r3/sobra):null;
+  document.getElementById('assistReserve').innerHTML=
+    `<div class="assist-num" style="color:var(--gold)">${BRL0(r3)} <span style="font-size:15px;color:var(--txt-dim);font-weight:600">a ${BRL0(r6)}</span></div>`+
+    `<p style="font-size:12.5px;color:var(--txt-dim);margin:6px 0 12px">Princípio: guardar de <b>3 a 6 meses</b> do seu custo mensal médio (${BRL0(avgTot)}). É o colchão que segura o negócio se as vendas caírem.</p>`+
+    `<div class="assist-line"><span>Custo mensal médio (3m)</span><b>${BRL0(avgTot)}</b></div>`+
+    `<div class="assist-line"><span>Sobra média por mês</span><b style="color:${sobra>=0?'var(--up)':'var(--down)'}">${BRLs(sobra)}</b></div>`+
+    `<div class="assist-line"><span>Tempo pra montar 3 meses</span><b>${mesesPra3?mesesPra3+' meses':'ajustar custos antes'}</b></div>`;
+  // O que fazer com a sobra
+  const surplus=[];
+  surplus.push(['1º','Reserva primeiro',`Antes de qualquer investimento, complete a reserva de ${BRL0(r3)}. Em conta com liquidez diária (rende e saca a qualquer hora).`]);
+  surplus.push(['2º','Quitar dívida cara',`Financiamentos e crédito rotativo costumam custar mais do que qualquer investimento rende. Abater o mais caro é "render" garantido.`]);
+  surplus.push(['3º','Só então investir',`Com reserva feita e dívida sob controle, o excedente pode ir para aplicações — priorizando liquidez e diversificação, no seu perfil de risco.`]);
+  document.getElementById('assistSurplus').innerHTML=surplus.map(([n,t,p])=>`<div style="display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft)"><div style="font-family:'Sora';font-weight:800;color:var(--gold);font-size:15px;flex-shrink:0">${n}</div><div><div style="font-size:13.5px;font-weight:700">${t}</div><div style="font-size:12.5px;color:var(--txt-dim);margin-top:2px;line-height:1.5">${p}</div></div></div>`).join('');
+  // Onde dá pra melhorar (ações priorizadas)
+  const acts=[];
+  // maior custo pessoal e empresarial
+  let itemsP=[],itemsE=[]; Object.keys(GROUPS).forEach(k=>(DATA.aba1.itens[k]||[]).forEach(it=>{ const v=it.vals[i]||0; if(v<=0)return; (classify(it.nome)==='pessoa'?itemsP:itemsE).push({n:it.nome,v}); }));
+  itemsP.sort((a,b)=>b.v-a.v); itemsE.sort((a,b)=>b.v-a.v);
+  if(itemsP[0]) acts.push(['🏠',`<b>Maior custo pessoal:</b> ${itemsP[0].n} (${BRL0(itemsP[0].v)}/mês). Renegociar ou reduzir isso vira lucro consolidado na hora.`]);
+  if(itemsE[0]) acts.push(['🏢',`<b>Maior custo do negócio:</b> ${itemsE[0].n} (${BRL0(itemsE[0].v)}/mês). Vale checar se o retorno justifica.`]);
+  // churn recuperável
+  const churn=ALUNOS.filter(a=>!a.cancel&&!a.temCall&&a.last>=0&&a.last<=i-2&&a.total>0&&!a.pays.slice(i-1).some(x=>x>0));
+  if(churn.length){ const mens=churn.map(a=>a.mensal).filter(x=>x>0); const tk=mens.length?mens.reduce((s,x)=>s+x,0)/mens.length:0;
+    acts.push(['🚪',`<b>Recuperação de churn:</b> ${churn.length} alunos pararam. Reativando metade ao ticket médio, são ~<b>${BRL0(churn.length/2*tk)}/mês</b> de volta.`]); }
+  // dias sem venda (limitação honesta)
+  acts.push(['📅',`<b>Dias sem entrada:</b> hoje a planilha só tem totais por mês, então esse alerta fica preciso no app (lançamentos com data). Já está no plano do banco de dados.`]);
+  document.getElementById('assistActions').innerHTML=acts.map(([ic,tx])=>`<div class="alert"><div class="alert-ic" style="background:var(--gold-soft)">${ic}</div><div class="alert-tx">${tx}</div></div>`).join('');
+}
+
 /* ================= CHARTS ================= */
 Chart.defaults.font.family="'Inter',sans-serif"; Chart.defaults.color='#5A6788'; const grid='rgba(255,255,255,.05)';
 function drawCharts(){ Object.values(charts).forEach(c=>c&&c.destroy());
@@ -749,7 +859,7 @@ function drawCharts(){ Object.values(charts).forEach(c=>c&&c.destroy());
     charts.goal=new Chart(gc,{data:{labels,datasets:[{type:'bar',label:'Objetivo',data:obj,backgroundColor:'rgba(108,123,242,.35)',borderColor:'#6C7BF2',borderWidth:1.5,borderRadius:6,barPercentage:.7,categoryPercentage:.7},{type:'bar',label:'Realizado',data:ins,backgroundColor:'#E8B24B',borderRadius:6,barPercentage:.7,categoryPercentage:.7}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${BRL0(c.raw)}`}}},scales:{x:{grid:{display:false}},y:{grid:{color:grid},ticks:{callback:v=>'R$'+(v/1000)+'k'}}}}}); } }
 
 /* ================= NAV / UI ================= */
-const TITLES={overview:['Visão Geral','Panorama consolidado'],cashflow:['Fluxo de Caixa','Receita, despesa e resultado mês a mês'],students:['Alunos & Fluxo','Todos os alunos e fluxo de pagamento'],expenses:['Despesas','Grupos e lançamentos do mês'],goals:['Metas','Objetivo x realizado ao longo do ano'],copilot:['Copiloto','Análise automática e conexão']};
+const TITLES={overview:['Visão Geral','Panorama consolidado'],cashflow:['Fluxo de Caixa','Receita, despesa e resultado mês a mês'],students:['Alunos & Fluxo','Todos os alunos e fluxo de pagamento'],expenses:['Despesas','Grupos e lançamentos do mês'],goals:['Metas','Objetivo x realizado ao longo do ano'],calls:['Calls','Controle de calls contratadas e realizadas'],assistant:['Assistente Financeiro','Diagnóstico e caminhos a partir dos seus números'],copilot:['Copiloto','Análise automática e conexão']};
 function go(v){ document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.view===v));
   document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+v));
   document.getElementById('pageTitle').textContent=TITLES[v][0]; document.getElementById('pageSub').textContent=TITLES[v][1];
