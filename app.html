@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Rhino • Lançamentos</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0A0D14;--panel:#111725;--panel-2:#161E30;--line:#222C42;--line-soft:#1A2236;--txt:#EAF0FA;--txt-dim:#8A96B0;--txt-faint:#5A6788;--gold:#E8B24B;--up:#38D399;--up-soft:rgba(56,211,153,.13);--down:#FF6B5D;--down-soft:rgba(255,107,93,.13);--indigo:#6C7BF2;--indigo-soft:rgba(108,123,242,.14);--radius:14px}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;min-height:100vh}
+  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(900px 500px at 12% -8%,rgba(108,123,242,.10),transparent 60%),radial-gradient(800px 500px at 100% 0%,rgba(232,178,75,.06),transparent 55%)}
+  h1,h2,h3,.num{font-family:'Sora',sans-serif}.num{font-variant-numeric:tabular-nums}
+  .wrap{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:22px 20px 60px}
+  /* LOGIN */
+  .login{min-height:100vh;display:grid;place-items:center;position:relative;z-index:1;padding:20px}
+  .login-card{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .login-mark{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,var(--gold),#C98A1E);display:grid;place-items:center;font-size:24px;margin-bottom:18px}
+  .login h1{font-size:20px;font-weight:700}.login p{font-size:13px;color:var(--txt-dim);margin:4px 0 22px}
+  label{display:block;font-size:12.5px;color:var(--txt-dim);font-weight:600;margin:14px 0 6px}
+  input,select{width:100%;padding:12px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--txt);font:inherit;outline:none}
+  input:focus,select:focus{border-color:var(--indigo)}
+  select option{background:var(--panel)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:10px;border:none;background:var(--gold);color:#1a1305;font:inherit;font-weight:700;cursor:pointer;transition:.15s}
+  .btn:hover{filter:brightness(1.06)}.btn:disabled{opacity:.5;cursor:default}
+  .btn-full{width:100%;margin-top:22px}
+  .btn-ghost{background:var(--panel);border:1px solid var(--line);color:var(--txt)}
+  .btn-sm{padding:8px 12px;font-size:13px}
+  .msg{font-size:12.5px;padding:10px 12px;border-radius:9px;margin-top:14px;display:none}
+  .msg.err{display:block;background:var(--down-soft);color:var(--down);border:1px solid rgba(255,107,93,.3)}
+  .msg.ok{display:block;background:var(--up-soft);color:var(--up);border:1px solid rgba(56,211,153,.3)}
+  /* APP */
+  .app{display:none}
+  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--gold),#C98A1E);display:grid;place-items:center;font-size:20px}
+  .brand-name{font-family:'Sora';font-weight:700;font-size:15px}.brand-sub{font-size:11px;color:var(--txt-faint)}
+  .spacer{flex:1}
+  .who{font-size:12.5px;color:var(--txt-dim)}
+  .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:22px;flex-wrap:wrap}
+  .tab{padding:9px 16px;border-radius:9px;border:none;background:transparent;color:var(--txt-dim);font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;transition:.15s}
+  .tab.on{background:var(--indigo-soft);color:#fff}
+  .view{display:none;animation:fade .3s}.view.on{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+  .card{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px;margin-bottom:18px}
+  .card-title{font-size:15px;font-weight:600;margin-bottom:16px}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  @media(max-width:720px){.kpis{grid-template-columns:1fr 1fr}}
+  .kpi{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:16px}
+  .kpi-l{font-size:12px;color:var(--txt-dim)}.kpi-v{font-size:22px;font-weight:800;font-family:'Sora';margin-top:4px;font-variant-numeric:tabular-nums}.kpi-f{font-size:11px;color:var(--txt-faint);margin-top:3px}
+  .form-grid{display:grid;grid-template-columns:130px 1fr 1fr 130px;gap:12px;align-items:end}
+  @media(max-width:720px){.form-grid{grid-template-columns:1fr 1fr}}
+  .form-grid .full{grid-column:1/-1}
+  table{width:100%;border-collapse:collapse}
+  th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--txt-faint);font-weight:600;padding:0 10px 10px;border-bottom:1px solid var(--line-soft)}
+  td{padding:11px 10px;border-bottom:1px solid var(--line-soft);font-size:13.5px}
+  tr:last-child td{border-bottom:none}
+  .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
+  .pill-in{background:var(--up-soft);color:var(--up)}.pill-out{background:var(--down-soft);color:var(--down)}
+  .pill-emp{background:var(--indigo-soft);color:var(--indigo)}.pill-pes{background:var(--down-soft);color:var(--down)}
+  .val-in{color:var(--up);font-weight:700}.val-out{color:var(--down);font-weight:700}
+  .mini{width:66px;padding:7px;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--txt);font:inherit;font-weight:700;font-variant-numeric:tabular-nums}
+  .x{cursor:pointer;color:var(--txt-faint);font-weight:700;padding:4px 8px;border-radius:6px}.x:hover{background:var(--down-soft);color:var(--down)}
+  .empty{text-align:center;color:var(--txt-faint);padding:30px}
+  .loading{text-align:center;color:var(--txt-dim);padding:40px}
+  .month{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:600;font-size:13px}
+  .month select{border:none;background:transparent;padding:0;width:auto}
+  .chk{width:auto;cursor:pointer}
+  .bar{height:7px;border-radius:20px;background:var(--line);overflow:hidden;min-width:80px}.bar>i{display:block;height:100%;border-radius:20px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login" id="loginView">
+  <div class="login-card">
+    <div class="login-mark">🦏</div>
+    <h1>Painel Team Rhino</h1>
+    <p>Entre para lançar e acompanhar os números.</p>
+    <label>E-mail</label>
+    <input id="email" type="email" autocomplete="username" placeholder="voce@email.com">
+    <label>Senha</label>
+    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn btn-full" id="loginBtn" onclick="doLogin()">Entrar</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app wrap" id="appView">
+  <div class="topbar">
+    <div class="brand"><div class="brand-mark">🦏</div><div><div class="brand-name">Painel Team Rhino</div><div class="brand-sub">Lançamentos & Calls</div></div></div>
+    <div class="spacer"></div>
+    <div class="month"><span style="color:var(--txt-dim)">Mês</span><select id="monthSel" onchange="renderAll()"></select></div>
+    <span class="who" id="whoAmI"></span>
+    <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sair</button>
+  </div>
+
+  <div class="msg" id="appMsg"></div>
+
+  <div class="tabs">
+    <button class="tab on" data-v="resumo" onclick="tab('resumo',this)">Resumo</button>
+    <button class="tab" data-v="lanc" onclick="tab('lanc',this)">Lançamentos</button>
+    <button class="tab" data-v="alunos" onclick="tab('alunos',this)">Alunos &amp; Calls</button>
+  </div>
+
+  <!-- RESUMO -->
+  <section class="view on" id="v-resumo">
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Faturamento do mês</div><div class="kpi-v num" id="kFat">—</div><div class="kpi-f" id="kFatF"></div></div>
+      <div class="kpi"><div class="kpi-l">Despesa do mês</div><div class="kpi-v num" id="kDesp">—</div><div class="kpi-f" id="kDespF"></div></div>
+      <div class="kpi"><div class="kpi-l">Resultado</div><div class="kpi-v num" id="kRes">—</div><div class="kpi-f" id="kResF"></div></div>
+      <div class="kpi"><div class="kpi-l">Calls a fazer</div><div class="kpi-v num" id="kCalls">—</div><div class="kpi-f" id="kCallsF"></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Alunos e movimento</div>
+      <div id="resumoBody" class="loading">Carregando…</div>
+    </div>
+  </section>
+
+  <!-- LANÇAMENTOS -->
+  <section class="view" id="v-lanc">
+    <div class="card">
+      <div class="card-title">Novo lançamento</div>
+      <div class="form-grid">
+        <div><label>Data</label><input id="fData" type="date"></div>
+        <div><label>Tipo</label><select id="fTipo" onchange="updateCatOptions()"><option value="entrada">Entrada</option><option value="despesa">Despesa</option></select></div>
+        <div><label>Categoria</label><select id="fCat"></select></div>
+        <div><label>Escopo</label><select id="fEscopo"><option value="empresa">Empresa</option><option value="pessoal">Pessoal</option></select></div>
+        <div class="full"><label>Descrição (opcional)</label><input id="fDesc" placeholder="ex.: mensalidade Framework — Bruno"></div>
+        <div><label>Valor (R$)</label><input id="fValor" type="number" step="0.01" min="0" placeholder="0,00"></div>
+        <div style="grid-column:2/-1;display:flex;align-items:end"><button class="btn" style="width:100%" id="addBtn" onclick="addLanc()">Adicionar lançamento</button></div>
+      </div>
+      <div class="msg" id="lancMsg"></div>
+    </div>
+    <div class="card">
+      <div class="card-title" id="lancListTitle">Lançamentos do mês</div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Escopo</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody id="lancTable"></tbody></table></div>
+    </div>
+  </section>
+
+  <!-- ALUNOS -->
+  <section class="view" id="v-alunos">
+    <div class="card">
+      <div class="card-title">Alunos &amp; Calls <span style="color:var(--txt-faint);font-weight:400;font-size:12.5px">· edite direto nas caixas, salva automático</span></div>
+      <div style="overflow-x:auto"><table><thead><tr><th>Aluno</th><th>Programa</th><th style="text-align:center">Ativo</th><th style="text-align:right">Mensalidade</th><th style="text-align:center">Calls contr.</th><th style="text-align:center">Feitas</th><th style="min-width:90px">Progresso</th><th style="text-align:center">Faltam</th></tr></thead><tbody id="alunosTable"></tbody></table></div>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ===== CONFIG ===== */
+const SB_URL = 'https://fcwxkelokmqwmivjembv.supabase.co';
+const SB_KEY = 'sb_publishable_eo9wQ05w390iA0V13ACSqg_Lihy643Q';
+let sb;
+try { sb = supabase.createClient(SB_URL, SB_KEY); }
+catch(e){ document.getElementById('loginMsg').className='msg err'; document.getElementById('loginMsg').textContent='Não foi possível iniciar a conexão. Recarregue a página.'; }
+
+/* ===== HELPERS ===== */
+const BRL0 = v => 'R$ ' + Math.round(v||0).toLocaleString('pt-BR');
+const BRLs = v => (v<0?'-':'') + BRL0(Math.abs(v));
+const MFULL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const CATS={ entrada:['Consultoria','Mentoria Rhino','Mentoria Framework','Outros'],
+             despesa:['Casa & Henrique','Cartões','Colaboradores','Extras','Impostos','Ferramentas','Outros'] };
+let LANC=[], ALUNOS=[], METAS={};
+const $ = id => document.getElementById(id);
+function showMsg(id,text,ok){ const e=$(id); e.className='msg '+(ok?'ok':'err'); e.textContent=text; if(ok) setTimeout(()=>{e.className='msg';},3000); }
+
+/* ===== AUTH ===== */
+async function init(){
+  if(!sb) return;
+  const { data:{ session } } = await sb.auth.getSession();
+  if(session) enterApp(session); else showLogin();
+  sb.auth.onAuthStateChange((_e,s)=>{ if(s) enterApp(s); else showLogin(); });
+}
+function showLogin(){ $('loginView').style.display='grid'; $('appView').style.display='none'; }
+async function doLogin(){
+  const email=$('email').value.trim(), password=$('password').value;
+  if(!email||!password){ showMsg('loginMsg','Preencha e-mail e senha.'); return; }
+  $('loginBtn').disabled=true; $('loginBtn').textContent='Entrando…';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  $('loginBtn').disabled=false; $('loginBtn').textContent='Entrar';
+  if(error){ showMsg('loginMsg', error.message==='Invalid login credentials'?'E-mail ou senha incorretos. Confira se o usuário foi criado no Supabase.':error.message); }
+}
+async function doLogout(){ await sb.auth.signOut(); }
+async function enterApp(session){
+  $('loginView').style.display='none'; $('appView').style.display='block';
+  $('whoAmI').textContent = session.user.email;
+  $('fData').value = new Date().toISOString().slice(0,10);
+  buildMonths(); updateCatOptions();
+  await loadAll();
+}
+
+/* ===== DATA ===== */
+async function loadAll(){
+  try{
+    const [l,a,m] = await Promise.all([
+      sb.from('lancamentos').select('*').order('data',{ascending:false}),
+      sb.from('alunos').select('*').order('nome'),
+      sb.from('metas').select('*')
+    ]);
+    if(l.error) throw l.error; if(a.error) throw a.error; if(m.error) throw m.error;
+    LANC=l.data||[]; ALUNOS=a.data||[]; METAS={}; (m.data||[]).forEach(x=>METAS[x.ano_mes]=x.objetivo);
+    $('appMsg').className='msg';
+    renderAll();
+  }catch(e){ showMsg('appMsg','Erro ao carregar dados: '+e.message+'. Verifique se você rodou o schema.sql e se as políticas de acesso estão ativas.'); }
+}
+function buildMonths(){
+  const sel=$('monthSel'); const now=new Date();
+  let opts='';
+  for(let mo=0;mo<12;mo++){ const ym='2026-'+String(mo+1).padStart(2,'0'); const seld=(mo===now.getMonth())?'selected':''; opts+=`<option value="${ym}" ${seld}>${MFULL[mo]}/26</option>`; }
+  sel.innerHTML=opts;
+}
+function updateCatOptions(){ const t=$('fTipo').value; $('fCat').innerHTML=CATS[t].map(c=>`<option>${c}</option>`).join(''); $('fEscopo').value = t==='entrada'?'empresa':'empresa'; }
+
+/* ===== ACTIONS ===== */
+async function addLanc(){
+  const data=$('fData').value, tipo=$('fTipo').value, categoria=$('fCat').value, descricao=$('fDesc').value.trim(), valor=parseFloat($('fValor').value), escopo=$('fEscopo').value;
+  if(!data){ showMsg('lancMsg','Escolha a data.'); return; }
+  if(!(valor>0)){ showMsg('lancMsg','Informe um valor maior que zero.'); return; }
+  $('addBtn').disabled=true;
+  const { error } = await sb.from('lancamentos').insert({ data, tipo, categoria, descricao, valor, escopo });
+  $('addBtn').disabled=false;
+  if(error){ showMsg('lancMsg','Não salvou: '+error.message); return; }
+  showMsg('lancMsg','Lançamento adicionado.',true);
+  $('fValor').value=''; $('fDesc').value='';
+  await loadAll();
+}
+async function delLanc(id){
+  const { error } = await sb.from('lancamentos').delete().eq('id',id);
+  if(error){ showMsg('appMsg','Não excluiu: '+error.message); return; }
+  await loadAll();
+}
+let saveTimer;
+async function saveAluno(id, field, value){
+  const patch={}; patch[field] = (field==='ativo') ? value : (field==='mensalidade'? (parseFloat(value)||0) : (parseInt(value)||0));
+  const a=ALUNOS.find(x=>x.id===id); if(a) a[field]=patch[field];
+  renderAlunos(); renderResumo();
+  const { error } = await sb.from('alunos').update(patch).eq('id',id);
+  if(error) showMsg('appMsg','Não salvou o aluno: '+error.message);
+}
+
+/* ===== RENDER ===== */
+function ym(){ return $('monthSel').value; }
+function lancDoMes(){ const m=ym(); return LANC.filter(x=>(x.data||'').slice(0,7)===m); }
+function renderAll(){ renderResumo(); renderLanc(); renderAlunos(); }
+
+function renderResumo(){
+  const rows=lancDoMes();
+  const fat=rows.filter(r=>r.tipo==='entrada').reduce((s,r)=>s+ +r.valor,0);
+  const desp=rows.filter(r=>r.tipo==='despesa').reduce((s,r)=>s+ +r.valor,0);
+  const res=fat-desp, meta=METAS[ym()]||0;
+  $('kFat').textContent=BRL0(fat); $('kFatF').textContent = meta?`meta ${BRL0(meta)} · ${(fat/meta*100||0).toFixed(0)}%`:'';
+  $('kDesp').textContent=BRL0(desp);
+  const emp=rows.filter(r=>r.tipo==='despesa'&&r.escopo==='empresa').reduce((s,r)=>s+ +r.valor,0);
+  const pes=desp-emp; $('kDespF').textContent=`empresa ${BRL0(emp)} · pessoal ${BRL0(pes)}`;
+  $('kRes').textContent=BRLs(res); $('kRes').style.color=res>=0?'var(--up)':'var(--down)';
+  $('kResF').textContent=`margem ${fat?(res/fat*100).toFixed(0):0}%`;
+  const ativos=ALUNOS.filter(a=>a.ativo);
+  const contr=ativos.reduce((s,a)=>s+(a.calls_contratadas||0),0), feitas=ativos.reduce((s,a)=>s+(a.calls_feitas||0),0);
+  $('kCalls').textContent=Math.max(0,contr-feitas); $('kCallsF').textContent=`${feitas}/${contr} feitas`;
+  const rh=ativos.filter(a=>a.programa==='rhino').length, fw=ativos.length-rh;
+  $('resumoBody').className=''; $('resumoBody').innerHTML=
+    `<div style="display:flex;gap:24px;flex-wrap:wrap;font-size:13.5px;color:var(--txt-dim)">
+      <div><b style="color:var(--txt);font-size:20px;font-family:Sora">${ativos.length}</b> alunos ativos</div>
+      <div><b style="color:var(--gold)">${rh}</b> Rhino · <b style="color:var(--indigo)">${fw}</b> Framework</div>
+      <div><b style="color:var(--txt)">${rows.length}</b> lançamentos em ${MFULL[+ym().slice(5)-1]}</div>
+    </div>`;
+}
+function renderLanc(){
+  const rows=lancDoMes();
+  $('lancListTitle').textContent=`Lançamentos de ${MFULL[+ym().slice(5)-1]}/26 · ${rows.length}`;
+  $('lancTable').innerHTML = rows.length ? rows.map(r=>`
+    <tr><td class="num">${(r.data||'').slice(8,10)}/${(r.data||'').slice(5,7)}</td>
+    <td><span class="pill ${r.tipo==='entrada'?'pill-in':'pill-out'}">${r.tipo==='entrada'?'Entrada':'Despesa'}</span></td>
+    <td>${r.categoria||''}</td><td style="color:var(--txt-dim)">${r.descricao||'—'}</td>
+    <td><span class="pill ${r.escopo==='pessoal'?'pill-pes':'pill-emp'}">${r.escopo==='pessoal'?'Pessoal':'Empresa'}</span></td>
+    <td style="text-align:right"><span class="${r.tipo==='entrada'?'val-in':'val-out'} num">${BRL0(r.valor)}</span></td>
+    <td style="text-align:right"><span class="x" onclick="delLanc('${r.id}')" title="excluir">✕</span></td></tr>`).join('')
+    : `<tr><td class="empty" colspan="7">Nenhum lançamento em ${MFULL[+ym().slice(5)-1]}. Adicione o primeiro acima.</td></tr>`;
+}
+function renderAlunos(){
+  const list=[...ALUNOS].sort((a,b)=>(b.ativo-a.ativo)||a.nome.localeCompare(b.nome));
+  $('alunosTable').innerHTML = list.length ? list.map(a=>{
+    const c=a.calls_contratadas||0, f=a.calls_feitas||0, falta=Math.max(0,c-f), p=c?Math.min(100,f/c*100):0;
+    return `<tr>
+      <td class="num" style="font-weight:600">${a.nome}${a.tem_call?' <span class="pill pill-emp" style="font-size:9px">C</span>':''}</td>
+      <td><span class="pill ${a.programa==='rhino'?'pill-emp':'pill-emp'}" style="background:${a.programa==='rhino'?'var(--gold-soft,rgba(232,178,75,.14))':'var(--indigo-soft)'};color:${a.programa==='rhino'?'var(--gold)':'var(--indigo)'}">${a.programa==='rhino'?'Rhino':'Framework'}</span></td>
+      <td style="text-align:center"><input class="chk" type="checkbox" ${a.ativo?'checked':''} onchange="saveAluno('${a.id}','ativo',this.checked)"></td>
+      <td style="text-align:right"><input class="mini" style="width:90px;text-align:right" type="number" step="0.01" value="${a.mensalidade||0}" onchange="saveAluno('${a.id}','mensalidade',this.value)"></td>
+      <td style="text-align:center"><input class="mini" type="number" min="0" value="${c}" onchange="saveAluno('${a.id}','calls_contratadas',this.value)"></td>
+      <td style="text-align:center"><input class="mini" type="number" min="0" value="${f}" onchange="saveAluno('${a.id}','calls_feitas',this.value)"></td>
+      <td><div class="bar"><i style="width:${p}%;background:${falta===0&&c>0?'var(--up)':'var(--gold)'}"></i></div></td>
+      <td style="text-align:center"><b class="num" style="color:${falta>0?'var(--gold)':'var(--up)'}">${falta}</b></td></tr>`;
+  }).join('') : `<tr><td class="empty" colspan="8">Nenhum aluno encontrado. Rode o schema.sql no Supabase.</td></tr>`;
+}
+
+/* ===== NAV ===== */
+function tab(v,el){ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on')); el.classList.add('on');
+  document.querySelectorAll('.view').forEach(s=>s.classList.remove('on')); $('v-'+v).classList.add('on'); }
+
+init();
+</script>
+</body>
+</html>
