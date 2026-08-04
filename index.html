@@ -636,28 +636,47 @@ function renderSplit(){
     `<div class="split-row"><div class="split-l"><span class="split-dot" style="background:var(--down)"></span>Pessoal</div><div><b class="num">${BRL0(pes)}</b> <span style="color:var(--txt-faint);font-size:12px">${(pes/tot*100).toFixed(0)}%</span></div></div>`+
     `<div class="split-row"><div class="split-l" style="color:var(--gold)">Lucro do negócio</div><div><b class="num" style="color:var(--gold)">${BRLs(lucro)}</b></div></div>`;
 }
-function renderAlerts(){
-  const A=[], inV=revMonth(current), outV=expTotal(current), i=current;
-  // 1. meta
+function avgRev(i,n){ let s=0,c=0; for(let k=i-1;k>=Math.max(0,i-n);k--){ s+=revMonth(k); c++; } return c?s/c:0; }
+function buildSignals(i){
+  const S=[], inV=revMonth(i), outV=expTotal(i), resV=revMonth(i)-expTotal(i), margin=inV?resV/inV*100:0;
   const meta=DATA.aba1.meta_objetivo[i]||60000;
-  if(inV>=meta) A.push(['up','🎯',`<b>Meta batida.</b> Faturamento de <b>${BRL0(inV)}</b> superou a meta de ${BRL0(meta)}.`]);
-  else A.push(['info','🎯',`Faltam <b>${BRL0(meta-inV)}</b> para bater a meta de ${BRL0(meta)} em ${MFULL[i]}.`]);
-  // 2. entrada: variação por origem vs mês anterior
-  if(i>0){ ['framework','consultoria','mentoria'].forEach(k=>{
-    const cur=DATA.aba1.receitas[k][i], prev=DATA.aba1.receitas[k][i-1];
-    if(prev>0){ const d=(cur-prev)/prev*100; const nm={framework:'Mentoria Framework',consultoria:'Consultoria',mentoria:'Mentoria Rhino'}[k];
-      if(d<=-25) A.push(['down','📉',`<b>${nm}</b> caiu <b>${Math.abs(d).toFixed(0)}%</b> vs ${MSHORT[i-1]} (${BRL0(prev)} → ${BRL0(cur)}).`]);
-      else if(d>=30) A.push(['up','📈',`<b>${nm}</b> cresceu <b>+${d.toFixed(0)}%</b> vs ${MSHORT[i-1]} (${BRL0(cur)}).`]); } }); }
-  // 3. maior despesa do mês
+  // resultado
+  const prevRes=i>0?(revMonth(i-1)-expTotal(i-1)):resV, gRes=prevRes?((resV-prevRes)/Math.abs(prevRes)*100):0;
+  S.push({t:resV>=0?'up':'down',ic:resV>=0?'💰':'🔻',h:'Resultado do mês',p:`Entrou <b>${BRL0(inV)}</b>, saiu <b>${BRL0(outV)}</b>, sobrou <b>${BRLs(resV)}</b> (margem <b>${margin.toFixed(1)}%</b>). ${i>0?(gRes>=0?`Melhorou <b>+${gRes.toFixed(0)}%</b> vs ${MSHORT[i-1]}.`:`Caiu <b>${gRes.toFixed(0)}%</b> vs ${MSHORT[i-1]}.`):''}`});
+  // meta + projeção
+  if(i===REAL_MONTH){ const d=new Date(),dim=new Date(d.getFullYear(),d.getMonth()+1,0).getDate(),frac=Math.max(.03,d.getDate()/dim),proj=inV/frac;
+    S.push({t:proj>=meta?'up':'info',ic:'🎯',h:'Projeção de fechamento',p:`No ritmo até aqui (dia ${d.getDate()}), o mês fecha em ~<b>${BRL0(proj)}</b>. Meta: ${BRL0(meta)} — ${proj>=meta?'no caminho ✓':`faltam <b>${BRL0(Math.max(0,meta-proj))}</b> de projeção`}.`});
+  } else {
+    if(inV>=meta) S.push({t:'up',ic:'🎯',h:'Meta batida',p:`Faturamento de <b>${BRL0(inV)}</b> superou a meta de ${BRL0(meta)} (<b>${(inV/meta*100).toFixed(0)}%</b>).`});
+    else S.push({t:'info',ic:'🎯',h:'Meta do mês',p:`Faltaram <b>${BRL0(meta-inV)}</b> para a meta de ${BRL0(meta)} (${(inV/meta*100).toFixed(0)}% atingido).`});
+  }
+  // tendência vs média 3m
+  if(i>=1){ const avg=avgRev(i,3); if(avg>0){ const d=(inV-avg)/avg*100;
+    S.push({t:d>=0?'up':'down',ic:d>=0?'📈':'📉',h:'Tendência',p:`Receita <b>${d>=0?'+':''}${d.toFixed(0)}%</b> ${d>=0?'acima':'abaixo'} da média dos últimos meses (${BRL0(avg)}). ${d<=-15?'Sinal de atenção.':d>=15?'Aceleração real.':'Dentro do normal.'}`}); } }
+  // churn: pararam de pagar
+  const churn=ALUNOS.filter(a=>!a.cancel && a.last>=0 && a.last<=i-2 && a.total>0 && !a.pays.slice(i-1).some(x=>x>0)).sort((a,b)=>b.total-a.total);
+  if(churn.length){ const ex=churn.slice(0,2).map(a=>`${a.nome} (parou em ${MSHORT[a.last]})`).join(', ');
+    S.push({t:'down',ic:'🚪',h:'Risco de churn',p:`<b>${churn.length}</b> aluno${churn.length>1?'s':''} ${churn.length>1?'pagavam e sumiram':'pagava e sumiu'} há 2+ meses: ${ex}${churn.length>2?` e +${churn.length-2}`:''}. Vale um contato.`}); }
+  // a receber futuro (contratado)
+  let futuro=0; ALUNOS.forEach(a=>{ for(let m=i+1;m<16;m++) futuro+=a.pays[m]||0; });
+  if(futuro>0) S.push({t:'info',ic:'📅',h:'Já contratado',p:`<b>${BRL0(futuro)}</b> em mensalidades de alunos já agendadas para os próximos meses.`});
+  // maior despesa
   let items=[]; Object.keys(GROUPS).forEach(k=>(DATA.aba1.itens[k]||[]).forEach(it=>{ if((it.vals[i]||0)>0) items.push(it); }));
   items.sort((a,b)=>(b.vals[i]||0)-(a.vals[i]||0));
-  if(items[0]) A.push(['info','💸',`Maior saída do mês: <b>${items[0].nome}</b> com <b>${BRL0(items[0].vals[i])}</b>.`]);
-  // 4. despesa que disparou vs mês anterior
-  if(i>0){ for(const it of items){ const cur=it.vals[i]||0, prev=it.vals[i-1]||0; if(prev>300 && cur/prev>=1.4){ A.push(['down','⚠️',`<b>${it.nome}</b> subiu <b>${((cur/prev-1)*100).toFixed(0)}%</b> vs ${MSHORT[i-1]} (${BRL0(prev)} → ${BRL0(cur)}).`]); break; } } }
-  // 5. peso pessoal
-  const pes=expPessoa(i); if(outV>0) A.push(['info','🏠',`Despesas pessoais foram <b>${(pes/outV*100).toFixed(0)}%</b> das saídas (${BRL0(pes)}). Lucro real do negócio: <b>${BRLs(inV-expEmpresa(i))}</b>.`]);
-  const col={up:['var(--up)','var(--up-soft)'],down:['var(--down)','var(--down-soft)'],info:['var(--indigo)','var(--indigo-soft)']};
-  document.getElementById('alerts').innerHTML=A.map(([t,ic,tx])=>`<div class="alert"><div class="alert-ic" style="background:${col[t][1]}">${ic}</div><div class="alert-tx">${tx}</div></div>`).join('');
+  if(items[0]) S.push({t:'info',ic:'💸',h:'Maior saída',p:`<b>${items[0].nome}</b> foi a maior despesa: <b>${BRL0(items[0].vals[i])}</b> (${(items[0].vals[i]/outV*100).toFixed(0)}% das saídas).`});
+  // despesa que disparou
+  if(i>0){ for(const it of items){ const c=it.vals[i]||0,p=it.vals[i-1]||0; if(p>300&&c/p>=1.4){ S.push({t:'down',ic:'⚠️',h:'Despesa em alta',p:`<b>${it.nome}</b> subiu <b>${((c/p-1)*100).toFixed(0)}%</b> vs ${MSHORT[i-1]} (${BRL0(p)} → ${BRL0(c)}).`}); break; } } }
+  // peso pessoal
+  const pes=expPessoa(i); if(outV>0) S.push({t:'info',ic:'🏠',h:'Empresa x Pessoal',p:`Despesas pessoais foram <b>${(pes/outV*100).toFixed(0)}%</b> das saídas (${BRL0(pes)}). Lucro real do negócio: <b>${BRLs(inV-expEmpresa(i))}</b>.`});
+  return S;
+}
+const SIG_COL={up:['var(--up)','var(--up-soft)'],down:['var(--down)','var(--down-soft)'],info:['var(--indigo)','var(--indigo-soft)']};
+function renderAlerts(){
+  const S=buildSignals(current);
+  // ordem de destaque para a visão geral
+  const order={'Risco de churn':0,'Meta do mês':1,'Projeção de fechamento':1,'Meta batida':1,'Tendência':2,'Despesa em alta':3,'Já contratado':4,'Maior saída':5,'Empresa x Pessoal':6,'Resultado do mês':7};
+  const list=[...S].sort((a,b)=>(order[a.h]??9)-(order[b.h]??9)).slice(0,6);
+  document.getElementById('alerts').innerHTML=list.map(s=>`<div class="alert"><div class="alert-ic" style="background:${SIG_COL[s.t][1]}">${s.ic}</div><div class="alert-tx">${s.p}</div></div>`).join('');
 }
 function renderRevLegend(){ const inV=revMonth(current);
   document.getElementById('revLegend').innerHTML=Object.entries(REVCATS).map(([k,c])=>{ const v=DATA.aba1.receitas[k][current],p=inV?v/inV*100:0;
@@ -702,18 +721,9 @@ function renderGoals(){ const inV=revMonth(current),meta=DATA.aba1.meta_objetivo
     {name:'Margem do mês',cur:Math.max(0,resMonth(current)),target:inV*0.35,color:'var(--up)'}];
   document.getElementById('goalsWrap').innerHTML=goals.map(g=>{ const p=Math.min(100,g.target?g.cur/g.target*100:0);
     return `<div class="goal"><div class="goal-top"><span class="goal-name">${g.name}</span><span class="goal-val">${balanceHidden?'••••':BRL0(g.cur)} <span style="color:var(--txt-faint)">/ ${BRL0(g.target)}</span></span></div><div class="bar"><div class="bar-fill" style="width:${p}%;background:${g.color}"></div></div></div>`; }).join(''); }
-function renderInsights(){ const inV=revMonth(current),outV=expMonth(current),resV=resMonth(current),margin=inV?resV/inV*100:0;
-  const prev=current>0?resMonth(current-1):resV,g=prev?((resV-prev)/Math.abs(prev)*100):0;
-  const gs=Object.entries(GROUPS).map(([k,gr])=>[gr.name,groupTotal(k,current)]).sort((a,b)=>b[1]-a[1]);
-  const ativos=ALUNOS.filter(a=>a.ativo),canc=ALUNOS.filter(a=>a.cancel);
-  const fwShare=inV?DATA.aba1.receitas.framework[current]/inV*100:0, consShare=inV?DATA.aba1.receitas.consultoria[current]/inV*100:0;
-  let best=ACTIVE_MONTHS[0]; ACTIVE_MONTHS.forEach(i=>{ if(revMonth(i)>revMonth(best)) best=i; });
-  const ins=[
-    {c:'var(--up)',bg:'var(--up-soft)',ic:'M12 19V5M5 12l7-7 7 7',h:'Resultado do mês',p:`Em ${MFULL[current]} entrou <b>${BRL0(inV)}</b> e saiu <b>${BRL0(outV)}</b>, sobrando <b>${BRLs(resV)}</b> (margem de <b>${margin.toFixed(1)}%</b>). ${g>=0?`Melhorou <b>+${g.toFixed(0)}%</b> vs o mês anterior.`:`Caiu <b>${g.toFixed(0)}%</b> vs o mês anterior — olho nas saídas.`}`},
-    {c:'var(--indigo)',bg:'var(--indigo-soft)',ic:'M3 17l5-5 4 3 8-8',h:'A Framework carrega a receita',p:`A Mentoria Framework foi <b>${fwShare.toFixed(0)}%</b> da receita do mês (${BRL0(DATA.aba1.receitas.framework[current])}), contra <b>${consShare.toFixed(0)}%</b> da consultoria. O produto de escala é o motor principal.`},
-    {c:'var(--down)',bg:'var(--down-soft)',ic:'M12 5v14M5 12l7 7 7-7',h:'Maior peso nas despesas',p:`<b>${gs[0][0]}</b> consumiu <b>${BRL0(gs[0][1])}</b> (${(gs[0][1]/outV*100).toFixed(0)}% das saídas). Primeiro lugar pra revisar se quiser proteger a margem.`},
-    {c:'var(--gold)',bg:'var(--gold-soft)',ic:'M12 8v4l3 2',h:'Base de alunos',p:`Você tem <b>${ativos.length}</b> alunos ativos e <b>${canc.length}</b> cancelamentos no período. Melhor mês de receita até agora: <b>${MFULL[best]}</b>, com <b>${BRL0(revMonth(best))}</b>.`}];
-  document.getElementById('insights').innerHTML=ins.map(i=>`<div class="insight"><div class="insight-ic" style="background:${i.bg};color:${i.c}"><svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="${i.ic}"/></svg></div><div><h4>${i.h}</h4><p>${i.p}</p></div></div>`).join(''); }
+function renderInsights(){
+  const S=buildSignals(current);
+  document.getElementById('insights').innerHTML=S.map(s=>`<div class="insight"><div class="insight-ic" style="background:${SIG_COL[s.t][1]};color:${SIG_COL[s.t][0]};font-size:16px">${s.ic}</div><div><h4>${s.h}</h4><p>${s.p}</p></div></div>`).join(''); }
 
 /* ================= CHARTS ================= */
 Chart.defaults.font.family="'Inter',sans-serif"; Chart.defaults.color='#5A6788'; const grid='rgba(255,255,255,.05)';
