@@ -1,414 +1,1093 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Team Rhino • Painel & Lançamentos</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel RHINO · Consulting Framework</title>
 <style>
-  :root{--bg:#0A0D14;--panel:#111725;--panel-2:#161E30;--line:#222C42;--line-soft:#1A2236;--txt:#EAF0FA;--txt-dim:#8A96B0;--txt-faint:#5A6788;--gold:#E8B24B;--gold-soft:rgba(232,178,75,.14);--up:#38D399;--up-soft:rgba(56,211,153,.13);--down:#FF6B5D;--down-soft:rgba(255,107,93,.13);--indigo:#6C7BF2;--indigo-soft:rgba(108,123,242,.14);--radius:14px}
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--txt);-webkit-font-smoothing:antialiased;min-height:100vh}
-  body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(900px 500px at 12% -8%,rgba(108,123,242,.10),transparent 60%),radial-gradient(800px 500px at 100% 0%,rgba(232,178,75,.06),transparent 55%)}
-  h1,h2,h3,.num{font-family:'Sora',sans-serif}.num{font-variant-numeric:tabular-nums}
-  .wrap{position:relative;z-index:1;max-width:1160px;margin:0 auto;padding:22px 20px 60px}
-  .login{min-height:100vh;display:grid;place-items:center;position:relative;z-index:1;padding:20px}
-  .login-card{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:32px 28px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-  .login-mark{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,var(--gold),#C98A1E);display:grid;place-items:center;font-size:24px;margin-bottom:18px}
-  .login h1{font-size:20px;font-weight:700}.login p{font-size:13px;color:var(--txt-dim);margin:4px 0 22px}
-  label{display:block;font-size:12px;color:var(--txt-dim);font-weight:600;margin:0 0 6px}
-  input,select{width:100%;padding:11px;background:var(--bg);border:1px solid var(--line);border-radius:10px;color:var(--txt);font:inherit;outline:none}
-  input:focus,select:focus{border-color:var(--indigo)}
-  select option{background:var(--panel)}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 16px;border-radius:10px;border:none;background:var(--gold);color:#1a1305;font:inherit;font-weight:700;cursor:pointer;transition:.15s}
-  .btn:hover{filter:brightness(1.06)}.btn:disabled{opacity:.5;cursor:default}
-  .btn-full{width:100%;margin-top:22px}
-  .btn-ghost{background:var(--panel);border:1px solid var(--line);color:var(--txt)}
-  .btn-sm{padding:8px 12px;font-size:13px}
-  .msg{font-size:12.5px;padding:10px 12px;border-radius:9px;margin:14px 0 0;display:none}
-  .msg.err{display:block;background:var(--down-soft);color:var(--down);border:1px solid rgba(255,107,93,.3)}
-  .msg.ok{display:block;background:var(--up-soft);color:var(--up);border:1px solid rgba(56,211,153,.3)}
-  .app{display:none}
-  .topbar{display:flex;align-items:center;gap:14px;margin-bottom:20px;flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:11px}
-  .brand-mark{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--gold),#C98A1E);display:grid;place-items:center;font-size:20px}
-  .brand-name{font-family:'Sora';font-weight:700;font-size:15px}.brand-sub{font-size:11px;color:var(--txt-faint)}
-  .spacer{flex:1}.who{font-size:12.5px;color:var(--txt-dim)}
-  .month{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:600;font-size:13px}
-  .month select{border:none;background:transparent;padding:0;width:auto}
-  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
-  .seg button{padding:7px 13px;border-radius:8px;border:none;background:transparent;color:var(--txt-dim);font:inherit;font-weight:600;font-size:12.5px;cursor:pointer;transition:.15s}
-  .seg button.on{background:var(--indigo-soft);color:#fff}
-  .tabs{display:flex;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:22px;flex-wrap:wrap}
-  .tab{padding:9px 16px;border-radius:9px;border:none;background:transparent;color:var(--txt-dim);font:inherit;font-weight:600;font-size:13.5px;cursor:pointer;transition:.15s}
-  .tab.on{background:var(--indigo-soft);color:#fff}
-  .view{display:none;animation:fade .3s}.view.on{display:block}
-  @keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-  .card{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:20px;margin-bottom:18px}
-  .card-title{font-size:15px;font-weight:600;margin-bottom:16px}
-  .card-title span{color:var(--txt-faint);font-weight:400;font-size:12.5px}
-  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
-  @media(max-width:720px){.kpis{grid-template-columns:1fr 1fr}}
-  .kpi{background:var(--panel);border:1px solid var(--line-soft);border-radius:var(--radius);padding:16px;position:relative;overflow:hidden}
-  .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--edge,transparent)}
-  .kpi.in{--edge:var(--up)}.kpi.out{--edge:var(--down)}.kpi.res{--edge:var(--gold)}.kpi.due{--edge:var(--indigo)}
-  .kpi-l{font-size:12px;color:var(--txt-dim)}.kpi-v{font-size:22px;font-weight:800;font-family:'Sora';margin-top:4px;font-variant-numeric:tabular-nums}.kpi-f{font-size:11px;color:var(--txt-faint);margin-top:3px}
-  .grid2{display:grid;grid-template-columns:1.4fr 1fr;gap:16px;margin-bottom:18px}
-  .grid2b{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
-  @media(max-width:800px){.grid2,.grid2b{grid-template-columns:1fr}}
-  .chart-wrap{position:relative;height:250px}.chart-sm{height:210px}.chart-lg{height:280px}
-  .gauge-wrap{position:relative;height:180px;display:grid;place-items:center}
-  .gauge-ctr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
-  .gauge-pct{font-family:'Sora';font-weight:800;font-size:32px}.gauge-sub{font-size:12px;color:var(--txt-dim);margin-top:2px}
-  .legend-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--txt-dim);padding:4px 0}
-  .legend-row .d{width:9px;height:9px;border-radius:3px}.legend-row b{margin-left:auto;color:var(--txt)}
-  .alert{display:flex;gap:11px;padding:12px 14px;border-radius:11px;background:var(--panel-2);border:1px solid var(--line-soft);margin-bottom:9px}
-  .alert-ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex-shrink:0;font-size:14px}
-  .alert-tx{font-size:12.5px;color:var(--txt-dim);line-height:1.5}.alert-tx b{color:var(--txt)}
-  .form-grid{display:grid;grid-template-columns:120px 1fr 1fr 120px;gap:12px;align-items:end}
-  @media(max-width:720px){.form-grid{grid-template-columns:1fr 1fr}}
-  .form-grid .full{grid-column:1/-1}
-  table{width:100%;border-collapse:collapse}
-  th{text-align:left;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--txt-faint);font-weight:600;padding:0 10px 10px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
-  td{padding:10px;border-bottom:1px solid var(--line-soft);font-size:13px;vertical-align:middle}
-  tr:last-child td{border-bottom:none}
-  .pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px}
-  .pill-in{background:var(--up-soft);color:var(--up)}.pill-out{background:var(--down-soft);color:var(--down)}
-  .pill-emp{background:var(--indigo-soft);color:var(--indigo)}.pill-pes{background:var(--down-soft);color:var(--down)}
-  .pill-pago{background:var(--up-soft);color:var(--up);cursor:pointer}.pill-pend{background:var(--gold-soft);color:var(--gold);cursor:pointer}
-  .val-in{color:var(--up);font-weight:700}.val-out{color:var(--down);font-weight:700}
-  .mini{width:58px;padding:7px;text-align:center;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--txt);font:inherit;font-weight:700;font-variant-numeric:tabular-nums}
-  .selrow{padding:6px 8px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--txt);font:inherit;font-size:12.5px;width:auto}
-  .x{cursor:pointer;color:var(--txt-faint);font-weight:700;padding:4px 8px;border-radius:6px}.x:hover{background:var(--down-soft);color:var(--down)}
-  .empty{text-align:center;color:var(--txt-faint);padding:30px}
-  .chk{width:auto;cursor:pointer}
-  .bar{height:7px;border-radius:20px;background:var(--line);overflow:hidden;min-width:70px}.bar>i{display:block;height:100%;border-radius:20px}
-  .switch-lbl{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--txt-dim)}
+:root{
+  --preto:#000000; --carvao:#0d0d0d; --grafite:#161616; --linha:#242424;
+  --cinza:#E6E8E9; --cinza-fraco:#8a8d8f; --verde:#44CF17; --verde-fundo:#122b06;
+  --vermelho:#e24b4a; --vermelho-fundo:#2a0f0f; --ambar:#EF9F27; --ambar-fundo:#2b1d05;
+  --mono:"Courier New",Courier,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--preto);color:var(--cinza);font-family:var(--sans);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select{font-family:inherit;font-size:14px}
+button{cursor:pointer}
+a{color:var(--verde)}
+.mono{font-family:var(--mono)}
+.rotulo{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--cinza-fraco)}
+.quadrado{display:inline-block;width:9px;height:9px;background:var(--verde);margin-right:9px;vertical-align:1px;flex:none}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.pos{color:var(--verde)} .neg{color:var(--vermelho)} .aviso{color:var(--ambar)}
+.oculto{display:none !important}
+
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.caixa-login{width:100%;max-width:360px;border:1px solid var(--linha);background:var(--carvao);padding:34px 30px}
+.caixa-login h1{font-size:20px;font-weight:600;margin:14px 0 4px}
+.caixa-login p{font-size:13px;color:var(--cinza-fraco);margin-bottom:22px}
+.campo{margin-bottom:12px}
+.campo label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--cinza-fraco);margin-bottom:5px}
+input,select{width:100%;background:var(--grafite);border:1px solid var(--linha);color:var(--cinza);padding:9px 11px;border-radius:0}
+input:focus,select:focus{outline:none;border-color:var(--verde)}
+.btn{background:var(--verde);color:#000;border:none;padding:10px 18px;font-weight:600;font-size:13px;letter-spacing:.02em}
+.btn:hover{filter:brightness(1.12)}
+.btn-vazio{background:transparent;color:var(--cinza);border:1px solid var(--linha);padding:8px 14px;font-size:13px}
+.btn-vazio:hover{border-color:var(--verde);color:var(--verde)}
+.erro{background:var(--vermelho-fundo);border:1px solid var(--vermelho);color:#f5b0b0;padding:9px 12px;font-size:13px;margin-top:12px}
+
+/* topo */
+header{border-bottom:1px solid var(--linha);background:var(--carvao);position:sticky;top:0;z-index:20}
+.topo{max-width:1180px;margin:0 auto;padding:13px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.marca{display:flex;align-items:center;gap:10px;margin-right:auto}
+.marca img{height:26px;width:auto;display:block}
+.marca .nome{font-weight:600;font-size:15px;letter-spacing:-.01em}
+.controles{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg{display:flex;border:1px solid var(--linha)}
+.seg button{background:transparent;border:none;color:var(--cinza-fraco);padding:6px 13px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase}
+.seg button.on{background:var(--verde);color:#000;font-weight:700}
+header select{width:auto;padding:6px 10px;font-family:var(--mono);font-size:12px}
+
+nav{border-bottom:1px solid var(--linha);background:var(--preto);overflow-x:auto}
+.abas{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;gap:2px}
+.abas button{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--cinza-fraco);padding:12px 15px;font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;white-space:nowrap}
+.abas button.on{color:var(--verde);border-bottom-color:var(--verde)}
+.abas button:hover{color:var(--cinza)}
+
+main{max-width:1180px;margin:0 auto;padding:26px 20px 80px}
+section h2{font-size:13px;font-family:var(--mono);letter-spacing:.13em;text-transform:uppercase;font-weight:400;color:var(--cinza);display:flex;align-items:center;margin:30px 0 13px}
+section h2:first-child{margin-top:0}
+
+.grade{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(168px,1fr))}
+
+.kpi{background:var(--carvao);border:1px solid var(--linha);padding:15px 16px}
+.kpi .t{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--cinza-fraco);margin-bottom:7px}
+.kpi .v{font-family:var(--mono);font-size:25px;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .s{font-size:12px;color:var(--cinza-fraco);margin-top:5px}
+.kpi.destaque{border-color:var(--verde)}
+
+.cartao{background:var(--carvao);border:1px solid var(--linha);padding:16px}
+.linha-fina{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--grafite);border-left:3px solid var(--verde);padding:11px 14px;font-size:13px;flex-wrap:wrap}
+
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cinza-fraco);text-align:left;padding:8px 9px;border-bottom:1px solid var(--linha);font-weight:400;white-space:nowrap}
+td{padding:8px 9px;border-bottom:1px solid #141414;vertical-align:middle}
+tbody tr:hover{background:var(--grafite)}
+td.d,th.d{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.rolagem{overflow-x:auto}
+.tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--linha);color:var(--cinza-fraco)}
+.tag.ok{color:var(--verde);border-color:#1e4a0c;background:var(--verde-fundo)}
+.tag.mal{color:var(--vermelho);border-color:#4a1414;background:var(--vermelho-fundo)}
+.tag.av{color:var(--ambar);border-color:#4a3410;background:var(--ambar-fundo)}
+.x{background:transparent;border:none;color:#4a4a4a;font-size:15px;padding:0 5px}
+.x:hover{color:var(--vermelho)}
+.mini{width:auto;min-width:56px;padding:4px 6px;font-size:12px;font-family:var(--mono)}
+
+.alerta{display:flex;gap:11px;align-items:flex-start;padding:11px 13px;border-left:3px solid var(--linha);background:var(--grafite);margin-bottom:7px;font-size:13px}
+.alerta.a{border-left-color:var(--ambar)} .alerta.r{border-left-color:var(--vermelho)} .alerta.v{border-left-color:var(--verde)}
+
+.barra{height:7px;background:var(--grafite);overflow:hidden;margin-top:9px}
+.barra i{display:block;height:100%;background:var(--verde)}
+
+.form-linha{display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end}
+.form-linha .campo{margin:0;flex:1;min-width:118px}
+.vazio{text-align:center;color:var(--cinza-fraco);padding:28px 14px;font-size:13px}
+.grafico{position:relative;height:250px}
+.nota{font-size:12px;color:var(--cinza-fraco);margin-top:9px;line-height:1.6}
+footer{border-top:1px solid var(--linha);padding:18px 20px;text-align:center}
+footer .rotulo{font-size:10px}
+@media(max-width:640px){ .kpi .v{font-size:21px} main{padding:18px 14px 70px} .topo{padding:11px 14px} .abas{padding:0 14px} }
 </style>
 </head>
 <body>
 
-<div class="login" id="loginView">
-  <div class="login-card">
-    <div class="login-mark">🦏</div>
-    <h1>Painel Team Rhino</h1>
-    <p>Entre para acompanhar e lançar os números.</p>
-    <label>E-mail</label>
-    <input id="email" type="email" autocomplete="username" placeholder="voce@email.com">
-    <label style="margin-top:14px">Senha</label>
-    <input id="password" type="password" autocomplete="current-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="btn btn-full" id="loginBtn" onclick="doLogin()">Entrar</button>
-    <div class="msg" id="loginMsg"></div>
+<div id="login">
+  <div class="caixa-login">
+    <div class="rotulo"><span class="quadrado"></span>Consulting Framework</div>
+    <h1>Painel financeiro</h1>
+    <p>Entre para ver e lançar os números.</p>
+    <div class="campo"><label for="email">E-mail</label><input id="email" type="email" autocomplete="username"></div>
+    <div class="campo"><label for="senha">Senha</label><input id="senha" type="password" autocomplete="current-password"></div>
+    <button class="btn" id="btEntrar" style="width:100%;margin-top:8px">Entrar</button>
+    <div id="erroLogin" class="erro oculto"></div>
   </div>
 </div>
 
-<div class="app wrap" id="appView">
-  <div class="topbar">
-    <div class="brand"><div class="brand-mark">🦏</div><div><div class="brand-name">Painel Team Rhino</div><div class="brand-sub">Framework & Mentoria Rhino</div></div></div>
-    <div class="spacer"></div>
-    <div class="seg" id="scopeSeg"><button class="on" data-s="tudo" onclick="setScope('tudo',this)">Tudo</button><button data-s="empresa" onclick="setScope('empresa',this)">Empresa</button><button data-s="pessoal" onclick="setScope('pessoal',this)">Pessoal</button></div>
-    <div class="month"><span style="color:var(--txt-dim)">Mês</span><select id="monthSel" onchange="renderAll()"></select></div>
-    <span class="who" id="whoAmI"></span>
-    <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sair</button>
+<div id="app" class="oculto">
+<header>
+  <div class="topo">
+    <div class="marca">
+      <img id="logoTopo" class="oculto" alt="">
+      <span class="quadrado" id="quadTopo"></span>
+      <span class="nome" id="nomeNegocio">Painel RHINO</span>
+    </div>
+    <div class="controles">
+      <div class="seg" id="segEscopo">
+        <button data-e="tudo" class="on">Tudo</button>
+        <button data-e="empresa">Empresa</button>
+        <button data-e="pessoal">Pessoal</button>
+      </div>
+      <select id="selMes" aria-label="Mês"></select>
+      <button class="btn-vazio" id="btSair">Sair</button>
+    </div>
   </div>
-  <div class="msg" id="appMsg"></div>
-  <div class="tabs">
-    <button class="tab on" data-v="dash" onclick="tab('dash',this)">Dashboard</button>
-    <button class="tab" data-v="lanc" onclick="tab('lanc',this)">Lançamentos</button>
-    <button class="tab" data-v="fixos" onclick="tab('fixos',this)">Fixos</button>
-    <button class="tab" data-v="alunos" onclick="tab('alunos',this)">Alunos &amp; Calls</button>
-  </div>
+</header>
 
-  <section class="view on" id="v-dash">
-    <div class="kpis">
-      <div class="kpi in"><div class="kpi-l">Recebimentos</div><div class="kpi-v num" id="kFat">—</div><div class="kpi-f" id="kFatF"></div></div>
-      <div class="kpi out"><div class="kpi-l">Gastos</div><div class="kpi-v num" id="kDesp">—</div><div class="kpi-f" id="kDespF"></div></div>
-      <div class="kpi res"><div class="kpi-l">Resultado</div><div class="kpi-v num" id="kRes">—</div><div class="kpi-f" id="kResF"></div></div>
-      <div class="kpi due"><div class="kpi-l">A pagar no mês</div><div class="kpi-v num" id="kDue">—</div><div class="kpi-f" id="kDueF"></div></div>
-    </div>
-    <div class="card"><div class="card-title">Evolução do saldo <span>· acumulado no mês, dia a dia</span></div><div class="chart-wrap chart-lg"><canvas id="saldoChart"></canvas></div></div>
-    <div class="grid2">
-      <div class="card"><div class="card-title">Fluxo de caixa <span>· 2026</span></div><div class="chart-wrap"><canvas id="flowChart"></canvas></div></div>
-      <div class="card"><div class="card-title">Meta do mês</div><div class="gauge-wrap"><canvas id="metaGauge"></canvas><div class="gauge-ctr"><div class="gauge-pct" id="metaPct">0%</div><div class="gauge-sub" id="metaGap"></div></div></div></div>
-    </div>
-    <div class="grid2b">
-      <div class="card"><div class="card-title">Empresa x Pessoal <span>· despesas do mês</span></div><div class="chart-wrap chart-sm"><canvas id="splitChart"></canvas></div><div id="splitLegend" style="margin-top:8px"></div></div>
-      <div class="card"><div class="card-title">Receita por origem <span>· mês</span></div><div class="chart-wrap chart-sm"><canvas id="revChart"></canvas></div><div id="revLegend" style="margin-top:8px"></div></div>
-    </div>
-    <div class="card"><div class="card-title">Alertas</div><div id="alerts"></div></div>
-    <div class="card" style="background:var(--panel-2)"><div style="font-size:12px;color:var(--txt-faint);line-height:1.6"><b style="color:var(--txt-dim)">Próximos do Finest (é só pedir):</b> gastos fixos com recorrência automática (repetem todo mês), cartões de crédito com parcelamento, e seções de bancos / cofrinhos / investimentos.</div></div>
-  </section>
+<nav><div class="abas" id="abas">
+  <button data-a="dash" class="on">Dashboard</button>
+  <button data-a="receb">Recebíveis</button>
+  <button data-a="renov">Renovações</button>
+  <button data-a="ment">Mentorados</button>
+  <button data-a="lanc">Lançamentos</button>
+  <button data-a="fixos">Fixos</button>
+  <button data-a="cart">Cartões</button>
+  <button data-a="conf">Configurações</button>
+</div></nav>
 
-  <section class="view" id="v-lanc">
-    <div class="card">
-      <div class="card-title">Novo lançamento <span>· receita de consultoria/avulsa não precisa de aluno</span></div>
-      <div class="form-grid">
-        <div><label>Data</label><input id="fData" type="date"></div>
-        <div><label>Tipo</label><select id="fTipo" onchange="updateCatOptions()"><option value="entrada">Entrada</option><option value="despesa">Despesa</option></select></div>
-        <div><label>Categoria</label><select id="fCat" onchange="suggestEscopo()"></select></div>
-        <div><label>Escopo</label><select id="fEscopo"><option value="empresa">Empresa</option><option value="pessoal">Pessoal</option></select></div>
-        <div class="full"><label>Descrição (opcional)</label><input id="fDesc" placeholder="ex.: consultoria João · aula avulsa · aluguel"></div>
-        <div><label>Valor (R$)</label><input id="fValor" type="number" step="0.01" min="0" placeholder="0,00"></div>
-        <div class="switch-lbl" style="align-self:end;padding-bottom:11px"><input class="chk" id="fPago" type="checkbox" checked><label style="margin:0">Já pago / quitado</label></div>
-        <div style="display:flex;align-items:end"><button class="btn" style="width:100%" id="addBtn" onclick="addLanc()">Adicionar</button></div>
-      </div>
-      <div class="msg" id="lancMsg"></div>
-    </div>
-    <div class="card">
-      <div class="card-title" id="lancListTitle">Lançamentos do mês</div>
-      <div style="overflow-x:auto"><table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Escopo</th><th style="text-align:center">Status</th><th style="text-align:right">Valor</th><th></th></tr></thead><tbody id="lancTable"></tbody></table></div>
-    </div>
-  </section>
+<main>
+  <section id="v-dash"></section>
+  <section id="v-receb" class="oculto"></section>
+  <section id="v-renov" class="oculto"></section>
+  <section id="v-ment" class="oculto"></section>
+  <section id="v-lanc" class="oculto"></section>
+  <section id="v-fixos" class="oculto"></section>
+  <section id="v-cart" class="oculto"></section>
+  <section id="v-conf" class="oculto"></section>
+</main>
 
-  <section class="view" id="v-fixos">
-    <div class="card" id="gerarCard" style="display:none;border-color:rgba(232,178,75,.35);background:linear-gradient(180deg,var(--gold-soft),transparent)">
-      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-        <div style="font-size:22px">🔁</div>
-        <div style="flex:1;min-width:200px"><div style="font-weight:700;font-size:14px" id="gerarTitle"></div><div style="font-size:12.5px;color:var(--txt-dim)" id="gerarSub"></div></div>
-        <button class="btn" id="gerarBtn" onclick="gerarMes()">Gerar lançamentos do mês</button>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Novo gasto/recebimento fixo <span>· cadastre uma vez, repete todo mês</span></div>
-      <div class="form-grid">
-        <div><label>Tipo</label><select id="rTipo" onchange="updateRecCat()"><option value="despesa">Despesa</option><option value="entrada">Entrada</option></select></div>
-        <div><label>Categoria</label><select id="rCat"></select></div>
-        <div><label>Descrição</label><input id="rDesc" placeholder="ex.: Aluguel · Ana · Ferramentas"></div>
-        <div><label>Dia venc.</label><input id="rDia" type="number" min="1" max="31" placeholder="10"></div>
-        <div><label>Valor (R$)</label><input id="rValor" type="number" step="0.01" min="0" placeholder="0,00"></div>
-        <div><label>Escopo</label><select id="rEscopo"><option value="empresa">Empresa</option><option value="pessoal">Pessoal</option></select></div>
-        <div style="grid-column:3/-1;display:flex;align-items:end"><button class="btn" style="width:100%" id="rAddBtn" onclick="addRec()">Adicionar fixo</button></div>
-      </div>
-      <div class="msg" id="recMsg"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Fixos cadastrados <span>· ✕ remove · desmarque para pausar</span></div>
-      <div style="overflow-x:auto"><table><thead><tr><th>Descrição</th><th>Tipo</th><th>Categoria</th><th>Escopo</th><th style="text-align:center">Dia</th><th style="text-align:right">Valor</th><th style="text-align:center">Ativo</th><th style="text-align:center" id="recMesTh">Este mês</th><th></th></tr></thead><tbody id="recTable"></tbody></table></div>
-    </div>
-  </section>
-
-  <section class="view" id="v-alunos">
-    <div class="card">
-      <div class="card-title">Novo aluno</div>
-      <div class="form-grid">
-        <div><label>Nome</label><input id="aNome" placeholder="Nome do aluno"></div>
-        <div><label>Programa</label><select id="aProg"><option value="framework">Framework</option><option value="rhino">Mentoria Rhino</option></select></div>
-        <div><label>Mensalidade</label><input id="aMens" type="number" step="0.01" min="0" placeholder="0,00"></div>
-        <div><label>Vencimento (dia)</label><input id="aVenc" type="number" min="1" max="31" placeholder="ex.: 10"></div>
-        <div class="switch-lbl" style="padding-bottom:2px"><input class="chk" id="aCall" type="checkbox"><label style="margin:0">Tem call mensal</label></div>
-        <div style="grid-column:2/-1;display:flex;align-items:end"><button class="btn" style="width:100%" id="aAddBtn" onclick="addAluno()">Adicionar aluno</button></div>
-      </div>
-      <div class="msg" id="alunoMsg"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Alunos &amp; Calls <span>· edite direto, salva automático · ✕ remove</span></div>
-      <div class="tabs" style="margin-bottom:16px"><button class="tab on" data-af="ativos" onclick="filterAlunos('ativos',this)">Ativos</button><button class="tab" data-af="todos" onclick="filterAlunos('todos',this)">Todos</button></div>
-      <div style="overflow-x:auto"><table><thead><tr><th>Aluno</th><th>Programa</th><th style="text-align:center">Ativo</th><th style="text-align:center">Venc.</th><th style="text-align:right">Mensal.</th><th style="text-align:center">Call</th><th style="text-align:center">Contr.</th><th style="text-align:center">Feitas</th><th style="min-width:80px">Prog.</th><th style="text-align:center">Faltam</th><th></th></tr></thead><tbody id="alunosTable"></tbody></table></div>
-    </div>
-  </section>
+<footer><div class="rotulo" id="rodape">Consulting Framework · RHINO</div></footer>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const SB_URL='https://fcwxkelokmqwmivjembv.supabase.co';
-const SB_KEY='sb_publishable_eo9wQ05w390iA0V13ACSqg_Lihy643Q';
-let sb; try{ sb=supabase.createClient(SB_URL,SB_KEY); }catch(e){}
+const SUPABASE_URL = 'https://fcwxkelokmqwmivjembv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_eo9wQ05w390iA0V13ACSqg_Lihy643Q';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const BRL0=v=>'R$ '+Math.round(v||0).toLocaleString('pt-BR');
-const BRLs=v=>(v<0?'-':'')+BRL0(Math.abs(v));
-const MFULL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const MSHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
-const CATS={ entrada:['Consultoria','Aulas avulsas','Mentoria Rhino','Mentoria Framework','Outros'],
-             despesa:['Despesas fixas','Despesas com cartão','Despesas com a empresa','Investimentos','Despesas extras'] };
-let LANC=[],ALUNOS=[],METAS={},RECS=[],charts={},alunoFilter='ativos',scope='tudo';
-const $=id=>document.getElementById(id);
-function showMsg(id,t,ok){const e=$(id);e.className='msg '+(ok?'ok':'err');e.textContent=t;if(ok)setTimeout(()=>{e.className='msg';},3000);}
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const MESC = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const HOJE = new Date();
+let ESCOPO='tudo', MES=HOJE.getMonth(), ANO=HOJE.getFullYear(), ABA='dash';
+let D = { config:{}, produtos:[], mentorados:[], contratos:[], parcelas:[], lancamentos:[], recorrencias:[], cartoes:[], parcelamentos:[], assinaturas:[], metas:[] };
+const graficos = {};
 
-async function init(){ if(!sb){$('loginMsg').className='msg err';$('loginMsg').textContent='Falha ao iniciar conexão. Recarregue.';return;}
-  const {data:{session}}=await sb.auth.getSession(); if(session)enterApp(session);else showLogin();
-  sb.auth.onAuthStateChange((_e,s)=>{ if(s)enterApp(s); else showLogin(); }); }
-function showLogin(){$('loginView').style.display='grid';$('appView').style.display='none';}
-async function doLogin(){ const email=$('email').value.trim(),password=$('password').value;
-  if(!email||!password){showMsg('loginMsg','Preencha e-mail e senha.');return;}
-  $('loginBtn').disabled=true;$('loginBtn').textContent='Entrando…';
-  const {error}=await sb.auth.signInWithPassword({email,password});
-  $('loginBtn').disabled=false;$('loginBtn').textContent='Entrar';
-  if(error)showMsg('loginMsg',error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message); }
-async function doLogout(){ await sb.auth.signOut(); }
-async function enterApp(session){ $('loginView').style.display='none';$('appView').style.display='block';
-  $('whoAmI').textContent=session.user.email; $('fData').value=new Date().toISOString().slice(0,10);
-  buildMonths(); updateCatOptions(); updateRecCat(); await loadAll(); }
-function setScope(s,el){ scope=s; document.querySelectorAll('#scopeSeg button').forEach(b=>b.classList.remove('on')); el.classList.add('on'); renderDash(); }
+/* ---------- utilitários ---------- */
+const rs = v => 'R$ ' + (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const rsc = v => 'R$ ' + Math.round(Number(v)||0).toLocaleString('pt-BR');
+const dt = s => { if(!s) return ''; const [a,m,d]=String(s).slice(0,10).split('-'); return `${d}/${m}/${a}`; };
+const iso = d => d.toISOString().slice(0,10);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* para nomes usados dentro de onclick: apóstrofo vira \' e não quebra a string */
+const escJS = s => String(s??'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const chave = (a,m) => `${a}-${String(m+1).padStart(2,'0')}`;
+const noMes = (s,a,m) => { if(!s) return false; const [y,mm]=String(s).slice(0,10).split('-').map(Number); return y===a && mm===m+1; };
+const somaMes = (d,n) => { const x=new Date(d.getFullYear(), d.getMonth()+n, 1); return x; };
+const diffMeses = (a,b) => (b.getFullYear()-a.getFullYear())*12 + (b.getMonth()-a.getMonth());
+const dObj = s => { const [y,m,d]=String(s).slice(0,10).split('-').map(Number); return new Date(y,m-1,d); };
+const prod = id => D.produtos.find(p=>p.id===id);
+const nomeProd = id => prod(id)?.nome || '—';
+const passaEscopo = e => ESCOPO==='tudo' || e===ESCOPO;
+const diasAtraso = venc => Math.floor((HOJE - dObj(venc)) / 86400000);
 
-async function loadAll(){ try{
-  const [l,a,m]=await Promise.all([
-    sb.from('lancamentos').select('*').order('data',{ascending:false}),
-    sb.from('alunos').select('*').order('nome'),
-    sb.from('metas').select('*')]);
-  if(l.error)throw l.error; if(a.error)throw a.error; if(m.error)throw m.error;
-  LANC=l.data||[]; ALUNOS=a.data||[]; METAS={}; (m.data||[]).forEach(x=>METAS[x.ano_mes]=+x.objetivo);
-  try{ const r=await sb.from('recorrencias').select('*').order('descricao'); RECS=r.error?[]:(r.data||[]); }catch(_){ RECS=[]; }
-  $('appMsg').className='msg'; renderAll();
-}catch(e){ showMsg('appMsg','Erro ao carregar: '+e.message); } }
-function buildMonths(){ const sel=$('monthSel'),now=new Date();let o='';
-  for(let mo=0;mo<12;mo++){const ym='2026-'+String(mo+1).padStart(2,'0');o+=`<option value="${ym}" ${mo===now.getMonth()?'selected':''}>${MFULL[mo]}/26</option>`;}
-  sel.innerHTML=o; }
-function updateCatOptions(){ const t=$('fTipo').value; $('fCat').innerHTML=CATS[t].map(c=>`<option>${c}</option>`).join(''); suggestEscopo(); }
-function suggestEscopo(){ const t=$('fTipo').value,c=$('fCat').value;
-  $('fEscopo').value=(t==='entrada'||c==='Despesas com a empresa')?'empresa':'pessoal'; }
+function toast(msg, erro){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText=`position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:${erro?'#2a0f0f':'#122b06'};border:1px solid ${erro?'#e24b4a':'#44CF17'};color:${erro?'#f5b0b0':'#c7f0b0'};padding:10px 18px;font-size:13px;z-index:99;font-family:var(--mono)`;
+  document.body.appendChild(t); setTimeout(()=>t.remove(),2600);
+}
 
-function ym(){ return $('monthSel').value; }
-function moIdx(){ return +ym().slice(5)-1; }
-function inScope(r){ if(scope==='tudo')return true; return (r.escopo||'empresa')===scope; }
-function agg(){ const rev={consultoria:Array(12).fill(0),mentoria:Array(12).fill(0),framework:Array(12).fill(0)};
-  const receb=Array(12).fill(0),desp=Array(12).fill(0),despEmp=Array(12).fill(0),despPes=Array(12).fill(0),porCat={};
-  const cur=moIdx(); let dueOpen=0; const dailyNet={};
-  LANC.forEach(r=>{ const mo=+String(r.data||'').slice(5,7)-1; if(mo<0||mo>11)return; const v=+r.valor||0; const sc=inScope(r);
-    const day=+String(r.data||'').slice(8,10);
-    if(r.tipo==='entrada'){ if(sc){ receb[mo]+=v; if(r.categoria==='Mentoria Framework')rev.framework[mo]+=v; else if(r.categoria==='Mentoria Rhino')rev.mentoria[mo]+=v; else rev.consultoria[mo]+=v; if(mo===cur)dailyNet[day]=(dailyNet[day]||0)+v; } }
-    else { if(sc){ desp[mo]+=v; if(mo===cur){ porCat[r.categoria]=(porCat[r.categoria]||0)+v; dailyNet[day]=(dailyNet[day]||0)-v; if(r.pago===false)dueOpen+=v; } }
-           (r.escopo==='pessoal'?despPes:despEmp)[mo]+=v; } });
-  return {rev,receb,desp,despEmp,despPes,porCat,dueOpen,dailyNet}; }
-function revMonth(A,i){ return A.receb[i]; }
+/* ---------- login ---------- */
+document.getElementById('btEntrar').onclick = entrar;
+document.getElementById('senha').onkeydown = e => { if(e.key==='Enter') entrar(); };
+document.getElementById('email').onkeydown = e => { if(e.key==='Enter') document.getElementById('senha').focus(); };
 
-function renderAll(){ renderDash(); renderLanc(); renderFixos(); renderAlunos(); }
-function lancDoMes(){ const m=ym(); return LANC.filter(x=>(x.data||'').slice(0,7)===m); }
+async function entrar(){
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('senha').value;
+  const cx=document.getElementById('erroLogin');
+  cx.classList.add('oculto');
+  if(!email || !password){ cx.textContent='Preencha e-mail e senha.'; cx.classList.remove('oculto'); return; }
+  const {error} = await sb.auth.signInWithPassword({email,password});
+  if(error){ cx.textContent = error.message.includes('Invalid') ? 'E-mail ou senha incorretos.' : error.message; cx.classList.remove('oculto'); return; }
+  iniciar();
+}
+document.getElementById('btSair').onclick = async()=>{ await sb.auth.signOut(); location.reload(); };
 
-function renderDash(){ const A=agg(),i=moIdx(),fat=A.receb[i],desp=A.desp[i],res=fat-desp,meta=METAS[ym()]||0,emp=A.despEmp[i],pes=A.despPes[i];
-  $('kFat').textContent=BRL0(fat); $('kFatF').textContent=(scope==='tudo'?'entradas do mês':'escopo '+scope);
-  $('kDesp').textContent=BRL0(desp); $('kDespF').textContent=(scope==='tudo'?`empresa ${BRL0(emp)} · pessoal ${BRL0(pes)}`:'gastos '+scope);
-  $('kRes').textContent=BRLs(res); $('kRes').style.color=res>=0?'var(--up)':'var(--down)'; $('kResF').textContent=`margem ${fat?(res/fat*100).toFixed(0):0}%`;
-  $('kDue').textContent=BRL0(A.dueOpen); $('kDueF').textContent=A.dueOpen>0?'despesas pendentes':'tudo quitado ✓';
-  renderAlerts(A,i); drawCharts(A,i); }
-function renderAlerts(A,i){ const fat=A.receb[i],desp=A.desp[i],res=fat-desp,meta=METAS[ym()]||0,pes=A.despPes[i],S=[];
-  if(A.dueOpen>0)S.push(['info','⏳',`<b>${BRL0(A.dueOpen)}</b> em despesas ainda a pagar neste mês. Marque como pago quando quitar.`]);
-  if(fat>0){ if(meta&&fat>=meta)S.push(['up','🎯',`<b>Meta batida.</b> Recebimentos de <b>${BRL0(fat)}</b> superaram ${BRL0(meta)}.`]);
-    else if(meta)S.push(['info','🎯',`Faltam <b>${BRL0(meta-fat)}</b> para a meta de ${BRL0(meta)}.`]); }
-  S.push([res>=0?'up':'down',res>=0?'💰':'🔻',`Resultado de <b>${BRLs(res)}</b> no mês (margem ${fat?(res/fat*100).toFixed(0):0}%).`]);
-  if(desp>0&&scope==='tudo')S.push(['info','🏠',`Despesas pessoais são <b>${(pes/desp*100).toFixed(0)}%</b> das saídas (${BRL0(pes)}).`]);
-  const cats=Object.entries(A.porCat).sort((a,b)=>b[1]-a[1]); if(cats[0])S.push(['info','💸',`Maior grupo de despesa: <b>${cats[0][0]}</b> (${BRL0(cats[0][1])}).`]);
-  const ativos=ALUNOS.filter(a=>a.ativo),contr=ativos.reduce((s,a)=>s+(a.calls_contratadas||0),0),fei=ativos.reduce((s,a)=>s+(a.calls_feitas||0),0);
-  if(contr>0)S.push([contr-fei>0?'info':'up','📞',`Calls: <b>${fei}/${contr}</b> feitas · <b>${Math.max(0,contr-fei)}</b> a fazer.`]);
-  const col={up:'var(--up-soft)',down:'var(--down-soft)',info:'var(--indigo-soft)'};
-  if(fat===0&&desp===0)$('alerts').innerHTML=`<div class="empty">Nenhum lançamento em ${MFULL[i]} neste escopo. Adicione na aba Lançamentos.</div>`;
-  else $('alerts').innerHTML=S.map(([t,ic,tx])=>`<div class="alert"><div class="alert-ic" style="background:${col[t]}">${ic}</div><div class="alert-tx">${tx}</div></div>`).join(''); }
+sb.auth.getSession().then(({data})=>{ if(data.session) iniciar(); });
 
-Chart.defaults.font.family="'Inter',sans-serif"; Chart.defaults.color='#5A6788'; const GRID='rgba(255,255,255,.05)';
-function drawCharts(A,cur){ Object.values(charts).forEach(c=>c&&c.destroy());
-  // evolução do saldo diária
-  const dim=new Date(2026,cur+1,0).getDate(); const days=[],saldo=[]; let acc=0;
-  for(let d=1;d<=dim;d++){ acc+=(A.dailyNet[d]||0); days.push(String(d).padStart(2,'0')+'/'+String(cur+1).padStart(2,'0')); saldo.push(acc); }
-  charts.saldo=new Chart($('saldoChart'),{type:'line',data:{labels:days,datasets:[{label:'Saldo acumulado',data:saldo,borderColor:'#E8B24B',borderWidth:2.5,tension:.3,pointRadius:0,fill:true,backgroundColor:c=>{const g=c.chart.ctx.createLinearGradient(0,0,0,280);g.addColorStop(0,'rgba(232,178,75,.22)');g.addColorStop(1,'rgba(232,178,75,0)');return g;}}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+BRLs(c.raw)}}},scales:{x:{grid:{display:false},ticks:{maxTicksLimit:12}},y:{grid:{color:GRID},ticks:{callback:v=>'R$'+(v/1000).toFixed(0)+'k'}}}}});
-  // fluxo mensal
-  const labels=MSHORT,ins=labels.map((_,i)=>A.receb[i]),outs=A.desp;
-  charts.flow=new Chart($('flowChart'),{data:{labels,datasets:[
-    {type:'bar',label:'Receita',data:ins,backgroundColor:'#38D399',borderRadius:5,barPercentage:.62,categoryPercentage:.74},
-    {type:'bar',label:'Despesa',data:outs,backgroundColor:'#FF6B5D',borderRadius:5,barPercentage:.62,categoryPercentage:.74},
-    {type:'line',label:'Resultado',data:labels.map((_,i)=>A.receb[i]-A.desp[i]),borderColor:'#E8B24B',borderWidth:2.5,tension:.35,pointRadius:2}]},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.dataset.label+': '+BRLs(c.raw)}}},scales:{x:{grid:{display:false}},y:{grid:{color:GRID},ticks:{callback:v=>'R$'+(v/1000)+'k'}}}}});
-  const meta=METAS[ym()]||60000,real=A.receb[cur],done=Math.min(real,meta),rem=Math.max(0,meta-real),pct=meta?real/meta*100:0;
-  $('metaPct').textContent=Math.round(pct)+'%'; $('metaGap').innerHTML=real>=meta?'meta batida 🎯':`faltam ${BRL0(meta-real)}`;
-  charts.meta=new Chart($('metaGauge'),{type:'doughnut',data:{datasets:[{data:[done,rem||(real>=meta?0.001:1)],backgroundColor:[real>=meta?'#38D399':'#E8B24B','#1A2236'],borderColor:'#111725',borderWidth:2,circumference:270,rotation:225}]},options:{responsive:true,maintainAspectRatio:false,cutout:'74%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
-  const emp=A.despEmp[cur],pes=A.despPes[cur],tot=emp+pes||1;
-  charts.split=new Chart($('splitChart'),{type:'doughnut',data:{labels:['Empresa','Pessoal'],datasets:[{data:[emp||0.001,pes||0.001],backgroundColor:['#6C7BF2','#FF6B5D'],borderColor:'#111725',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+BRL0(c.raw)}}}}});
-  $('splitLegend').innerHTML=`<div class="legend-row"><span class="d" style="background:#6C7BF2"></span>Empresa<b>${BRL0(emp)} · ${(emp/tot*100).toFixed(0)}%</b></div><div class="legend-row"><span class="d" style="background:#FF6B5D"></span>Pessoal<b>${BRL0(pes)} · ${(pes/tot*100).toFixed(0)}%</b></div>`;
-  const rq=[A.rev.consultoria[cur],A.rev.mentoria[cur],A.rev.framework[cur]],rt=rq.reduce((s,x)=>s+x,0)||1,rc=['#38D399','#E8B24B','#6C7BF2'],rn=['Consultoria/Avulsa','Mentoria Rhino','Framework'];
-  charts.rev=new Chart($('revChart'),{type:'doughnut',data:{labels:rn,datasets:[{data:rq.map(x=>x||0.001),backgroundColor:rc,borderColor:'#111725',borderWidth:3}]},options:{responsive:true,maintainAspectRatio:false,cutout:'64%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+c.label+': '+BRL0(c.raw)}}}}});
-  $('revLegend').innerHTML=rn.map((n,k)=>`<div class="legend-row"><span class="d" style="background:${rc[k]}"></span>${n}<b>${BRL0(rq[k])} · ${(rq[k]/rt*100).toFixed(0)}%</b></div>`).join(''); }
+async function iniciar(){
+  document.getElementById('login').classList.add('oculto');
+  document.getElementById('app').classList.remove('oculto');
+  montarSeletorMes();
+  await carregar();
+}
 
-async function addLanc(){ const data=$('fData').value,tipo=$('fTipo').value,categoria=$('fCat').value,descricao=$('fDesc').value.trim(),valor=parseFloat($('fValor').value),escopo=$('fEscopo').value,pago=$('fPago').checked;
-  if(!data){showMsg('lancMsg','Escolha a data.');return;} if(!(valor>0)){showMsg('lancMsg','Informe um valor maior que zero.');return;}
-  $('addBtn').disabled=true; const {error}=await sb.from('lancamentos').insert({data,tipo,categoria,descricao,valor,escopo,pago}); $('addBtn').disabled=false;
-  if(error){showMsg('lancMsg','Não salvou: '+error.message+(error.message.includes('pago')?' — rode a migração supabase-migracao-3.sql.':''));return;}
-  showMsg('lancMsg','Lançamento adicionado.',true); $('fValor').value='';$('fDesc').value=''; await loadAll(); }
-async function delLanc(id){ if(!confirm('Excluir este lançamento?'))return; const {error}=await sb.from('lancamentos').delete().eq('id',id); if(error){showMsg('appMsg','Não excluiu: '+error.message);return;} await loadAll(); }
-async function togglePago(id,atual){ const {error}=await sb.from('lancamentos').update({pago:!atual}).eq('id',id); if(error){showMsg('appMsg','Não atualizou: '+error.message);return;} const r=LANC.find(x=>x.id===id); if(r)r.pago=!atual; renderLanc(); renderDash(); }
-function renderLanc(){ const rows=lancDoMes(); $('lancListTitle').textContent=`Lançamentos de ${MFULL[moIdx()]}/26 · ${rows.length}`;
-  $('lancTable').innerHTML=rows.length?rows.map(r=>{ const pago=r.pago!==false;
-    return `<tr>
-    <td class="num">${(r.data||'').slice(8,10)}/${(r.data||'').slice(5,7)}</td>
-    <td><span class="pill ${r.tipo==='entrada'?'pill-in':'pill-out'}">${r.tipo==='entrada'?'Entrada':'Despesa'}</span></td>
-    <td>${r.categoria||''}</td><td style="color:var(--txt-dim)">${r.descricao||'—'}</td>
-    <td><span class="pill ${r.escopo==='pessoal'?'pill-pes':'pill-emp'}">${r.escopo==='pessoal'?'Pessoal':'Empresa'}</span></td>
-    <td style="text-align:center"><span class="pill ${pago?'pill-pago':'pill-pend'}" onclick="togglePago('${r.id}',${pago})" title="clique para alternar">${pago?'Pago':'A pagar'}</span></td>
-    <td style="text-align:right"><span class="${r.tipo==='entrada'?'val-in':'val-out'} num">${BRL0(r.valor)}</span></td>
-    <td style="text-align:right"><span class="x" onclick="delLanc('${r.id}')">✕</span></td></tr>`; }).join('')
-    :`<tr><td class="empty" colspan="8">Nenhum lançamento em ${MFULL[moIdx()]}. Adicione o primeiro acima.</td></tr>`; }
+/* ---------- carga ---------- */
+async function carregar(){
+  const [cfg,pr,me,co,pa,la,re,ca,pc,as,mt] = await Promise.all([
+    sb.from('config').select('*').eq('id',1).single(),
+    sb.from('produtos').select('*').order('ordem'),
+    sb.from('mentorados').select('*').order('nome'),
+    sb.from('contratos').select('*'),
+    sb.from('parcelas').select('*'),
+    sb.from('lancamentos').select('*'),
+    sb.from('recorrencias').select('*').order('dia'),
+    sb.from('cartoes').select('*').order('nome'),
+    sb.from('parcelamentos').select('*'),
+    sb.from('assinaturas').select('*'),
+    sb.from('metas').select('*')
+  ]);
+  if(cfg.error){ toast('Erro ao carregar. Rode o supabase-schema-v2.sql primeiro.',true); return; }
+  D.config=cfg.data||{}; D.produtos=pr.data||[]; D.mentorados=me.data||[]; D.contratos=co.data||[];
+  D.parcelas=pa.data||[]; D.lancamentos=la.data||[]; D.recorrencias=re.data||[]; D.cartoes=ca.data||[];
+  D.parcelamentos=pc.data||[]; D.assinaturas=as.data||[]; D.metas=mt.data||[];
+  aplicarMarca();
+  desenhar();
+}
 
-async function addAluno(){ const nome=$('aNome').value.trim(),programa=$('aProg').value,mensalidade=parseFloat($('aMens').value)||0,venc=parseInt($('aVenc').value)||null,tem_call=$('aCall').checked;
-  if(!nome){showMsg('alunoMsg','Informe o nome.');return;}
-  $('aAddBtn').disabled=true; const {error}=await sb.from('alunos').insert({nome,programa,mensalidade,vencimento:venc,tem_call,ativo:true,calls_contratadas:0,calls_feitas:0}); $('aAddBtn').disabled=false;
-  if(error){showMsg('alunoMsg','Não salvou: '+error.message+(error.message.includes('vencimento')?' — rode a migração supabase-migracao-2.sql.':''));return;}
-  showMsg('alunoMsg','Aluno adicionado.',true); $('aNome').value='';$('aMens').value='';$('aVenc').value='';$('aCall').checked=false; await loadAll(); }
-async function delAluno(id,nome){ if(!confirm('Remover '+nome+'? Isso apaga o aluno. Para só pausar, desmarque "Ativo".'))return; const {error}=await sb.from('alunos').delete().eq('id',id); if(error){showMsg('appMsg','Não removeu: '+error.message);return;} await loadAll(); }
-async function saveAluno(id,field,value){ const patch={}; patch[field]=(field==='ativo'||field==='tem_call')?value:(field==='mensalidade'?(parseFloat(value)||0):(field==='programa'?value:(parseInt(value)||null)));
-  const a=ALUNOS.find(x=>x.id===id); if(a)a[field]=patch[field]; renderAlunos(); renderDash();
-  const {error}=await sb.from('alunos').update(patch).eq('id',id); if(error)showMsg('appMsg','Não salvou o aluno: '+error.message); }
-function filterAlunos(f,el){ alunoFilter=f; document.querySelectorAll('#v-alunos .tab').forEach(t=>t.classList.remove('on')); el.classList.add('on'); renderAlunos(); }
-function renderAlunos(){ let list=[...ALUNOS]; if(alunoFilter==='ativos')list=list.filter(a=>a.ativo);
-  list.sort((a,b)=>(b.ativo-a.ativo)||a.nome.localeCompare(b.nome));
-  $('alunosTable').innerHTML=list.length?list.map(a=>{ const c=a.calls_contratadas||0,f=a.calls_feitas||0,falta=Math.max(0,c-f),p=c?Math.min(100,f/c*100):0;
-    return `<tr>
-      <td style="font-weight:600">${a.nome}</td>
-      <td><select class="selrow" onchange="saveAluno('${a.id}','programa',this.value)"><option value="framework" ${a.programa==='framework'?'selected':''}>Framework</option><option value="rhino" ${a.programa==='rhino'?'selected':''}>Rhino</option></select></td>
-      <td style="text-align:center"><input class="chk" type="checkbox" ${a.ativo?'checked':''} onchange="saveAluno('${a.id}','ativo',this.checked)"></td>
-      <td style="text-align:center"><input class="mini" style="width:46px" type="number" min="1" max="31" value="${a.vencimento||''}" onchange="saveAluno('${a.id}','vencimento',this.value)"></td>
-      <td style="text-align:right"><input class="mini" style="width:84px;text-align:right" type="number" step="0.01" value="${a.mensalidade||0}" onchange="saveAluno('${a.id}','mensalidade',this.value)"></td>
-      <td style="text-align:center"><input class="chk" type="checkbox" ${a.tem_call?'checked':''} onchange="saveAluno('${a.id}','tem_call',this.checked)"></td>
-      <td style="text-align:center"><input class="mini" type="number" min="0" value="${c}" onchange="saveAluno('${a.id}','calls_contratadas',this.value)"></td>
-      <td style="text-align:center"><input class="mini" type="number" min="0" value="${f}" onchange="saveAluno('${a.id}','calls_feitas',this.value)"></td>
-      <td><div class="bar"><i style="width:${p}%;background:${falta===0&&c>0?'var(--up)':'var(--gold)'}"></i></div></td>
-      <td style="text-align:center"><b class="num" style="color:${falta>0?'var(--gold)':'var(--up)'}">${falta}</b></td>
-      <td style="text-align:center"><span class="x" onclick="delAluno('${a.id}','${(a.nome||'').replace(/'/g,'')}')">✕</span></td></tr>`; }).join('')
-    :`<tr><td class="empty" colspan="11">Nenhum aluno. Adicione acima.</td></tr>`; }
+function aplicarMarca(){
+  const c=D.config;
+  if(c.cor_primaria) document.documentElement.style.setProperty('--verde', c.cor_primaria);
+  if(c.cor_fundo){ document.documentElement.style.setProperty('--preto', c.cor_fundo); }
+  document.getElementById('nomeNegocio').textContent = c.negocio || 'Painel RHINO';
+  document.getElementById('rodape').textContent = c.assinatura || 'Consulting Framework · RHINO';
+  const img=document.getElementById('logoTopo');
+  if(c.logo_url){ img.src=c.logo_url; img.classList.remove('oculto'); document.getElementById('quadTopo').classList.add('oculto'); }
+  else { img.classList.add('oculto'); document.getElementById('quadTopo').classList.remove('oculto'); }
+}
 
-/* ===== RECORRÊNCIAS (fixos) ===== */
-function updateRecCat(){ const t=$('rTipo').value; $('rCat').innerHTML=CATS[t].map(c=>`<option>${c}</option>`).join(''); $('rEscopo').value=(t==='entrada'||$('rCat').value==='Despesas com a empresa')?'empresa':'pessoal'; }
-function recLancadaNoMes(rec,m){ return LANC.some(l=>l.recorrencia_id===rec.id && (l.data||'').slice(0,7)===m); }
-function renderFixos(){ const m=ym(),mi=moIdx();
-  $('recMesTh').textContent=MSHORT[mi];
-  const ativos=RECS.filter(r=>r.ativo), pend=ativos.filter(r=>!recLancadaNoMes(r,m));
-  const gc=$('gerarCard');
-  if(RECS.length===0){ gc.style.display='none'; }
-  else if(pend.length>0){ gc.style.display='block'; $('gerarTitle').textContent=`${pend.length} fixo${pend.length>1?'s':''} ainda não lançado${pend.length>1?'s':''} em ${MFULL[mi]}`;
-    const soma=pend.reduce((s,r)=>s+ (r.tipo==='despesa'?+r.valor:0),0);
-    $('gerarSub').textContent=`Gera os lançamentos de ${MFULL[mi]} de uma vez (${BRL0(soma)} em despesas fixas). Não duplica o que já existe.`; }
-  else { gc.style.display='block'; $('gerarTitle').textContent=`Tudo lançado em ${MFULL[mi]} ✓`; $('gerarSub').textContent='Os fixos ativos já foram gerados neste mês.'; }
-  $('recTable').innerHTML=RECS.length?RECS.map(r=>{ const feito=recLancadaNoMes(r,m);
-    return `<tr>
-      <td style="font-weight:600">${r.descricao}</td>
-      <td><span class="pill ${r.tipo==='entrada'?'pill-in':'pill-out'}">${r.tipo==='entrada'?'Entrada':'Despesa'}</span></td>
-      <td>${r.categoria}</td>
-      <td><span class="pill ${r.escopo==='pessoal'?'pill-pes':'pill-emp'}">${r.escopo==='pessoal'?'Pessoal':'Empresa'}</span></td>
-      <td style="text-align:center" class="num">${r.dia||'—'}</td>
-      <td style="text-align:right"><span class="${r.tipo==='entrada'?'val-in':'val-out'} num">${BRL0(r.valor)}</span></td>
-      <td style="text-align:center"><input class="chk" type="checkbox" ${r.ativo?'checked':''} onchange="saveRec('${r.id}','ativo',this.checked)"></td>
-      <td style="text-align:center">${feito?'<span class="pill pill-pago">lançado</span>':(r.ativo?'<span class="pill pill-pend">pendente</span>':'<span style="color:var(--txt-faint)">—</span>')}</td>
-      <td style="text-align:center"><span class="x" onclick="delRec('${r.id}','${(r.descricao||'').replace(/'/g,'')}')">✕</span></td></tr>`; }).join('')
-    :`<tr><td class="empty" colspan="9">Nenhum fixo cadastrado. Adicione acima para automatizar seus lançamentos mensais.</td></tr>`; }
-async function addRec(){ const tipo=$('rTipo').value,categoria=$('rCat').value,descricao=$('rDesc').value.trim(),valor=parseFloat($('rValor').value),escopo=$('rEscopo').value,dia=parseInt($('rDia').value)||null;
-  if(!descricao){showMsg('recMsg','Informe a descrição.');return;} if(!(valor>0)){showMsg('recMsg','Informe um valor maior que zero.');return;}
-  $('rAddBtn').disabled=true; const {error}=await sb.from('recorrencias').insert({tipo,categoria,descricao,valor,escopo,dia,ativo:true}); $('rAddBtn').disabled=false;
-  if(error){showMsg('recMsg','Não salvou: '+error.message+(error.message.includes('recorrencias')||error.message.includes('does not exist')?' — rode a migração supabase-migracao-4.sql.':''));return;}
-  showMsg('recMsg','Fixo adicionado.',true); $('rDesc').value='';$('rValor').value='';$('rDia').value=''; await loadAll(); }
-async function delRec(id,nome){ if(!confirm('Remover o fixo "'+nome+'"? Os lançamentos já gerados continuam.'))return; const {error}=await sb.from('recorrencias').delete().eq('id',id); if(error){showMsg('appMsg','Não removeu: '+error.message);return;} await loadAll(); }
-async function saveRec(id,field,value){ const patch={}; patch[field]=value; const r=RECS.find(x=>x.id===id); if(r)r[field]=value; renderFixos();
-  const {error}=await sb.from('recorrencias').update(patch).eq('id',id); if(error)showMsg('appMsg','Não salvou: '+error.message); }
-async function gerarMes(){ const m=ym(),mi=moIdx(),dim=new Date(2026,mi+1,0).getDate();
-  const pend=RECS.filter(r=>r.ativo && !recLancadaNoMes(r,m));
-  if(pend.length===0){ showMsg('appMsg','Nada a gerar: os fixos já estão lançados neste mês.',true); return; }
-  const rows=pend.map(r=>{ const d=Math.min(r.dia||1,dim); const data=`${m}-${String(d).padStart(2,'0')}`;
-    return {data,tipo:r.tipo,categoria:r.categoria,descricao:r.descricao,valor:r.valor,escopo:r.escopo,pago:r.tipo==='entrada',recorrencia_id:r.id}; });
-  $('gerarBtn').disabled=true; const {error}=await sb.from('lancamentos').insert(rows); $('gerarBtn').disabled=false;
-  if(error){showMsg('appMsg','Não gerou: '+error.message);return;}
-  showMsg('appMsg',`${rows.length} lançamento(s) fixo(s) gerado(s) em ${MFULL[mi]}.`,true); await loadAll(); }
+/* ---------- navegação ---------- */
+function montarSeletorMes(){
+  const s=document.getElementById('selMes'); s.innerHTML='';
+  for(let i=-13;i<=4;i++){
+    const d=new Date(HOJE.getFullYear(), HOJE.getMonth()+i, 1);
+    const o=document.createElement('option');
+    o.value=`${d.getFullYear()}-${d.getMonth()}`;
+    o.textContent=`${MESES[d.getMonth()]} ${d.getFullYear()}`;
+    if(i===0) o.selected=true;
+    s.appendChild(o);
+  }
+  s.onchange=()=>{ const [a,m]=s.value.split('-').map(Number); ANO=a; MES=m; desenhar(); };
+}
+document.getElementById('segEscopo').onclick = e => {
+  const b=e.target.closest('button'); if(!b) return;
+  ESCOPO=b.dataset.e;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle('on', x===b));
+  desenhar();
+};
+document.getElementById('abas').onclick = e => {
+  const b=e.target.closest('button'); if(!b) return;
+  ABA=b.dataset.a;
+  [...e.currentTarget.children].forEach(x=>x.classList.toggle('on', x===b));
+  ['dash','receb','renov','ment','lanc','fixos','cart','conf'].forEach(k=>
+    document.getElementById('v-'+k).classList.toggle('oculto', k!==ABA));
+  desenhar();
+};
+function irPara(a){ document.querySelector(`#abas button[data-a="${a}"]`).click(); window.scrollTo(0,0); }
 
-function tab(v,el){ document.querySelectorAll('.tabs .tab[data-v]').forEach(t=>t.classList.remove('on')); el.classList.add('on');
-  document.querySelectorAll('.view').forEach(s=>s.classList.remove('on')); $('v-'+v).classList.add('on'); if(v==='dash')setTimeout(()=>renderDash(),50); }
+/* ---------- cálculos ---------- */
+function mrrPorProduto(){
+  const r={};
+  D.contratos.filter(c=>c.status==='ativo').forEach(c=>{
+    const m = Math.max(1, c.meses||1);
+    r[c.produto_id] = (r[c.produto_id]||0) + Number(c.valor_total)/m;
+  });
+  return r;
+}
+function contratoAtivoNoMes(c,a,m){
+  const ini=dObj(c.data_inicio), fim=dObj(c.data_fim), ref=new Date(a,m,1), refFim=new Date(a,m+1,0);
+  return c.status!=='cancelado' && ini<=refFim && fim>=ref;
+}
+/* receita reconhecida (competência) */
+function competenciaMes(a,m){
+  let t=0; const porProd={};
+  D.contratos.forEach(c=>{
+    if(!contratoAtivoNoMes(c,a,m)) return;
+    const v = Number(c.valor_total)/Math.max(1,c.meses||1);
+    t+=v; porProd[c.produto_id]=(porProd[c.produto_id]||0)+v;
+  });
+  D.lancamentos.filter(l=>l.tipo==='entrada' && noMes(l.competencia||l.data,a,m)).forEach(l=>{
+    t+=Number(l.valor); porProd[l.produto_id]=(porProd[l.produto_id]||0)+Number(l.valor);
+  });
+  return {total:t, porProd};
+}
+/* caixa recebido */
+function caixaMes(a,m){
+  let t=0; const porProd={};
+  D.parcelas.filter(p=>p.pago && noMes(p.data_pagamento||p.vencimento,a,m)).forEach(p=>{
+    const c=D.contratos.find(x=>x.id===p.contrato_id); if(!c) return;
+    t+=Number(p.valor); porProd[c.produto_id]=(porProd[c.produto_id]||0)+Number(p.valor);
+  });
+  D.lancamentos.filter(l=>l.tipo==='entrada' && l.pago && noMes(l.data,a,m)).forEach(l=>{
+    t+=Number(l.valor); porProd[l.produto_id]=(porProd[l.produto_id]||0)+Number(l.valor);
+  });
+  return {total:t, porProd};
+}
+function despesasMes(a,m,escopo){
+  return D.lancamentos.filter(l=>l.tipo==='despesa' && noMes(l.data,a,m) && (!escopo||l.escopo===escopo))
+    .reduce((s,l)=>s+Number(l.valor),0);
+}
+function aPagarMes(a,m,escopo){
+  return D.lancamentos.filter(l=>l.tipo==='despesa' && !l.pago && noMes(l.data,a,m) && (!escopo||l.escopo===escopo))
+    .reduce((s,l)=>s+Number(l.valor),0);
+}
+/* fatura de cartão projetada por competência */
+function faturaMes(a,m,escopo){
+  const ref=new Date(a,m,1); let t=0;
+  D.parcelamentos.forEach(p=>{
+    if(escopo && p.escopo!==escopo) return;
+    const ini=dObj(p.primeira_competencia);
+    const n=diffMeses(ini,ref);
+    if(n>=0 && n < p.total_parcelas) t+=Number(p.valor_parcela);
+  });
+  D.assinaturas.filter(x=>x.ativo!==false && (!escopo||x.escopo===escopo)).forEach(x=>t+=Number(x.valor));
+  return t;
+}
+function impostoMes(){
+  const c=D.config;
+  return (Number(c.base_declarada)||0) * (Number(c.aliquota)||0)/100;
+}
+function parcelasAbertas(){
+  return D.parcelas.filter(p=>!p.pago).map(p=>{
+    const c=D.contratos.find(x=>x.id===p.contrato_id);
+    const me=c?D.mentorados.find(x=>x.id===c.mentorado_id):null;
+    return {...p, contrato:c, mentorado:me, atraso:diasAtraso(p.vencimento)};
+  }).filter(p=>p.contrato && p.contrato.status!=='cancelado')
+    .sort((a,b)=>a.vencimento.localeCompare(b.vencimento));
+}
+function renovacoes(){
+  return D.contratos.filter(c=>c.status==='ativo' || c.status==='concluido').map(c=>{
+    const me=D.mentorados.find(x=>x.id===c.mentorado_id);
+    const dias=Math.floor((dObj(c.data_fim)-HOJE)/86400000);
+    return {...c, mentorado:me, dias};
+  }).filter(c=>c.mentorado && c.mentorado.status!=='cancelado' && c.dias<=90 && c.dias>=-180)
+    .sort((a,b)=>a.dias-b.dias);
+}
 
-init();
+/* ---------- render ---------- */
+function desenhar(){
+  if(ABA==='dash') verDash();
+  if(ABA==='receb') verRecebiveis();
+  if(ABA==='renov') verRenovacoes();
+  if(ABA==='ment') verMentorados();
+  if(ABA==='lanc') verLancamentos();
+  if(ABA==='fixos') verFixos();
+  if(ABA==='cart') verCartoes();
+  if(ABA==='conf') verConfig();
+}
+
+function verDash(){
+  const cx=competenciaMes(ANO,MES), ca=caixaMes(ANO,MES);
+  const mrr=mrrPorProduto(); const mrrTot=Object.values(mrr).reduce((a,b)=>a+b,0);
+  const despEmp=despesasMes(ANO,MES,'empresa'), despPes=despesasMes(ANO,MES,'pessoal');
+  const imposto=impostoMes();
+  const fatPes=faturaMes(ANO,MES,'pessoal'), fatEmp=faturaMes(ANO,MES,'empresa');
+  const prolab=Number(D.config.prolabore)||0;
+  const lucro = cx.total - despEmp - imposto - fatEmp;
+  const sobraPessoal = prolab - despPes - fatPes;
+  const abertas=parcelasAbertas();
+  const atrasadas=abertas.filter(p=>p.atraso>0);
+  const aReceber=abertas.filter(p=>noMes(p.vencimento,ANO,MES)).reduce((s,p)=>s+Number(p.valor),0);
+  const metaMes=D.metas.filter(m=>m.ano_mes===chave(ANO,MES)).reduce((s,m)=>s+Number(m.valor),0) || Number(D.config.meta_mensal)||0;
+  const pct = metaMes>0 ? Math.min(100, ca.total/metaMes*100) : 0;
+
+  let h = '';
+
+  if(ESCOPO!=='pessoal'){
+    h += `<h2><span class="quadrado"></span>Mentoria · ${MESES[MES]} ${ANO}</h2>
+    <div class="grade g4">
+      ${kpi('MRR recorrente', rsc(mrrTot), `${D.contratos.filter(c=>c.status==='ativo').length} contratos ativos`, true)}
+      ${kpi('Caixa recebido', rsc(ca.total), 'o que entrou no mês')}
+      ${kpi('Receita por competência', rsc(cx.total), 'o que foi ganho no mês')}
+      ${kpi('Lucro da empresa', rsc(lucro), 'já com imposto e pró-labore', false, lucro>=0?'pos':'neg')}
+    </div>
+    <div class="grade g4" style="margin-top:12px">
+      ${kpi('A receber no mês', rsc(aReceber), `${abertas.filter(p=>noMes(p.vencimento,ANO,MES)).length} parcelas`)}
+      ${kpi('Em atraso', rsc(atrasadas.reduce((s,p)=>s+Number(p.valor),0)), `${atrasadas.length} parcelas vencidas`, false, atrasadas.length?'neg':'')}
+      ${kpi('Imposto provisionado', rsc(imposto), `${D.config.aliquota}% sobre ${rsc(D.config.base_declarada)}`)}
+      ${kpi('Despesa da empresa', rsc(despEmp+fatEmp), 'inclui ferramentas no cartão')}
+    </div>
+
+    <h2><span class="quadrado"></span>Meta do mês</h2>
+    <div class="cartao">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px">
+        <span class="num" style="font-size:24px">${rsc(ca.total)}</span>
+        <span class="rotulo">meta ${rsc(metaMes)} · ${pct.toFixed(0)}%</span>
+      </div>
+      <div class="barra"><i style="width:${pct}%"></i></div>
+    </div>
+
+    <h2><span class="quadrado"></span>Evolução · caixa e competência</h2>
+    <div class="cartao"><div class="grafico"><canvas id="gFluxo" role="img" aria-label="Comparação mensal entre caixa recebido e receita por competência"></canvas></div></div>
+
+    <h2><span class="quadrado"></span>Receita por produto · competência</h2>
+    <div class="cartao"><div class="grafico"><canvas id="gProd" role="img" aria-label="Receita do mês distribuída por produto"></canvas></div></div>`;
+  }
+
+  if(ESCOPO!=='empresa'){
+    h += `<h2><span class="quadrado"></span>Pessoal</h2>
+    <div class="grade g4">
+      ${kpi('Pró-labore', rsc(prolab), 'entrada fixa mensal')}
+      ${kpi('Despesa pessoal', rsc(despPes), 'fora do cartão')}
+      ${kpi('Fatura de cartão', rsc(fatPes), 'projetada para o mês')}
+      ${kpi('Sobra pessoal', rsc(sobraPessoal), sobraPessoal<0?'coberto por retirada extra':'no azul', false, sobraPessoal>=0?'pos':'neg')}
+    </div>`;
+  }
+
+  h += `<h2><span class="quadrado"></span>Cartões</h2>
+  <div class="linha-fina">
+    <span>Fatura projetada de ${MESES[MES]}: <strong class="num">${rsc(faturaMes(ANO,MES,ESCOPO==='tudo'?null:ESCOPO))}</strong></span>
+    <button class="btn-vazio" onclick="irPara('cart')">Ver detalhe</button>
+  </div>`;
+
+  h += `<h2><span class="quadrado"></span>Alertas</h2><div id="alertas"></div>`;
+
+  document.getElementById('v-dash').innerHTML = h;
+  if(ESCOPO!=='pessoal'){ graficoFluxo(); graficoProduto(cx.porProd); }
+  document.getElementById('alertas').innerHTML = montarAlertas();
+}
+
+function kpi(t,v,s,destaque,cor){
+  return `<div class="kpi${destaque?' destaque':''}"><div class="t">${t}</div><div class="v ${cor||''}">${v}</div><div class="s">${s||''}</div></div>`;
+}
+
+function montarAlertas(){
+  const av=[];
+  const abertas=parcelasAbertas();
+  const atr=abertas.filter(p=>p.atraso>0);
+  if(atr.length){
+    const v=atr.reduce((s,p)=>s+Number(p.valor),0);
+    av.push(['r',`<strong>${atr.length} parcelas em atraso</strong>, somando ${rs(v)}. A mais antiga está há ${Math.max(...atr.map(p=>p.atraso))} dias vencida.`]);
+  }
+  const ren=renovacoes();
+  const venc=ren.filter(c=>c.dias<0);
+  const prox=ren.filter(c=>c.dias>=0 && c.dias<=30);
+  if(venc.length) av.push(['r',`<strong>${venc.length} contratos já venceram</strong> e continuam marcados como ativos. Renovar ou dar baixa.`]);
+  if(prox.length) av.push(['a',`<strong>${prox.length} contratos vencem em até 30 dias</strong>, somando ${rs(prox.reduce((s,c)=>s+Number(c.valor_total)/Math.max(1,c.meses),0))} de MRR em risco.`]);
+
+  // recarga de parcelamento
+  const novos=D.parcelamentos.filter(p=>noMes(p.primeira_competencia,ANO,MES));
+  if(novos.length){
+    const v=novos.reduce((s,p)=>s+Number(p.valor_parcela),0);
+    const comp=novos.reduce((s,p)=>s+Number(p.valor_parcela)*p.total_parcelas,0);
+    av.push(['r',`<strong>Recarga de parcelamento:</strong> ${novos.length} compras novas parceladas neste mês, ${rs(v)} por mês e ${rs(comp)} de compromisso futuro criado.`]);
+  } else {
+    av.push(['v',`<strong>Nenhum parcelamento novo neste mês.</strong> É assim que a fatura cai sozinha.`]);
+  }
+
+  // repasse trimestral
+  const meses=(D.config.repasse_meses||'1,4,7,10').split(',').map(x=>Number(x.trim())-1);
+  if(meses.includes(MES)) av.push(['a',`<strong>Mês de repasse da sociedade.</strong> Calcular o resultado do trimestre e acertar com o Jefferson.`]);
+
+  // runway
+  const custoFixo = D.recorrencias.filter(r=>r.ativo!==false && r.tipo==='despesa' && r.escopo==='empresa').reduce((s,r)=>s+Number(r.valor),0) + faturaMes(ANO,MES,'empresa') + impostoMes();
+  const caixa=Number(D.config.saldo_caixa)||0;
+  if(caixa>0 && custoFixo>0){
+    const meses_=caixa/custoFixo;
+    if(meses_<3) av.push(['a',`<strong>Reserva de ${meses_.toFixed(1)} mês(es) de operação.</strong> O alvo definido é ${rs(D.config.reserva_alvo)}.`]);
+  } else if(!caixa){
+    av.push(['a',`Saldo de caixa não informado. Preencha em Configurações para acompanhar a reserva.`]);
+  }
+
+  const sem=D.mentorados.filter(m=>m.status==='ativo' && m.calls_contratadas>0 && m.calls_feitas<m.calls_contratadas).length;
+  if(sem) av.push(['a',`<strong>${sem} mentorados com calls pendentes</strong> dentro do contrato.`]);
+
+  return av.length ? av.map(([t,x])=>`<div class="alerta ${t}"><div>${x}</div></div>`).join('') : `<div class="vazio">Nada exigindo atenção neste mês.</div>`;
+}
+
+function graficoFluxo(){
+  const labels=[], caixa=[], comp=[];
+  for(let i=-5;i<=0;i++){
+    const d=new Date(ANO,MES+i,1);
+    labels.push(`${MESC[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`);
+    caixa.push(caixaMes(d.getFullYear(),d.getMonth()).total);
+    comp.push(competenciaMes(d.getFullYear(),d.getMonth()).total);
+  }
+  desenhaGrafico('gFluxo','bar',{labels,datasets:[
+    {label:'Caixa',data:caixa,backgroundColor:D.config.cor_primaria||'#44CF17',borderRadius:3,maxBarThickness:24},
+    {label:'Competência',data:comp,type:'line',borderColor:'#8a8d8f',borderWidth:2,borderDash:[5,4],pointRadius:4,pointBackgroundColor:'#8a8d8f',fill:false}
+  ]});
+}
+function graficoProduto(porProd){
+  const ids=Object.keys(porProd).filter(k=>porProd[k]>0);
+  if(!ids.length){ document.getElementById('gProd').closest('.cartao').innerHTML='<div class="vazio">Sem receita reconhecida neste mês.</div>'; return; }
+  desenhaGrafico('gProd','doughnut',{
+    labels: ids.map(i=>nomeProd(i)),
+    datasets:[{data: ids.map(i=>porProd[i]), backgroundColor: ids.map(i=>prod(i)?.cor||'#44CF17'), borderColor:'#0d0d0d', borderWidth:2}]
+  }, true);
+}
+function desenhaGrafico(id,tipo,data,legenda){
+  const el=document.getElementById(id); if(!el) return;
+  if(graficos[id]) graficos[id].destroy();
+  graficos[id]=new Chart(el,{type:tipo,data,options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:!!legenda,position:'bottom',labels:{color:'#8a8d8f',font:{family:'Courier New',size:11},boxWidth:10,padding:14}},
+      tooltip:{callbacks:{label:c=>` ${c.dataset.label||c.label}: ${rsc(c.parsed.y ?? c.parsed)}`}}},
+    scales: tipo==='doughnut' ? {} : {
+      x:{grid:{display:false},ticks:{color:'#8a8d8f',font:{family:'Courier New',size:11}}},
+      y:{beginAtZero:true,grid:{color:'#1c1c1c'},ticks:{color:'#8a8d8f',font:{family:'Courier New',size:11},callback:v=>'R$ '+Math.round(v/1000)+'k'}}
+    }
+  }});
+}
+
+/* ---------- recebíveis ---------- */
+function verRecebiveis(){
+  const ab=parcelasAbertas();
+  const faixa = (min,max) => ab.filter(p=> p.atraso>=min && (max===null || p.atraso<=max));
+  const aVencer=ab.filter(p=>p.atraso<=0);
+  const f1=faixa(1,30), f2=faixa(31,60), f3=faixa(61,null);
+  const soma=a=>a.reduce((s,p)=>s+Number(p.valor),0);
+
+  let h=`<h2><span class="quadrado"></span>Recebíveis em aberto</h2>
+  <div class="grade g4">
+    ${kpi('A vencer', rsc(soma(aVencer)), `${aVencer.length} parcelas`)}
+    ${kpi('1 a 30 dias', rsc(soma(f1)), `${f1.length} parcelas`, false, f1.length?'aviso':'')}
+    ${kpi('31 a 60 dias', rsc(soma(f2)), `${f2.length} parcelas`, false, f2.length?'aviso':'')}
+    ${kpi('Mais de 60 dias', rsc(soma(f3)), `${f3.length} parcelas`, false, f3.length?'neg':'')}
+  </div>
+  <h2><span class="quadrado"></span>Detalhe</h2>`;
+
+  if(!ab.length){ h+=`<div class="vazio">Nenhuma parcela em aberto. Tudo recebido.</div>`; document.getElementById('v-receb').innerHTML=h; return; }
+
+  h+=`<div class="cartao rolagem"><table><thead><tr>
+    <th>Mentorado</th><th>Produto</th><th>Parcela</th><th>Vencimento</th><th>Situação</th><th class="d">Valor</th><th></th>
+  </tr></thead><tbody>`;
+  ab.forEach(p=>{
+    const tag = p.atraso>60 ? '<span class="tag mal">60+ dias</span>' :
+                p.atraso>30 ? '<span class="tag mal">31-60 dias</span>' :
+                p.atraso>0  ? `<span class="tag av">${p.atraso} dias</span>` :
+                              '<span class="tag">a vencer</span>';
+    h+=`<tr>
+      <td>${esc(p.mentorado?.nome||'—')}</td>
+      <td class="rotulo" style="font-size:10px">${esc(nomeProd(p.contrato.produto_id))}</td>
+      <td class="num">${p.numero}/${p.contrato.meses}</td>
+      <td class="num">${dt(p.vencimento)}</td>
+      <td>${tag}</td>
+      <td class="d">${rs(p.valor)}</td>
+      <td><button class="btn-vazio" style="padding:3px 9px;font-size:11px" onclick="baixarParcela('${p.id}')">Baixar</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>
+  <p class="nota">Baixar marca a parcela como recebida na data de hoje e ela entra no caixa do mês.</p>`;
+  document.getElementById('v-receb').innerHTML=h;
+}
+async function baixarParcela(id){
+  const {error}=await sb.from('parcelas').update({pago:true,data_pagamento:iso(HOJE)}).eq('id',id);
+  if(error) return toast('Não foi possível baixar: '+error.message,true);
+  const p=D.parcelas.find(x=>x.id===id); if(p){p.pago=true;p.data_pagamento=iso(HOJE);}
+  toast('Parcela baixada.'); desenhar();
+}
+
+/* ---------- renovações ---------- */
+function verRenovacoes(){
+  const r=renovacoes();
+  const venc=r.filter(c=>c.dias<0), d30=r.filter(c=>c.dias>=0&&c.dias<=30),
+        d60=r.filter(c=>c.dias>30&&c.dias<=60), d90=r.filter(c=>c.dias>60);
+  const mrrDe=a=>a.reduce((s,c)=>s+Number(c.valor_total)/Math.max(1,c.meses),0);
+
+  let h=`<h2><span class="quadrado"></span>Renovações · próximos 90 dias</h2>
+  <div class="grade g4">
+    ${kpi('Já vencidos', rsc(mrrDe(venc)), `${venc.length} contratos`, false, venc.length?'neg':'')}
+    ${kpi('Em 30 dias', rsc(mrrDe(d30)), `${d30.length} contratos`, false, d30.length?'aviso':'')}
+    ${kpi('Em 60 dias', rsc(mrrDe(d60)), `${d60.length} contratos`)}
+    ${kpi('Em 90 dias', rsc(mrrDe(d90)), `${d90.length} contratos`)}
+  </div>
+  <h2><span class="quadrado"></span>Quem renovar</h2>`;
+
+  if(!r.length){ h+=`<div class="vazio">Nenhum contrato vencendo nos próximos 90 dias.</div>`; document.getElementById('v-renov').innerHTML=h; return; }
+
+  h+=`<div class="cartao rolagem"><table><thead><tr>
+    <th>Mentorado</th><th>Produto</th><th>Início</th><th>Vence</th><th>Situação</th><th class="d">MRR</th><th class="d">Contrato</th><th></th>
+  </tr></thead><tbody>`;
+  r.forEach(c=>{
+    const tag = c.dias<0 ? `<span class="tag mal">venceu há ${-c.dias}d</span>` :
+                c.dias<=30 ? `<span class="tag av">${c.dias} dias</span>` :
+                `<span class="tag">${c.dias} dias</span>`;
+    h+=`<tr>
+      <td>${esc(c.mentorado.nome)}</td>
+      <td class="rotulo" style="font-size:10px">${esc(nomeProd(c.produto_id))}</td>
+      <td class="num">${dt(c.data_inicio)}</td>
+      <td class="num">${dt(c.data_fim)}</td>
+      <td>${tag}</td>
+      <td class="d">${rsc(Number(c.valor_total)/Math.max(1,c.meses))}</td>
+      <td class="d">${rs(c.valor_total)}</td>
+      <td style="white-space:nowrap">
+        <button class="btn-vazio" style="padding:3px 8px;font-size:11px" onclick="marcarContrato('${c.id}','renovado')">Renovou</button>
+        <button class="btn-vazio" style="padding:3px 8px;font-size:11px" onclick="marcarContrato('${c.id}','cancelado')">Saiu</button>
+      </td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>
+  <p class="nota">Renovou tira o contrato da lista de risco. Saiu marca como churn e o MRR cai no mês.</p>`;
+  document.getElementById('v-renov').innerHTML=h;
+}
+async function marcarContrato(id,status){
+  const {error}=await sb.from('contratos').update({status}).eq('id',id);
+  if(error) return toast('Não foi possível salvar: '+error.message,true);
+  const c=D.contratos.find(x=>x.id===id); if(c) c.status=status;
+  if(status==='cancelado'){
+    const m=D.mentorados.find(x=>x.id===c.mentorado_id);
+    if(m){ await sb.from('mentorados').update({status:'cancelado'}).eq('id',m.id); m.status='cancelado'; }
+  }
+  toast(status==='renovado'?'Contrato marcado como renovado.':'Contrato encerrado.');
+  desenhar();
+}
+
+/* ---------- mentorados ---------- */
+function verMentorados(){
+  const ativos=D.mentorados.filter(m=>m.status==='ativo');
+  const mrr=mrrPorProduto();
+  let h=`<h2><span class="quadrado"></span>Novo mentorado</h2>
+  <div class="cartao"><div class="form-linha">
+    <div class="campo"><label>Nome</label><input id="mNome"></div>
+    <div class="campo"><label>Produto</label><select id="mProd">${D.produtos.filter(p=>p.gere_pessoas).map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></div>
+    <div class="campo"><label>Instagram</label><input id="mIg" placeholder="@"></div>
+    <div class="campo"><label>Valor do contrato</label><input id="mValor" type="number" step="0.01"></div>
+    <div class="campo"><label>Meses</label><input id="mMeses" type="number" value="6"></div>
+    <div class="campo"><label>Início</label><input id="mIni" type="date" value="${iso(HOJE)}"></div>
+    <div class="campo"><label>Calls contratadas</label><input id="mCalls" type="number" value="0"></div>
+    <button class="btn" onclick="novoMentorado()">Adicionar</button>
+  </div>
+  <p class="nota">As parcelas são geradas sozinhas: valor dividido pelos meses, vencendo no mesmo dia de cada mês.</p></div>
+
+  <h2><span class="quadrado"></span>Ativos · ${ativos.length} · MRR ${rsc(Object.values(mrr).reduce((a,b)=>a+b,0))}</h2>
+  <div class="cartao rolagem"><table><thead><tr>
+    <th>Mentorado</th><th>Produto</th><th>Contrato</th><th>Vence</th><th class="d">MRR</th><th>Calls</th><th>Situação</th><th></th>
+  </tr></thead><tbody>`;
+
+  D.mentorados.forEach(m=>{
+    const c=D.contratos.filter(x=>x.mentorado_id===m.id).sort((a,b)=>b.data_inicio.localeCompare(a.data_inicio))[0];
+    const tag = m.status==='ativo'?'<span class="tag ok">ativo</span>':
+                m.status==='cancelado'?'<span class="tag mal">saiu</span>':`<span class="tag">${m.status}</span>`;
+    h+=`<tr>
+      <td>${esc(m.nome)}${m.instagram?`<br><span class="rotulo" style="font-size:10px">${esc(m.instagram)}</span>`:''}</td>
+      <td class="rotulo" style="font-size:10px">${esc(nomeProd(m.produto_id))}</td>
+      <td class="d">${c?rs(c.valor_total):'—'}${c?`<br><span class="rotulo" style="font-size:10px">${c.meses}x</span>`:''}</td>
+      <td class="num">${c?dt(c.data_fim):'—'}</td>
+      <td class="d">${c&&c.status==='ativo'?rsc(Number(c.valor_total)/Math.max(1,c.meses)):'—'}</td>
+      <td class="num" style="white-space:nowrap">
+        <input class="mini" type="number" value="${m.calls_feitas}" onchange="salvarCampo('mentorados','${m.id}','calls_feitas',this.value)"> / ${m.calls_contratadas}
+      </td>
+      <td>${tag}</td>
+      <td><button class="x" onclick="remover('mentorados','${m.id}','${escJS(m.nome)}')" aria-label="Remover">✕</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('v-ment').innerHTML=h;
+}
+async function novoMentorado(){
+  const nome=document.getElementById('mNome').value.trim();
+  const produto_id=document.getElementById('mProd').value;
+  const instagram=document.getElementById('mIg').value.trim()||null;
+  const valor=Number(document.getElementById('mValor').value)||0;
+  const meses=Math.max(1,Number(document.getElementById('mMeses').value)||1);
+  const ini=document.getElementById('mIni').value;
+  const calls=Number(document.getElementById('mCalls').value)||0;
+  if(!nome) return toast('Informe o nome do mentorado.',true);
+  if(!valor) return toast('Informe o valor do contrato.',true);
+  if(!ini) return toast('Informe a data de início.',true);
+
+  const {data:m,error:e1}=await sb.from('mentorados')
+    .insert({nome,produto_id,instagram,calls_contratadas:calls}).select().single();
+  if(e1) return toast('Erro ao salvar: '+e1.message,true);
+
+  const di=dObj(ini), df=new Date(di.getFullYear(), di.getMonth()+meses, di.getDate());
+  const {data:c,error:e2}=await sb.from('contratos')
+    .insert({mentorado_id:m.id,produto_id,valor_total:valor,meses,data_inicio:ini,data_fim:iso(df)}).select().single();
+  if(e2) return toast('Erro no contrato: '+e2.message,true);
+
+  const parcelas=[];
+  for(let i=0;i<meses;i++){
+    const v=new Date(di.getFullYear(), di.getMonth()+i, di.getDate());
+    parcelas.push({contrato_id:c.id,numero:i+1,valor:+(valor/meses).toFixed(2),vencimento:iso(v),pago:false});
+  }
+  const {data:ps}=await sb.from('parcelas').insert(parcelas).select();
+  D.mentorados.push(m); D.contratos.push(c); D.parcelas.push(...(ps||[]));
+  ['mNome','mIg','mValor'].forEach(i=>document.getElementById(i).value='');
+  toast(`${nome} adicionado com ${meses} parcelas.`);
+  desenhar();
+}
+
+/* ---------- lançamentos ---------- */
+function verLancamentos(){
+  const lst=D.lancamentos.filter(l=>noMes(l.data,ANO,MES) && passaEscopo(l.escopo))
+    .sort((a,b)=>b.data.localeCompare(a.data));
+  const ent=lst.filter(l=>l.tipo==='entrada').reduce((s,l)=>s+Number(l.valor),0);
+  const des=lst.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+Number(l.valor),0);
+
+  let h=`<h2><span class="quadrado"></span>Novo lançamento</h2>
+  <div class="cartao"><div class="form-linha">
+    <div class="campo"><label>Data</label><input id="lData" type="date" value="${iso(HOJE)}"></div>
+    <div class="campo"><label>Tipo</label><select id="lTipo"><option value="despesa">Despesa</option><option value="entrada">Entrada</option></select></div>
+    <div class="campo"><label>Categoria</label><input id="lCat" placeholder="Ferramentas"></div>
+    <div class="campo"><label>Descrição</label><input id="lDesc"></div>
+    <div class="campo"><label>Escopo</label><select id="lEsc"><option value="empresa">Empresa</option><option value="pessoal">Pessoal</option></select></div>
+    <div class="campo"><label>Produto</label><select id="lProd"><option value="">—</option>${D.produtos.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></div>
+    <div class="campo"><label>Valor</label><input id="lValor" type="number" step="0.01"></div>
+    <div class="campo"><label>Pago</label><select id="lPago"><option value="true">Sim</option><option value="false">Não</option></select></div>
+    <button class="btn" onclick="novoLancamento()">Adicionar</button>
+  </div></div>
+
+  <h2><span class="quadrado"></span>${MESES[MES]} ${ANO} · entradas ${rsc(ent)} · saídas ${rsc(des)}</h2>`;
+  if(!lst.length){ h+=`<div class="vazio">Nenhum lançamento neste mês e escopo.</div>`; document.getElementById('v-lanc').innerHTML=h; return; }
+
+  h+=`<div class="cartao rolagem"><table><thead><tr>
+    <th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Produto</th><th>Escopo</th><th>Situação</th><th class="d">Valor</th><th></th>
+  </tr></thead><tbody>`;
+  lst.forEach(l=>{
+    h+=`<tr>
+      <td class="num">${dt(l.data)}</td>
+      <td>${l.tipo==='entrada'?'<span class="tag ok">entrada</span>':'<span class="tag">saída</span>'}</td>
+      <td>${esc(l.categoria)}</td>
+      <td>${esc(l.descricao||'')}</td>
+      <td class="rotulo" style="font-size:10px">${l.produto_id?esc(nomeProd(l.produto_id)):'—'}</td>
+      <td class="rotulo" style="font-size:10px">${l.escopo}</td>
+      <td><button class="tag ${l.pago?'ok':'av'}" style="cursor:pointer" onclick="alternarPago('${l.id}',${!l.pago})">${l.pago?'pago':'a pagar'}</button></td>
+      <td class="d ${l.tipo==='entrada'?'pos':''}">${l.tipo==='entrada'?'+':'−'}${rs(l.valor)}</td>
+      <td><button class="x" onclick="remover('lancamentos','${l.id}','este lançamento')" aria-label="Remover">✕</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('v-lanc').innerHTML=h;
+}
+async function novoLancamento(){
+  const r={
+    data:document.getElementById('lData').value,
+    competencia:document.getElementById('lData').value,
+    tipo:document.getElementById('lTipo').value,
+    categoria:document.getElementById('lCat').value.trim(),
+    descricao:document.getElementById('lDesc').value.trim()||null,
+    escopo:document.getElementById('lEsc').value,
+    produto_id:document.getElementById('lProd').value||null,
+    valor:Number(document.getElementById('lValor').value)||0,
+    pago:document.getElementById('lPago').value==='true'
+  };
+  if(!r.data) return toast('Informe a data.',true);
+  if(!r.categoria) return toast('Informe a categoria.',true);
+  if(!r.valor) return toast('Informe o valor.',true);
+  const {data,error}=await sb.from('lancamentos').insert(r).select().single();
+  if(error) return toast('Erro ao salvar: '+error.message,true);
+  D.lancamentos.push(data);
+  ['lCat','lDesc','lValor'].forEach(i=>document.getElementById(i).value='');
+  toast('Lançamento adicionado.'); desenhar();
+}
+async function alternarPago(id,valor){
+  const {error}=await sb.from('lancamentos').update({pago:valor}).eq('id',id);
+  if(error) return toast('Erro: '+error.message,true);
+  const l=D.lancamentos.find(x=>x.id===id); if(l) l.pago=valor;
+  desenhar();
+}
+
+/* ---------- fixos ---------- */
+function verFixos(){
+  const lst=D.recorrencias.filter(r=>passaEscopo(r.escopo));
+  const jaGerados=new Set(D.lancamentos.filter(l=>noMes(l.data,ANO,MES) && l.recorrencia_id).map(l=>l.recorrencia_id));
+  const pend=lst.filter(r=>r.ativo!==false && !jaGerados.has(r.id));
+  const totalPend=pend.reduce((s,r)=>s+Number(r.valor),0);
+
+  let h=`<h2><span class="quadrado"></span>Fixos de ${MESES[MES]}</h2>`;
+  if(pend.length) h+=`<div class="linha-fina" style="margin-bottom:12px">
+    <span><strong>${pend.length} fixos ainda não lançados</strong> em ${MESES[MES]}, somando ${rs(totalPend)}.</span>
+    <button class="btn" onclick="gerarFixos()">Gerar lançamentos do mês</button>
+  </div>`;
+  else h+=`<div class="linha-fina" style="margin-bottom:12px"><span>Todos os fixos de ${MESES[MES]} já foram lançados.</span></div>`;
+
+  h+=`<div class="cartao"><div class="form-linha">
+    <div class="campo"><label>Descrição</label><input id="fDesc"></div>
+    <div class="campo"><label>Categoria</label><input id="fCat"></div>
+    <div class="campo"><label>Valor</label><input id="fValor" type="number" step="0.01"></div>
+    <div class="campo"><label>Dia</label><input id="fDia" type="number" value="5" min="1" max="28"></div>
+    <div class="campo"><label>Escopo</label><select id="fEsc"><option value="empresa">Empresa</option><option value="pessoal">Pessoal</option></select></div>
+    <div class="campo"><label>Produto</label><select id="fProd"><option value="">—</option>${D.produtos.map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></div>
+    <button class="btn" onclick="novoFixo()">Adicionar fixo</button>
+  </div></div>
+
+  <h2><span class="quadrado"></span>Cadastrados</h2>
+  <div class="cartao rolagem"><table><thead><tr>
+    <th>Descrição</th><th>Categoria</th><th>Produto</th><th>Escopo</th><th>Dia</th><th class="d">Valor</th><th>Este mês</th><th></th>
+  </tr></thead><tbody>`;
+  lst.forEach(r=>{
+    h+=`<tr>
+      <td>${esc(r.descricao)}</td>
+      <td>${esc(r.categoria)}</td>
+      <td class="rotulo" style="font-size:10px">${r.produto_id?esc(nomeProd(r.produto_id)):'—'}</td>
+      <td class="rotulo" style="font-size:10px">${r.escopo}</td>
+      <td class="num">${r.dia}</td>
+      <td class="d">${rs(r.valor)}</td>
+      <td>${jaGerados.has(r.id)?'<span class="tag ok">lançado</span>':'<span class="tag av">pendente</span>'}</td>
+      <td><button class="x" onclick="remover('recorrencias','${r.id}','${escJS(r.descricao)}')" aria-label="Remover">✕</button></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  document.getElementById('v-fixos').innerHTML=h;
+}
+async function novoFixo(){
+  const r={
+    descricao:document.getElementById('fDesc').value.trim(),
+    categoria:document.getElementById('fCat').value.trim(),
+    valor:Number(document.getElementById('fValor').value)||0,
+    dia:Number(document.getElementById('fDia').value)||5,
+    escopo:document.getElementById('fEsc').value,
+    produto_id:document.getElementById('fProd').value||null,
+    tipo:'despesa'
+  };
+  if(!r.descricao) return toast('Informe a descrição.',true);
+  if(!r.valor) return toast('Informe o valor.',true);
+  const {data,error}=await sb.from('recorrencias').insert(r).select().single();
+  if(error) return toast('Erro: '+error.message,true);
+  D.recorrencias.push(data);
+  ['fDesc','fCat','fValor'].forEach(i=>document.getElementById(i).value='');
+  toast('Fixo cadastrado.'); desenhar();
+}
+async function gerarFixos(){
+  const jaGerados=new Set(D.lancamentos.filter(l=>noMes(l.data,ANO,MES) && l.recorrencia_id).map(l=>l.recorrencia_id));
+  const pend=D.recorrencias.filter(r=>r.ativo!==false && !jaGerados.has(r.id));
+  if(!pend.length) return toast('Nada pendente para gerar.');
+  const novos=pend.map(r=>({
+    data: iso(new Date(ANO,MES,Math.min(r.dia,28))),
+    competencia: iso(new Date(ANO,MES,1)),
+    tipo:r.tipo, categoria:r.categoria, descricao:r.descricao,
+    valor:r.valor, escopo:r.escopo, produto_id:r.produto_id, pago:false, recorrencia_id:r.id
+  }));
+  const {data,error}=await sb.from('lancamentos').insert(novos).select();
+  if(error) return toast('Erro ao gerar: '+error.message,true);
+  D.lancamentos.push(...data);
+  toast(`${data.length} fixos lançados em ${MESES[MES]}.`); desenhar();
+}
+
+/* ---------- cartões ---------- */
+function verCartoes(){
+  const ref=new Date(ANO,MES,1);
+  const ativos=D.parcelamentos.map(p=>{
+    const ini=dObj(p.primeira_competencia);
+    const n=diffMeses(ini,ref)+1;
+    const fim=new Date(ini.getFullYear(), ini.getMonth()+p.total_parcelas-1, 1);
+    return {...p, atual:n, fim, viva: n>=1 && n<=p.total_parcelas};
+  });
+  const vivos=ativos.filter(p=>p.viva && passaEscopo(p.escopo));
+  const totalParcela=vivos.reduce((s,p)=>s+Number(p.valor_parcela),0);
+  const compromisso=vivos.reduce((s,p)=>s+Number(p.valor_parcela)*(p.total_parcelas-p.atual+1),0);
+  const assin=D.assinaturas.filter(a=>a.ativo!==false && passaEscopo(a.escopo));
+  const totalAssin=assin.reduce((s,a)=>s+Number(a.valor),0);
+
+  // data de liberdade
+  const fins=ativos.filter(p=>passaEscopo(p.escopo)).map(p=>p.fim).sort((a,b)=>a-b);
+  const liberdade=fins.length?fins[fins.length-1]:null;
+
+  const novos=D.parcelamentos.filter(p=>noMes(p.primeira_competencia,ANO,MES) && passaEscopo(p.escopo));
+  const compNovo=novos.reduce((s,p)=>s+Number(p.valor_parcela)*p.total_parcelas,0);
+
+  let h=`<h2><span class="quadrado"></span>Cartões · ${MESES[MES]} ${ANO}</h2>
+  <div class="grade g4">
+    ${kpi('Fatura projetada', rsc(totalParcela+totalAssin), `${vivos.length} parcelamentos + ${assin.length} assinaturas`, true)}
+    ${kpi('Só parcelas', rsc(totalParcela), totalParcela+totalAssin>0?`${Math.round(totalParcela/(totalParcela+totalAssin)*100)}% da fatura`:'—')}
+    ${kpi('Dívida restante', rsc(compromisso), 'tudo que ainda falta pagar')}
+    ${kpi('Livre de parcelas em', liberdade?`${MESC[liberdade.getMonth()]}/${String(liberdade.getFullYear()).slice(2)}`:'—', 'se não parcelar mais nada')}
+  </div>`;
+
+  if(novos.length){
+    h+=`<div class="alerta r" style="margin-top:12px"><div><strong>Recarga neste mês:</strong> ${novos.length} compras novas parceladas, criando ${rs(compNovo)} de compromisso futuro. Cada uma dessas adia a data de liberdade.</div></div>`;
+  } else {
+    h+=`<div class="alerta v" style="margin-top:12px"><div><strong>Zero parcelamento novo neste mês.</strong> Mantendo assim, a fatura cai sozinha até a data acima.</div></div>`;
+  }
+
+  h+=`<h2><span class="quadrado"></span>Projeção dos próximos 12 meses</h2>
+  <div class="cartao"><div class="grafico"><canvas id="gCartao" role="img" aria-label="Projeção da fatura de cartão nos próximos 12 meses"></canvas></div></div>
+
+  <h2><span class="quadrado"></span>Parcelamentos em aberto</h2>`;
+
+  if(!vivos.length){ h+=`<div class="vazio">Nenhum parcelamento em aberto neste escopo.</div>`; }
+  else {
+    h+=`<div class="cartao rolagem"><table><thead><tr>
+      <th>Compra</th><th>Cartão</th><th>Categoria</th><th>Parcela</th><th>Quita em</th><th class="d">Por mês</th><th class="d">Falta</th><th></th>
+    </tr></thead><tbody>`;
+    vivos.sort((a,b)=>Number(b.valor_parcela)-Number(a.valor_parcela)).forEach(p=>{
+      const cartao=D.cartoes.find(c=>c.id===p.cartao_id);
+      const falta=Number(p.valor_parcela)*(p.total_parcelas-p.atual+1);
+      h+=`<tr>
+        <td>${esc(p.descricao)}</td>
+        <td class="rotulo" style="font-size:10px">${esc(cartao?.nome||'—')}</td>
+        <td class="rotulo" style="font-size:10px">${esc(p.categoria||'—')}</td>
+        <td class="num">${p.atual}/${p.total_parcelas}</td>
+        <td class="num">${MESC[p.fim.getMonth()]}/${String(p.fim.getFullYear()).slice(2)}</td>
+        <td class="d">${rs(p.valor_parcela)}</td>
+        <td class="d">${rs(falta)}</td>
+        <td><button class="x" onclick="remover('parcelamentos','${p.id}','${escJS(p.descricao)}')" aria-label="Remover">✕</button></td>
+      </tr>`;
+    });
+    h+=`</tbody></table></div>`;
+  }
+
+  h+=`<h2><span class="quadrado"></span>Novo parcelamento</h2>
+  <div class="cartao"><div class="form-linha">
+    <div class="campo"><label>Cartão</label><select id="pCartao">${D.cartoes.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select></div>
+    <div class="campo"><label>Descrição</label><input id="pDesc"></div>
+    <div class="campo"><label>Categoria</label><input id="pCat" placeholder="Compras"></div>
+    <div class="campo"><label>Valor da parcela</label><input id="pValor" type="number" step="0.01"></div>
+    <div class="campo"><label>Total de parcelas</label><input id="pTotal" type="number" value="10"></div>
+    <div class="campo"><label>1ª parcela em</label><input id="pIni" type="month" value="${chave(ANO,MES)}"></div>
+    <div class="campo"><label>Escopo</label><select id="pEsc"><option value="pessoal">Pessoal</option><option value="empresa">Empresa</option></select></div>
+    <button class="btn" onclick="novoParcelamento()">Adicionar</button>
+  </div></div>
+
+  <h2><span class="quadrado"></span>Assinaturas · ${rsc(totalAssin)} por mês</h2>`;
+  if(!assin.length){ h+=`<div class="vazio">Nenhuma assinatura cadastrada.</div>`; }
+  else {
+    h+=`<div class="cartao rolagem"><table><thead><tr>
+      <th>Assinatura</th><th>Cartão</th><th>Escopo</th><th>Produto</th><th class="d">Mensal</th><th class="d">Ano</th><th></th>
+    </tr></thead><tbody>`;
+    assin.sort((a,b)=>Number(b.valor)-Number(a.valor)).forEach(a=>{
+      const cartao=D.cartoes.find(c=>c.id===a.cartao_id);
+      h+=`<tr>
+        <td>${esc(a.descricao)}</td>
+        <td class="rotulo" style="font-size:10px">${esc(cartao?.nome||'—')}</td>
+        <td class="rotulo" style="font-size:10px">${a.escopo}</td>
+        <td class="rotulo" style="font-size:10px">${a.produto_id?esc(nomeProd(a.produto_id)):'—'}</td>
+        <td class="d">${rs(a.valor)}</td>
+        <td class="d">${rsc(Number(a.valor)*12)}</td>
+        <td><button class="x" onclick="remover('assinaturas','${a.id}','${escJS(a.descricao)}')" aria-label="Remover">✕</button></td>
+      </tr>`;
+    });
+    h+=`</tbody></table></div>
+    <p class="nota">Revise esta lista uma vez por trimestre. É onde assinatura esquecida se acumula.</p>`;
+  }
+
+  document.getElementById('v-cart').innerHTML=h;
+  graficoCartao();
+}
+function graficoCartao(){
+  const labels=[], parc=[], assinat=[];
+  const totalAssin=D.assinaturas.filter(a=>a.ativo!==false && passaEscopo(a.escopo)).reduce((s,a)=>s+Number(a.valor),0);
+  for(let i=0;i<12;i++){
+    const d=new Date(ANO,MES+i,1);
+    labels.push(`${MESC[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`);
+    let t=0;
+    D.parcelamentos.forEach(p=>{
+      if(!passaEscopo(p.escopo)) return;
+      const n=diffMeses(dObj(p.primeira_competencia), d);
+      if(n>=0 && n<p.total_parcelas) t+=Number(p.valor_parcela);
+    });
+    parc.push(t); assinat.push(totalAssin);
+  }
+  const el=document.getElementById('gCartao'); if(!el) return;
+  if(graficos.gCartao) graficos.gCartao.destroy();
+  graficos.gCartao=new Chart(el,{type:'bar',data:{labels,datasets:[
+    {label:'Parcelas',data:parc,backgroundColor:D.config.cor_primaria||'#44CF17',borderRadius:3,maxBarThickness:26},
+    {label:'Assinaturas',data:assinat,backgroundColor:'#4a4a4a',borderRadius:3,maxBarThickness:26}
+  ]},options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,position:'bottom',labels:{color:'#8a8d8f',font:{family:'Courier New',size:11},boxWidth:10,padding:14}},
+      tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${rsc(c.parsed.y)}`}}},
+    scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#8a8d8f',font:{family:'Courier New',size:10},autoSkip:false,maxRotation:45}},
+      y:{stacked:true,beginAtZero:true,grid:{color:'#1c1c1c'},ticks:{color:'#8a8d8f',font:{family:'Courier New',size:11},callback:v=>'R$ '+Math.round(v/1000)+'k'}}}
+  }});
+}
+async function novoParcelamento(){
+  const mes=document.getElementById('pIni').value;
+  const r={
+    cartao_id:document.getElementById('pCartao').value,
+    descricao:document.getElementById('pDesc').value.trim(),
+    categoria:document.getElementById('pCat').value.trim()||'Outros',
+    valor_parcela:Number(document.getElementById('pValor').value)||0,
+    total_parcelas:Math.max(1,Number(document.getElementById('pTotal').value)||1),
+    primeira_competencia: mes ? mes+'-01' : null,
+    escopo:document.getElementById('pEsc').value
+  };
+  if(!r.descricao) return toast('Informe a descrição da compra.',true);
+  if(!r.valor_parcela) return toast('Informe o valor da parcela.',true);
+  if(!r.primeira_competencia) return toast('Informe o mês da primeira parcela.',true);
+  const {data,error}=await sb.from('parcelamentos').insert(r).select().single();
+  if(error) return toast('Erro: '+error.message,true);
+  D.parcelamentos.push(data);
+  ['pDesc','pCat','pValor'].forEach(i=>document.getElementById(i).value='');
+  toast('Parcelamento cadastrado.'); desenhar();
+}
+
+/* ---------- configurações ---------- */
+function verConfig(){
+  const c=D.config;
+  const h=`<h2><span class="quadrado"></span>Identidade</h2>
+  <div class="cartao"><div class="form-linha">
+    <div class="campo"><label>Nome do negócio</label><input id="cNome" value="${esc(c.negocio||'')}"></div>
+    <div class="campo"><label>Razão social</label><input id="cRazao" value="${esc(c.razao_social||'')}"></div>
+    <div class="campo"><label>URL do logo</label><input id="cLogo" value="${esc(c.logo_url||'')}" placeholder="https://..."></div>
+    <div class="campo"><label>Cor de destaque</label><input id="cCor" type="color" value="${esc(c.cor_primaria||'#44CF17')}"></div>
+    <div class="campo"><label>Cor de fundo</label><input id="cFundo" type="color" value="${esc(c.cor_fundo||'#000000')}"></div>
+    <div class="campo"><label>Assinatura do rodapé</label><input id="cAssin" value="${esc(c.assinatura||'')}"></div>
+  </div></div>
+
+  <h2><span class="quadrado"></span>Números do negócio</h2>
+  <div class="cartao"><div class="form-linha">
+    <div class="campo"><label>Pró-labore mensal</label><input id="cProl" type="number" step="0.01" value="${c.prolabore||0}"></div>
+    <div class="campo"><label>Alíquota (%)</label><input id="cAliq" type="number" step="0.01" value="${c.aliquota||0}"></div>
+    <div class="campo"><label>Base declarada</label><input id="cBase" type="number" step="0.01" value="${c.base_declarada||0}"></div>
+    <div class="campo"><label>Meta mensal</label><input id="cMeta" type="number" step="0.01" value="${c.meta_mensal||0}"></div>
+    <div class="campo"><label>Saldo em caixa</label><input id="cCaixa" type="number" step="0.01" value="${c.saldo_caixa||0}"></div>
+    <div class="campo"><label>Reserva alvo</label><input id="cReserva" type="number" step="0.01" value="${c.reserva_alvo||0}"></div>
+    <div class="campo"><label>Meses de repasse</label><input id="cRepasse" value="${esc(c.repasse_meses||'1,4,7,10')}"></div>
+  </div>
+  <p class="nota">Meses de repasse são os números dos meses em que o alerta da sociedade aparece, separados por vírgula. O cálculo e o pagamento continuam por fora do painel.</p>
+  <div style="margin-top:14px"><button class="btn" onclick="salvarConfig()">Salvar</button></div></div>
+
+  <h2><span class="quadrado"></span>Produtos</h2>
+  <div class="cartao rolagem"><table><thead><tr><th>Produto</th><th>Cor</th><th>Gere pessoas</th><th class="d">MRR</th></tr></thead><tbody>
+  ${D.produtos.map(p=>{
+    const mrr=mrrPorProduto()[p.id]||0;
+    return `<tr><td>${esc(p.nome)}</td>
+      <td><span style="display:inline-block;width:14px;height:14px;background:${esc(p.cor)}"></span></td>
+      <td class="rotulo" style="font-size:10px">${p.gere_pessoas?'sim':'não'}</td>
+      <td class="d">${rsc(mrr)}</td></tr>`;
+  }).join('')}
+  </tbody></table></div>
+  <p class="nota">Consultoria RHINO não gere pessoas aqui porque aluno e vencimento já ficam no Treino.io. Ela entra só como linha de receita.</p>`;
+  document.getElementById('v-conf').innerHTML=h;
+}
+async function salvarConfig(){
+  const r={
+    negocio:document.getElementById('cNome').value.trim()||'Painel RHINO',
+    razao_social:document.getElementById('cRazao').value.trim(),
+    logo_url:document.getElementById('cLogo').value.trim()||null,
+    cor_primaria:document.getElementById('cCor').value,
+    cor_fundo:document.getElementById('cFundo').value,
+    assinatura:document.getElementById('cAssin').value.trim(),
+    prolabore:Number(document.getElementById('cProl').value)||0,
+    aliquota:Number(document.getElementById('cAliq').value)||0,
+    base_declarada:Number(document.getElementById('cBase').value)||0,
+    meta_mensal:Number(document.getElementById('cMeta').value)||0,
+    saldo_caixa:Number(document.getElementById('cCaixa').value)||0,
+    reserva_alvo:Number(document.getElementById('cReserva').value)||0,
+    repasse_meses:document.getElementById('cRepasse').value.trim()||'1,4,7,10'
+  };
+  const {error}=await sb.from('config').update(r).eq('id',1);
+  if(error) return toast('Erro ao salvar: '+error.message,true);
+  D.config={...D.config,...r};
+  aplicarMarca(); toast('Configurações salvas.'); desenhar();
+}
+
+/* ---------- genéricos ---------- */
+async function salvarCampo(tabela,id,campo,valor){
+  const {error}=await sb.from(tabela).update({[campo]:valor}).eq('id',id);
+  if(error) return toast('Erro ao salvar: '+error.message,true);
+  const item=D[tabela]?.find(x=>x.id===id); if(item) item[campo]=valor;
+  toast('Salvo.');
+}
+async function remover(tabela,id,rotulo){
+  if(!confirm(`Remover ${rotulo}? Isso não pode ser desfeito.`)) return;
+  const {error}=await sb.from(tabela).delete().eq('id',id);
+  if(error) return toast('Erro ao remover: '+error.message,true);
+  D[tabela]=D[tabela].filter(x=>x.id!==id);
+  if(tabela==='mentorados'){
+    D.contratos=D.contratos.filter(c=>c.mentorado_id!==id);
+  }
+  toast('Removido.'); desenhar();
+}
 </script>
 </body>
 </html>
