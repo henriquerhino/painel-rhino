@@ -115,7 +115,8 @@ tr.filho td:first-child{padding-left:26px;color:var(--medio)}
 .ed{background:transparent;border:1px solid transparent;color:var(--cinza);padding:4px 6px;width:100%;font-size:14px}
 .ed:hover{border-color:var(--linha);background:var(--grafite)}
 .ed:focus{border-color:var(--verde);background:var(--grafite);outline:none}
-.ed.n{font-family:var(--mono);text-align:right}
+.ed.n{font-family:var(--mono);text-align:right;min-width:0}
+.ed.n::-webkit-inner-spin-button{opacity:.35}
 .ed.dt{font-family:var(--mono);width:140px}
 .ed.nm{min-width:220px}
 select.ed{width:auto;min-width:110px}
@@ -147,6 +148,11 @@ footer{border-top:1px solid var(--linha);padding:20px;text-align:center}
 .girando{display:inline-block;width:12px;height:12px;border:2px solid var(--linha);border-top-color:var(--verde);
   border-radius:50%;animation:g .7s linear infinite;vertical-align:-2px;margin-right:7px}
 @keyframes g{to{transform:rotate(360deg)}}
+.cabecalho{width:100%;background:none;border:none;color:var(--cinza);display:flex;align-items:center;gap:12px;padding:15px 17px;text-align:left}
+.cabecalho:hover{background:var(--grafite)}
+.seta{color:var(--fraco);font-size:13px;transition:transform .15s;flex:none}
+.seta.on{transform:rotate(90deg);color:var(--verde)}
+.corpo{padding:0 17px 17px;border-top:1px solid var(--linha)}
 .dropzona{border:1px dashed var(--linha);padding:22px;text-align:center;color:var(--fraco);font-size:13.5px}
 .dropzona.ativo{border-color:var(--verde);color:var(--verde)}
 .miniaturas{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -215,8 +221,9 @@ let MES=HOJE.getMonth(), ANO=HOJE.getFullYear(), ABA='dash';
 let FILTRO={ini:'',fim:'',cat:'',tipo:''};
 let IA={estado:'ocioso',itens:[],erro:''};
 let PRINTS=[];
+let CART_ABERTO=null;
 let D={config:{},produtos:[],mentorados:[],contratos:[],parcelas:[],lancamentos:[],recorrencias:[],
-  cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[]};
+  cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[],repasses:[]};
 const G={};
 
 const rs=v=>'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -267,7 +274,7 @@ function irPara(a){document.querySelector(`#abas button[data-a="${a}"]`).click()
 
 async function carregar(){
   const t=['config','produtos','mentorados','contratos','parcelas','lancamentos','recorrencias','cartoes',
-    'parcelamentos','assinaturas','metas_mes','investimentos','investimentos_hist','categorias'];
+    'parcelamentos','assinaturas','metas_mes','investimentos','investimentos_hist','categorias','repasses'];
   const r=await Promise.all(t.map(x=>sb.from(x).select('*')));
   let faltou=[];
   r.forEach((res,i)=>{if(res.error){faltou.push(t[i]);return;} D[t[i]]=res.data||[];});
@@ -567,12 +574,17 @@ function verDash(){
 
   <h2><span class="q"></span>Repasse da sociedade · ${ANO}</h2>
   <div class="cartao rolagem"><table><thead><tr>
-    <th>Mês</th><th class="d">Base dos 3 meses</th><th class="d">Provisão 25%</th><th>Situação</th>
-  </tr></thead><tbody>${repasseAno(ANO).map(r=>`<tr>
-    <td>${MESES[r.mes]}</td><td class="d">${rsc(r.base)}</td><td class="d">${rsc(r.provisao)}</td>
-    <td>${r.passou?'<span class="tag ok">passou</span>':MES===r.mes?'<span class="tag al">é este mês</span>':'<span class="tag">a vir</span>'}</td>
-  </tr>`).join('')}</tbody></table>
-  <p class="nota">Provisão estimada sobre o recebido do Framework nos três meses anteriores. O cálculo final e o pagamento continuam por fora do painel.</p></div>
+    <th>Mês</th><th class="d">Sugestão do painel</th><th class="d">Valor do repasse</th><th>Observação</th><th>Pago</th>
+  </tr></thead><tbody>${repasseAno(ANO).map(r=>{
+    const k=chave(ANO,r.mes), reg=D.repasses.find(x=>x.ano_mes===k)||{};
+    return `<tr>
+    <td>${MESES[r.mes]} ${r.passou?'<span class="tag" style="margin-left:6px">passou</span>':MES===r.mes?'<span class="tag al" style="margin-left:6px">este mês</span>':''}</td>
+    <td class="d" style="color:var(--fraco)">${rsc(r.provisao)}</td>
+    <td class="d"><input class="ed n" style="width:118px" type="number" step="0.01" value="${reg.valor??''}" placeholder="${Math.round(r.provisao)}" onchange="salvarRepasse('${k}','valor',this.value)"></td>
+    <td><input class="ed" value="${esc(reg.observacao||'')}" placeholder="anotação" onchange="salvarRepasse('${k}','observacao',this.value)"></td>
+    <td><button class="tag ${reg.pago?'ok':'al'}" onclick="salvarRepasse('${k}','pago',${!reg.pago})">${reg.pago?'pago':'em aberto'}</button></td>
+  </tr>`}).join('')}</tbody></table>
+  <p class="nota">A coluna cinza é só uma sugestão calculada sobre o Framework dos três meses anteriores. O valor que vale é o que você digitar.</p></div>
 
   <h2><span class="q"></span>Agente financeiro</h2>
   <div style="margin-bottom:12px"><button class="btn" id="btIA" onclick="rodarIA()" ${IA.estado==='rodando'?'disabled':''}>
@@ -597,6 +609,17 @@ function renderAgente(){
   h+=agenteLocal().map(([n,t])=>`<div class="alerta ${n}"><div>${t}</div></div>`).join('');
   el.innerHTML=h;
 }
+async function salvarRepasse(ano_mes,campo,valor){
+  const reg=D.repasses.find(x=>x.ano_mes===ano_mes)||{ano_mes,percentual:25,pago:false};
+  const linha={ano_mes,base:reg.base||0,percentual:reg.percentual||25,
+    valor:reg.valor||0,pago:reg.pago||false,observacao:reg.observacao||null};
+  linha[campo]= campo==='valor' ? (+valor||0) : valor;
+  const {error}=await sb.from('repasses').upsert(linha,{onConflict:'ano_mes'});
+  if(error) return toast('Erro ao salvar repasse: '+error.message,true);
+  const i=D.repasses.findIndex(x=>x.ano_mes===ano_mes);
+  if(i>=0) D.repasses[i]=linha; else D.repasses.push(linha);
+  toast('Repasse salvo.'); desenhar();
+}
 async function salvarMeta(campo,valor){
   const k=chave(ANO,MES), M=metaDoMes(ANO,MES);
   const linha={ano_mes:k,total:M.total,s1:M.s[0],s2:M.s[1],s3:M.s[2],s4:M.s[3]};
@@ -616,8 +639,10 @@ function graficoDespesas(dp){
     return `<div class="it"><span class="pt" style="background:${CORES[k%CORES.length]}"></span>
       <span class="nm"><strong>${esc(m)}</strong></span><span class="vl">${rs(o.total)}</span>
       <span class="pc">${(o.total/dp.total*100).toFixed(0)}%</span></div>`
-      +filhos.map(([n,v])=>`<div class="it sub"><span class="pt" style="background:transparent"></span>
-        <span class="nm">${esc(n)}</span><span class="vl">${rs(v)}</span><span class="pc"></span></div>`).join('');
+      +filhos.map(([n,v])=>{const e=catPorNome(n)?.escopo;
+        return `<div class="it sub"><span class="pt" style="background:transparent"></span>
+        <span class="nm">${esc(n)}${e&&e!=='ambos'?` <span class="rotulo" style="font-size:9px">${e}</span>`:''}</span>
+        <span class="vl">${rs(v)}</span><span class="pc"></span></div>`}).join('');
   }).join('')+`<div class="tot"><span class="rotulo">Total</span><span>${rs(dp.total)}</span></div>`;
   pinta('gDesp','doughnut',{labels:g.map(x=>x[0]),
     datasets:[{data:g.map(x=>x[1].total),backgroundColor:g.map((_,k)=>CORES[k%CORES.length]),borderColor:'#0e0e0e',borderWidth:2}]});
@@ -674,8 +699,8 @@ function verContratos(){
     <td class="nome">${esc(c.m.nome)}<div class="rotulo" style="font-size:10px">${esc(nomeProd(c.produto_id))}</div></td>
     <td class="d">${rs(rec)}</td>
     <td class="d"><input class="ed n" style="width:110px" type="number" step="0.01" id="rt-${c.id}" value="${+c.valor_total}" oninput="previaRev('${c.id}',${rec})"></td>
-    <td class="d"><input class="ed n" style="width:50px" type="number" id="rd-${c.id}" value="${c.meses||6}"></td>
-    <td class="d"><input class="ed n" style="width:50px" type="number" id="rp-${c.id}" value="${c.parcelas_saldo||5}" oninput="previaRev('${c.id}',${rec})"></td>
+    <td class="d"><input class="ed n" style="width:64px" type="number" id="rd-${c.id}" value="${c.meses||6}"></td>
+    <td class="d"><input class="ed n" style="width:64px" type="number" id="rp-${c.id}" value="${c.parcelas_saldo||5}" oninput="previaRev('${c.id}',${rec})"></td>
     <td><input class="ed dt" type="date" id="ri-${c.id}" value="${iso(new Date(HOJE.getFullYear(),HOJE.getMonth()+1,10))}"></td>
     <td class="d" id="rv-${c.id}">${rs(((+c.valor_total-rec)>0?(+c.valor_total-rec):0)/Math.max(1,c.parcelas_saldo||5))}</td>
     <td><button class="btn" style="padding:5px 12px;font-size:12px" onclick="salvarRevisao('${c.id}')">Gerar</button></td>
@@ -712,11 +737,11 @@ function verContratos(){
       <td class="d"><input class="ed n" style="width:106px" type="number" step="0.01" value="${c.valor_total}" onchange="upNum('contratos','${c.id}','valor_total',this.value)"></td>
       <td class="d">${rsc(recebidoDe(c.id))}</td>
       <td class="d ${saldoDe(c)>0?'av':''}">${rsc(saldoDe(c))}</td>
-      <td class="d"><input class="ed n" style="width:44px" type="number" value="${c.parcelas_saldo||0}" onchange="upNum('contratos','${c.id}','parcelas_saldo',this.value)"></td>
+      <td class="d"><input class="ed n" style="width:62px" type="number" value="${c.parcelas_saldo||0}" onchange="upNum('contratos','${c.id}','parcelas_saldo',this.value)"></td>
       <td class="d">${rsc(parcelaDe(c))}</td>
       <td><input class="ed dt" type="date" value="${String(c.data_fim).slice(0,10)}" onchange="up('contratos','${c.id}','data_fim',this.value)"></td>
       <td class="d">${c.status==='ativo'?rsc(+c.valor_total/Math.max(1,c.meses)):'—'}</td>
-      <td class="d" style="white-space:nowrap"><input class="ed n" style="width:38px" type="number" value="${c.m.calls_feitas}" onchange="upNum('mentorados','${c.m.id}','calls_feitas',this.value)">/<input class="ed n" style="width:38px" type="number" value="${c.m.calls_contratadas}" onchange="upNum('mentorados','${c.m.id}','calls_contratadas',this.value)"></td>
+      <td class="d" style="white-space:nowrap"><input class="ed n" style="width:46px" type="number" value="${c.m.calls_feitas}" onchange="upNum('mentorados','${c.m.id}','calls_feitas',this.value)">/<input class="ed n" style="width:46px" type="number" value="${c.m.calls_contratadas}" onchange="upNum('mentorados','${c.m.id}','calls_contratadas',this.value)"></td>
       <td><select class="ed" onchange="mudaStatus('${c.id}',this.value)">${['ativo','renovado','concluido','cancelado'].map(s=>`<option value="${s}"${s===c.status?' selected':''}>${s}</option>`).join('')}</select>
         <div style="margin-top:4px">${tg}</div></td>
       <td><button class="x" onclick="del('mentorados','${c.m.id}')" aria-label="Remover">✕</button></td>
@@ -852,7 +877,7 @@ function verRecebiveis(){
     h+=`<tr>
       <td class="nome"><input class="ed nm" value="${esc(p.mentorado?.nome||'')}" onchange="up('mentorados','${p.mentorado?.id}','nome',this.value)"></td>
       <td><select class="ed" onchange="up('contratos','${p.contrato.id}','produto_id',this.value)">${D.produtos.map(x=>`<option value="${x.id}"${x.id===p.contrato.produto_id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></td>
-      <td class="d"><input class="ed n" style="width:40px" type="number" value="${p.numero}" onchange="upNum('parcelas','${p.id}','numero',this.value)">/${p.contrato.meses}</td>
+      <td class="d"><input class="ed n" style="width:56px" type="number" value="${p.numero}" onchange="upNum('parcelas','${p.id}','numero',this.value)">/${p.contrato.meses}</td>
       <td><input class="ed dt" type="date" value="${String(p.vencimento).slice(0,10)}" onchange="up('parcelas','${p.id}','vencimento',this.value)"></td>
       <td>${tg}</td>
       <td class="d"><input class="ed n" style="width:104px" type="number" step="0.01" value="${p.valor}" onchange="upNum('parcelas','${p.id}','valor',this.value)"></td>
@@ -1046,6 +1071,7 @@ async function novoLanc(){
 }
 
 /* ================= CARTÕES ================= */
+function abrirCartao(id){CART_ABERTO=(CART_ABERTO===id?null:id);verCartoes();}
 function verCartoes(){
   const ref=new Date(ANO,MES,1);
   const restante=D.parcelamentos.reduce((s,p)=>{const n=dif(dObj(p.primeira_competencia),ref);
@@ -1068,12 +1094,20 @@ function verCartoes(){
     if(!ps.length&&!asn.length) return;
     const falta=ps.reduce((s,p)=>s+ +p.valor_parcela*(p.total_parcelas-p.atual+1),0);
     const livre=ps.length?ps.reduce((a,b)=>a.fim>b.fim?a:b).fim:null;
-    h+=`<div class="cartao" style="margin-bottom:12px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px;border-bottom:1px solid var(--linha);padding-bottom:12px;margin-bottom:12px">
-        <div><strong style="font-size:16px">${esc(c.nome)}</strong>
-        <div class="rotulo" style="font-size:10px;margin-top:3px">${esc(c.bandeira||'')} · vence dia ${c.dia_vencimento} · ${c.escopo}</div></div>
-        <div style="text-align:right"><div class="num" style="font-size:21px">${rs(fat)}</div>
-        <div class="rotulo" style="font-size:10px;margin-top:3px">${ps.length} parcelamentos · falta ${rsc(falta)}${livre?` · livre em ${MESC[livre.getMonth()]}/${String(livre.getFullYear()).slice(2)}`:''}</div></div></div>`;
+    const aberto=CART_ABERTO===c.id;
+    h+=`<div class="cartao" style="margin-bottom:10px;padding:0">
+      <button class="cabecalho" onclick="abrirCartao('${c.id}')" aria-expanded="${aberto}">
+        <span class="seta ${aberto?'on':''}">▸</span>
+        <span style="flex:1;text-align:left;min-width:0">
+          <strong style="font-size:15px">${esc(c.nome)}</strong>
+          <span class="rotulo" style="font-size:10px;display:block;margin-top:2px">${esc(c.bandeira||'')} · vence dia ${c.dia_vencimento} · ${c.escopo}</span>
+        </span>
+        <span style="text-align:right;white-space:nowrap">
+          <span class="num" style="font-size:19px">${rs(fat)}</span>
+          <span class="rotulo" style="font-size:10px;display:block;margin-top:2px">${ps.length} parcelamentos · falta ${rsc(falta)}${livre?` · livre ${MESC[livre.getMonth()]}/${String(livre.getFullYear()).slice(2)}`:''}</span>
+        </span>
+      </button>
+      <div class="corpo ${aberto?'':'oculto'}">`;
     if(ps.length){
       h+=`<div class="rolagem"><table><thead><tr><th>Compra</th><th>Categoria</th><th class="d">Parcela</th><th>Quita</th><th class="d">Por mês</th><th class="d">Falta</th><th></th></tr></thead><tbody>`;
       ps.forEach(p=>{h+=`<tr>
@@ -1089,7 +1123,7 @@ function verCartoes(){
     if(asn.length) h+=`<div class="leg" style="margin-top:10px">${asn.map(a=>`<div class="it">
       <span class="pt" style="background:#4a4a4a"></span><span class="nm">${esc(a.descricao)} <span class="rotulo" style="font-size:10px">assinatura</span></span>
       <span class="vl">${rs(a.valor)}</span><span class="pc"><button class="x" onclick="del('assinaturas','${a.id}')" aria-label="Remover">✕</button></span></div>`).join('')}</div>`;
-    h+='</div>';
+    h+='</div></div>';
   });
 
   h+=`<h2><span class="q"></span>Ler fatura pelo print</h2>
@@ -1358,17 +1392,29 @@ function verConfig(){
     <button class="btn" onclick="novoProduto()">Adicionar produto</button>
   </div><p class="nota">Produto inativo some dos formulários novos mas continua nos contratos antigos. Só dá para apagar produto sem contrato ativo.</p></div>
 
-  <h2><span class="q"></span>Categorias</h2>
-  <div class="cartao rolagem"><table><thead><tr><th>Categoria</th><th>Matriz</th><th>Tipo</th><th></th></tr></thead><tbody>
+  <h2><span class="q"></span>Categorias · edite o nome e o escopo direto na tabela</h2>
+  <div class="cartao rolagem"><table><thead><tr>
+    <th>Categoria</th><th>Dentro de</th><th>Escopo</th><th>Tipo</th><th></th>
+  </tr></thead><tbody>
   ${matrizes('despesa').concat(matrizes('entrada')).map(m=>
-    `<tr class="matriz"><td>${esc(m.nome)}</td><td>—</td><td>${m.tipo}</td><td></td></tr>`+
-    filhosDe(m.id).map(f=>`<tr class="filho"><td>${esc(f.nome)}</td><td class="rotulo" style="font-size:10px">${esc(m.nome)}</td><td>${f.tipo}</td>
+    `<tr class="matriz">
+      <td><input class="ed nm" value="${esc(m.nome)}" onchange="up('categorias','${m.id}','nome',this.value)"></td>
+      <td class="rotulo" style="font-size:10px">matriz</td>
+      <td><select class="ed" onchange="up('categorias','${m.id}','escopo',this.value)">${['ambos','empresa','pessoal'].map(e=>`<option value="${e}"${m.escopo===e?' selected':''}>${e}</option>`).join('')}</select></td>
+      <td class="rotulo" style="font-size:10px">${m.tipo}</td><td></td></tr>`+
+    filhosDe(m.id).map(f=>`<tr class="filho">
+      <td><input class="ed nm" value="${esc(f.nome)}" onchange="up('categorias','${f.id}','nome',this.value)"></td>
+      <td><select class="ed" onchange="up('categorias','${f.id}','parent_id',this.value)">${matrizes(f.tipo).map(x=>`<option value="${x.id}"${x.id===f.parent_id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></td>
+      <td><select class="ed" onchange="up('categorias','${f.id}','escopo',this.value)">${['ambos','empresa','pessoal'].map(e=>`<option value="${e}"${f.escopo===e?' selected':''}>${e}</option>`).join('')}</select></td>
+      <td class="rotulo" style="font-size:10px">${f.tipo}</td>
       <td><button class="x" onclick="del('categorias','${f.id}')" aria-label="Remover">✕</button></td></tr>`).join('')
   ).join('')}
-  </tbody></table></div>
+  </tbody></table>
+  <p class="nota">Renomear a categoria aqui não renomeia nos lançamentos antigos, porque eles guardam o nome. Se renomear, ajuste os lançamentos pela aba Lançamentos.</p></div>
   <div class="cartao" style="margin-top:12px"><div class="formlinha">
-    <div class="campo"><label>Nova categoria filho</label><input id="ctNome"></div>
+    <div class="campo"><label>Nova categoria</label><input id="ctNome"></div>
     <div class="campo"><label>Dentro de</label><select id="ctPai">${matrizes('despesa').concat(matrizes('entrada')).map(m=>`<option value="${m.id}">${esc(m.nome)}</option>`).join('')}</select></div>
+    <div class="campo"><label>Escopo</label><select id="ctEsc"><option value="empresa">Empresa</option><option value="pessoal">Pessoal</option><option value="ambos">Ambos</option></select></div>
     <button class="btn" onclick="novaCategoria()">Adicionar</button>
   </div></div>`;
 }
@@ -1400,7 +1446,7 @@ async function novaCategoria(){
   if(!nome)return toast('Informe o nome.',true);
   const pai=D.categorias.find(c=>c.id===parent_id);
   const {data,error}=await sb.from('categorias').insert({nome,parent_id,tipo:pai?.tipo||'despesa',
-    escopo:pai?.escopo||'ambos',matriz:false,ordem:99}).select().single();
+    escopo:document.getElementById('ctEsc').value,matriz:false,ordem:99}).select().single();
   if(error)return toast('Erro: '+error.message,true);
   D.categorias.push(data);document.getElementById('ctNome').value='';toast('Categoria criada.');desenhar();
 }
