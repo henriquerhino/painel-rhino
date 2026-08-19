@@ -115,8 +115,12 @@ tr.filho td:first-child{padding-left:26px;color:var(--medio)}
 .ed{background:transparent;border:1px solid transparent;color:var(--cinza);padding:4px 6px;width:100%;font-size:14px}
 .ed:hover{border-color:var(--linha);background:var(--grafite)}
 .ed:focus{border-color:var(--verde);background:var(--grafite);outline:none}
-.ed.n{font-family:var(--mono);text-align:right;min-width:0}
-.ed.n::-webkit-inner-spin-button{opacity:.35}
+.ed.n{font-family:var(--mono);text-align:right;min-width:0;-moz-appearance:textfield}
+.ed.n::-webkit-outer-spin-button,.ed.n::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.ed.lim{width:118px} .ed.mini{width:70px}
+table.revisar td{padding:9px 12px} table.revisar th{padding:10px 12px}
+table.revisar td.nome{min-width:250px}
+
 .ed.dt{font-family:var(--mono);width:140px}
 .ed.nm{min-width:220px}
 select.ed{width:auto;min-width:110px}
@@ -676,37 +680,38 @@ function verContratos(){
   const at=lst.filter(c=>c.status==='ativo');
   const mrrDe=l=>l.reduce((s,c)=>s+ +c.valor_total/Math.max(1,c.meses),0);
   const venc=at.filter(c=>c.d<0), d30=at.filter(c=>c.d>=0&&c.d<=30);
-  const rever=lst.filter(c=>!c.revisado&&c.status!=='cancelado');
-  const carteira=at.reduce((s,c)=>s+ +c.valor_total,0);
-  const aReceber=at.reduce((s,c)=>s+saldoDe(c),0);
+  const rever=lst.filter(c=>!c.revisado&&c.status!=='cancelado').sort((a,b)=>recebidoDe(b.id)-recebidoDe(a.id));
+  const revOk=at.filter(c=>c.revisado);
+  const recebidoTotal=D.parcelas.filter(p=>p.pago).reduce((s,p)=>s+ +p.valor,0);
+  const aReceber=D.parcelas.filter(p=>!p.pago).reduce((s,p)=>s+ +p.valor,0);
   let h=`<h2><span class="q"></span>Contratos</h2>
   <div class="grade g4">
-    ${kpi('Carteira contratada',rsc(carteira),`${at.length} contratos ativos`)}
-    ${kpi('Saldo a receber',rsc(aReceber),'valor cheio menos o já pago')}
-    ${kpi('MRR ativo',rsc(mrrDe(at)),'contrato dividido pela duração')}
+    ${kpi('Já recebido',rsc(recebidoTotal),'soma de tudo que foi baixado')}
+    ${kpi('A receber',rsc(aReceber),'parcelas em aberto, hoje')}
+    ${kpi('MRR ativo',rsc(mrrDe(revOk)),`${revOk.length} contratos confirmados${rever.length?` · ${rever.length} de fora`:''}`)}
     ${kpi('Vencem em 30d',`${d30.length}`,venc.length?`${venc.length} já venceram`:'nenhum vencido',venc.length?'neg':'av')}
   </div>
+  ${rever.length?`<p class="nota" style="margin-top:-2px">O MRR ignora os ${rever.length} contratos ainda sem o valor cheio. Ele sobe conforme você preenche abaixo.</p>`:''}
   ${rever.length?`
-  <h2><span class="q"></span>Revisar · ${rever.length} contratos sem o valor cheio</h2>
+  <h2><span class="q"></span>Revisar · ${rever.length} contratos com só a entrada</h2>
   <div class="linhafina" style="margin-bottom:12px;border-left-color:var(--ambar)">
-    <span>Nestes o painel só tem o que já entrou. Preencha o valor cheio e em quantas parcelas ficou o saldo. As parcelas futuras são geradas na hora.</span>
+    <span>Digite o valor cheio e em quantas parcelas ficou o saldo. As parcelas futuras nascem na hora, já em Recebíveis.</span>
   </div>
-  <div class="cartao rolagem"><table><thead><tr>
-    <th>Mentorado</th><th class="d">Já recebido</th><th class="d">Valor cheio</th><th class="d">Duração</th>
-    <th class="d">Parcelas do saldo</th><th>1ª parcela em</th><th class="d">Fica em</th><th></th>
+  <div class="cartao rolagem"><table class="revisar"><thead><tr>
+    <th>Mentorado</th><th class="d">Já recebido</th><th class="d">Valor cheio</th>
+    <th class="d">Parcelas</th><th>1ª parcela</th><th class="d">Fica em</th><th></th>
   </tr></thead><tbody>
-  ${rever.map(c=>{const rec=recebidoDe(c.id);return `<tr id="rev-${c.id}">
-    <td class="nome">${esc(c.m.nome)}<div class="rotulo" style="font-size:10px">${esc(nomeProd(c.produto_id))}</div></td>
-    <td class="d">${rs(rec)}</td>
-    <td class="d"><input class="ed n" style="width:110px" type="number" step="0.01" id="rt-${c.id}" value="${+c.valor_total}" oninput="previaRev('${c.id}',${rec})"></td>
-    <td class="d"><input class="ed n" style="width:64px" type="number" id="rd-${c.id}" value="${c.meses||6}"></td>
-    <td class="d"><input class="ed n" style="width:64px" type="number" id="rp-${c.id}" value="${c.parcelas_saldo||5}" oninput="previaRev('${c.id}',${rec})"></td>
+  ${rever.map(c=>{const rec=recebidoDe(c.id);return `<tr>
+    <td class="nome">${esc(c.m.nome)}<div class="rotulo" style="font-size:9px;margin-top:2px">${esc(nomeProd(c.produto_id))}</div></td>
+    <td class="d" style="color:var(--medio)">${rs(rec)}</td>
+    <td class="d"><input class="ed n lim" type="number" step="0.01" id="rt-${c.id}" placeholder="${Math.round(rec)}" oninput="previaRev('${c.id}',${rec})"></td>
+    <td class="d"><input class="ed n mini" type="number" id="rp-${c.id}" value="5" oninput="previaRev('${c.id}',${rec})"></td>
     <td><input class="ed dt" type="date" id="ri-${c.id}" value="${iso(new Date(HOJE.getFullYear(),HOJE.getMonth()+1,10))}"></td>
-    <td class="d" id="rv-${c.id}">${rs(((+c.valor_total-rec)>0?(+c.valor_total-rec):0)/Math.max(1,c.parcelas_saldo||5))}</td>
-    <td><button class="btn" style="padding:5px 12px;font-size:12px" onclick="salvarRevisao('${c.id}')">Gerar</button></td>
+    <td class="d" id="rv-${c.id}" style="color:var(--fraco)">—</td>
+    <td><button class="btn" style="padding:5px 13px;font-size:12px" onclick="salvarRevisao('${c.id}')">Gerar</button></td>
   </tr>`}).join('')}
   </tbody></table>
-  <p class="nota">Já recebido é o que está baixado hoje, e vira a entrada. O saldo é o valor cheio menos isso, dividido nas parcelas que você indicar. Nada do que já foi pago é alterado.</p></div>`:''}
+  <p class="nota">O já recebido vira a entrada e não é alterado. A duração do contrato fica igual ao número de parcelas mais o mês da entrada.</p></div>`:''}
 
   <h2><span class="q"></span>Novo contrato</h2>
   <div class="cartao"><div class="formlinha">
@@ -752,9 +757,10 @@ function verContratos(){
 function previaRev(id,recebido){
   const total=+document.getElementById('rt-'+id).value||0;
   const n=Math.max(1,+document.getElementById('rp-'+id).value||1);
-  const saldo=Math.max(0,total-recebido);
-  const el=document.getElementById('rv-'+id);
-  if(el){el.textContent=rs(saldo/n); el.className='d '+(saldo>0?'':'av');}
+  const el=document.getElementById('rv-'+id); if(!el)return;
+  if(!total){el.textContent='—';el.style.color='var(--fraco)';return;}
+  if(total<recebido){el.textContent='menor que o recebido';el.style.color='var(--vermelho)';return;}
+  el.textContent=rs((total-recebido)/n); el.style.color='var(--verde)';
 }
 
 /* Regera as parcelas em aberto de um contrato a partir do valor cheio.
@@ -762,7 +768,7 @@ function previaRev(id,recebido){
 async function salvarRevisao(id){
   const c=D.contratos.find(x=>x.id===id); if(!c) return;
   const total=+document.getElementById('rt-'+id).value||0;
-  const duracao=Math.max(1,+document.getElementById('rd-'+id).value||6);
+  const duracao=Math.max(1,(+document.getElementById('rp-'+id).value||0)+1);
   const n=Math.max(0,+document.getElementById('rp-'+id).value||0);
   const ini=document.getElementById('ri-'+id).value;
   const recebido=recebidoDe(id);
