@@ -262,8 +262,9 @@ let CART_ABERTO=null;
 let REC_ABERTO=null;
 let DESP_ABERTO=null;
 let CAT_ABERTO=null;
+let HIST_ABERTO=null;
 let D={config:{},produtos:[],mentorados:[],contratos:[],parcelas:[],lancamentos:[],recorrencias:[],
-  cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[],repasses:[]};
+  cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[],repasses:[],analises:[]};
 const G={};
 
 const rs=v=>'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -303,7 +304,7 @@ async function iniciar(){
   for(let i=-13;i<=4;i++){const d=new Date(HOJE.getFullYear(),HOJE.getMonth()+i,1);
     const o=document.createElement('option');o.value=`${d.getFullYear()}-${d.getMonth()}`;
     o.textContent=`${MESES[d.getMonth()]} ${d.getFullYear()}`;if(i===0)o.selected=true;s.appendChild(o);}
-  s.onchange=()=>{const[a,m]=s.value.split('-').map(Number);ANO=a;MES=m;IA={estado:'ocioso',itens:[],erro:''};desenhar()};
+  s.onchange=()=>{const[a,m]=s.value.split('-').map(Number);ANO=a;MES=m;IA={estado:'ocioso',itens:[],erro:''};HIST_ABERTO=null;desenhar()};
   await carregar();
 }
 document.getElementById('abas').onclick=e=>{const b=e.target.closest('button');if(!b)return;
@@ -314,7 +315,7 @@ function irPara(a){document.querySelector(`#abas button[data-a="${a}"]`).click()
 
 async function carregar(){
   const t=['config','produtos','mentorados','contratos','parcelas','lancamentos','recorrencias','cartoes',
-    'parcelamentos','assinaturas','metas_mes','investimentos','investimentos_hist','categorias','repasses'];
+    'parcelamentos','assinaturas','metas_mes','investimentos','investimentos_hist','categorias','repasses','analises'];
   const r=await Promise.all(t.map(x=>sb.from(x).select('*')));
   let faltou=[];
   r.forEach((res,i)=>{if(res.error){faltou.push(t[i]);return;} D[t[i]]=res.data||[];});
@@ -534,15 +535,23 @@ async function rodarIA(){
   const url=D.config.agente_url;
   if(!url) return toast('Configure a URL do agente em Configurações.',true);
   IA={estado:'rodando',itens:[],erro:''}; verDash();
+  const dados=dadosParaIA();
   try{
     const {data:{session}}=await sb.auth.getSession();
     const r=await fetch(url,{method:'POST',
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${session?.access_token||SUPABASE_KEY}`},
-      body:JSON.stringify({modo:'analise',mes:`${MESES[MES]} ${ANO}`,dados:dadosParaIA(),
+      body:JSON.stringify({modo:'analise',mes:`${MESES[MES]} ${ANO}`,dados,
         automaticos:agenteLocal().map(([n,t])=>t.replace(/<[^>]+>/g,''))})});
     const j=await r.json();
     if(j.erro) throw new Error(j.erro);
-    IA={estado:'pronto',itens:j.apontamentos||[],erro:''};
+    const itens=j.apontamentos||[];
+    IA={estado:'pronto',itens,erro:''};
+    // guarda no historico
+    const {data,error}=await sb.from('analises').insert({
+      ano_mes:chave(ANO,MES), apontamentos:itens, contexto:dados, modelo:'claude'
+    }).select().single();
+    if(error) toast('Análise pronta, mas não consegui salvar no histórico: '+error.message,true);
+    else D.analises.unshift(data);
   }catch(e){IA={estado:'erro',itens:[],erro:String(e.message||e)};}
   verDash();
 }
@@ -641,26 +650,68 @@ function verDash(){
 
   <h2><span class="q"></span>Agente financeiro</h2>
   <div style="margin-bottom:12px"><button class="btn" id="btIA" onclick="rodarIA()" ${IA.estado==='rodando'?'disabled':''}>
-    ${IA.estado==='rodando'?'<span class="girando"></span>Analisando':IA.estado==='pronto'?'Analisar de novo':'Rodar análise com IA'}</button></div>
+    ${IA.estado==='rodando'?'<span class="girando"></span>Analisando':
+      (IA.estado==='pronto'||D.analises.some(a=>a.ano_mes===chave(ANO,MES)))?'Rodar nova análise':'Rodar análise com IA'}</button></div>
   <div id="ag"></div>`;
 
   document.getElementById('v-dash').innerHTML=h;
   graficoDespesas(dp); graficoPrevisao();
   renderAgente();
 }
+const quando=s=>{const d=new Date(s);
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} às ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+const blocoApontamentos=l=>(l||[]).map(i=>`<div class="alerta ${esc(i.nivel||'info')}"><div>
+  <strong>${esc(i.titulo||'')}</strong><br>${esc(i.texto||'')}
+  ${i.acao?`<span class="acao"><b>Ação:</b> ${esc(i.acao)}</span>`:''}</div></div>`).join('');
+
 function renderAgente(){
   const el=document.getElementById('ag'); if(!el) return;
+  const hist=D.analises.filter(a=>a.ano_mes===chave(ANO,MES))
+    .sort((a,b)=>String(b.criado_em).localeCompare(String(a.criado_em)));
   let h='';
-  if(IA.estado==='pronto'&&IA.itens.length){
-    h+=IA.itens.map(i=>`<div class="alerta ${esc(i.nivel||'info')}"><div>
-      <strong>${esc(i.titulo||'')}</strong><br>${esc(i.texto||'')}
-      ${i.acao?`<span class="acao"><b>Ação:</b> ${esc(i.acao)}</span>`:''}</div></div>`).join('');
-    h+='<p class="nota">Análise gerada por IA a partir dos dados do painel. Confira os números antes de decidir. Não substitui contador.</p>';
+
+  if(IA.estado==='erro')
+    h+=`<div class="alerta critico"><div><strong>A análise com IA não rodou.</strong><br>${esc(IA.erro)}<span class="acao">Os apontamentos automáticos abaixo continuam valendo.</span></div></div>`;
+
+  // a mais recente aparece aberta: a que acabou de rodar, ou a ultima salva
+  const atual = (IA.estado==='pronto'&&IA.itens.length) ? {itens:IA.itens,quandoTxt:'agora'} :
+                hist.length ? {itens:hist[0].apontamentos,quandoTxt:quando(hist[0].criado_em),id:hist[0].id} : null;
+  if(atual){
+    h+=`<div class="rotulo" style="margin-bottom:9px">Análise de ${atual.quandoTxt}${atual.id?` · <button class="x" style="font-size:12px" onclick="apagarAnalise('${atual.id}')" title="Apagar esta análise">✕</button>`:''}</div>`;
+    h+=blocoApontamentos(atual.itens);
+    h+='<p class="nota">Gerada por IA a partir dos números do painel. Confira antes de decidir. Não substitui contador.</p>';
   }
-  if(IA.estado==='erro') h+=`<div class="alerta critico"><div><strong>A análise com IA não rodou.</strong><br>${esc(IA.erro)}<span class="acao">Enquanto isso os apontamentos automáticos abaixo continuam valendo.</span></div></div>`;
-  h+=`<h2 style="margin-top:${IA.estado==='pronto'?'26px':'0'}"><span class="q"></span>Apontamentos automáticos</h2>`;
+
+  const anteriores = (IA.estado==='pronto'&&IA.itens.length) ? hist.slice(1) : hist.slice(1);
+  if(anteriores.length){
+    h+=`<h2 style="margin-top:26px"><span class="q"></span>Histórico · ${anteriores.length} análise${anteriores.length>1?'s':''} anterior${anteriores.length>1?'es':''}</h2>`;
+    anteriores.forEach(a=>{
+      const aberto=HIST_ABERTO===a.id;
+      const crit=(a.apontamentos||[]).filter(x=>x.nivel==='critico').length;
+      h+=`<div class="cartao" style="margin-bottom:8px;padding:0">
+        <button class="cabecalho" onclick="abrirHistorico('${a.id}')" aria-expanded="${aberto}">
+          <span class="seta ${aberto?'on':''}">▸</span>
+          <span style="flex:1;text-align:left"><strong>${quando(a.criado_em)}</strong>
+            <span class="rotulo" style="font-size:10px;display:block;margin-top:2px">${(a.apontamentos||[]).length} apontamentos${crit?` · ${crit} crítico${crit>1?'s':''}`:''}</span></span>
+          <span class="x" onclick="event.stopPropagation();apagarAnalise('${a.id}')" title="Apagar">✕</span>
+        </button>
+        <div class="corpo ${aberto?'':'oculto'}">${aberto?`<div style="padding-top:14px">${blocoApontamentos(a.apontamentos)}</div>`:''}</div>
+      </div>`;
+    });
+  }
+
+  h+=`<h2 style="margin-top:${atual||anteriores.length?'26px':'0'}"><span class="q"></span>Apontamentos automáticos</h2>`;
   h+=agenteLocal().map(([n,t])=>`<div class="alerta ${n}"><div>${t}</div></div>`).join('');
   el.innerHTML=h;
+}
+function abrirHistorico(id){HIST_ABERTO=(HIST_ABERTO===id?null:id);renderAgente();}
+async function apagarAnalise(id){
+  if(!confirm('Apagar esta análise do histórico?'))return;
+  const {error}=await sb.from('analises').delete().eq('id',id);
+  if(error)return toast('Erro: '+error.message,true);
+  D.analises=D.analises.filter(a=>a.id!==id);
+  if(IA.estado==='pronto')IA={estado:'ocioso',itens:[],erro:''};
+  toast('Análise removida.');verDash();
 }
 async function salvarRepasse(ano_mes,campo,valor){
   const reg=D.repasses.find(x=>x.ano_mes===ano_mes)||{ano_mes,percentual:25,pago:false};
