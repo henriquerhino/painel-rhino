@@ -173,6 +173,19 @@ table.contratos th.d:nth-child(5),table.contratos td.d:nth-child(5){width:74px}
 table.contratos th:nth-child(6),table.contratos td:nth-child(6){width:150px}
 table.contratos th:nth-child(7),table.contratos td:nth-child(7){width:132px}
 table.receb th:nth-child(2),table.receb td:nth-child(2){width:78px}
+table.recebido{table-layout:fixed;width:100%}
+table.recebido td{padding:8px 9px} table.recebido th{padding:9px}
+table.recebido th:nth-child(2),table.recebido td:nth-child(2){width:170px}
+table.recebido th:nth-child(3),table.recebido td:nth-child(3){width:130px}
+table.desp{table-layout:fixed;width:100%} table.desp td{padding:7px 9px} table.desp th{padding:9px}
+table.desp th:nth-child(1),table.desp td:nth-child(1){width:170px}
+table.desp th:nth-child(3),table.desp td:nth-child(3){width:150px}
+table.desp th:nth-child(4),table.desp td:nth-child(4){width:96px}
+table.desp th:nth-child(5),table.desp td:nth-child(5){width:126px}
+table.cats{table-layout:fixed;width:100%} table.cats td{padding:7px 9px} table.cats th{padding:9px}
+table.cats th:nth-child(2),table.cats td:nth-child(2){width:130px}
+table.cats th:nth-child(3),table.cats td:nth-child(3){width:230px}
+.corpo>.formlinha:first-child{padding-top:14px}
 .ed.lim{width:100%;max-width:118px} .ed.mini{width:100%;max-width:64px}
 .ed.dt{width:100%;max-width:142px}
 @media(max-width:900px){table.contratos,table.receb{table-layout:auto}
@@ -247,6 +260,8 @@ let IA={estado:'ocioso',itens:[],erro:''};
 let PRINTS=[];
 let CART_ABERTO=null;
 let REC_ABERTO=null;
+let DESP_ABERTO=null;
+let CAT_ABERTO=null;
 let D={config:{},produtos:[],mentorados:[],contratos:[],parcelas:[],lancamentos:[],recorrencias:[],
   cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[],repasses:[]};
 const G={};
@@ -388,8 +403,16 @@ const reservaTotal=()=>somaCaixa()+somaInvestido();
 function metaDoMes(a,m){
   const r=D.metas_mes.find(x=>x.ano_mes===chave(a,m));
   const total=r?+r.total:(+D.config.meta_mensal||0);
-  const s=[r?.s1,r?.s2,r?.s3,r?.s4].map(v=>v==null?total/4:+v);
+  // nulo fica nulo: significa "calcular proporcional aos dias do bloco"
+  const s=[r?.s1,r?.s2,r?.s3,r?.s4,r?.s5].map(v=>v==null||v===''?null:+v);
   return {total,s,registro:r};
+}
+/* Divide o mes em blocos de 7 dias corridos. Mes de 28 dias da 4 blocos,
+   de 29 a 35 dias da 5, sendo o ultimo mais curto. */
+function blocosSemana(a,m){
+  const ult=new Date(a,m+1,0).getDate(), b=[];
+  for(let d=1;d<=ult;d+=7) b.push([d,Math.min(d+6,ult)]);
+  return b;
 }
 function abertas(){
   return D.parcelas.filter(p=>!p.pago).map(p=>{
@@ -406,16 +429,21 @@ function previsao(n){
 }
 function semanas(a,m){
   const ult=new Date(a,m+1,0).getDate();
-  const faixas=[[1,7],[8,14],[15,21],[22,ult]];
+  const faixas=blocosSemana(a,m);
   const M=metaDoMes(a,m); let acum=0;
   return faixas.map(([i,f],k)=>{
+    const dias=f-i+1;
+    // meta da semana: o que você digitou, ou o proporcional aos dias do bloco
+    const alvo = M.s[k]!=null ? M.s[k] : M.total*dias/ult;
+    const fixa = M.s[k]!=null;
     let v=0;
     D.parcelas.filter(p=>p.pago&&noMes(p.data_pagamento||p.vencimento,a,m)).forEach(p=>{
       const dd=dObj(p.data_pagamento||p.vencimento).getDate();if(dd>=i&&dd<=f)v+=+p.valor;});
     D.lancamentos.filter(l=>l.tipo==='entrada'&&l.pago&&noMes(l.data,a,m)).forEach(l=>{
       const dd=dObj(l.data).getDate();if(dd>=i&&dd<=f)v+=+l.valor;});
     acum+=v;
-    return {n:k+1,ini:i,fim:f,valor:v,alvo:M.s[k],pct:M.s[k]?v/M.s[k]*100:0,acum,pctAcum:M.total?acum/M.total*100:0};
+    return {n:k+1,ini:i,fim:f,dias,valor:v,alvo,fixa,
+            pct:alvo?v/alvo*100:0,acum,pctAcum:M.total?acum/M.total*100:0};
   });
 }
 function repasseAno(a){
@@ -557,12 +585,12 @@ function verDash(){
     </div>
     <div class="barra"><i style="width:${pct}%"></i></div>
     <div class="sem" style="margin-top:15px">${sm.map((s,k)=>`<div class="c">
-      <div class="lb">Semana ${s.n} · dia ${s.ini} a ${s.fim}</div>
+      <div class="lb">Semana ${s.n} · dia ${s.ini} a ${s.fim}${s.dias<7?` · ${s.dias} dias`:''}</div>
       <div class="vv">${rsc(s.valor)}</div>
       <div class="barra ${s.pct>=100?'':s.pct>=60?'a':'r'}" style="height:6px;margin-top:6px"><i style="width:${Math.min(100,s.pct)}%"></i></div>
-      <div class="pp">meta <input type="number" step="100" value="${Math.round(s.alvo)}" onchange="salvarMeta('s${k+1}',this.value)"></div>
+      <div class="pp">meta <input type="number" step="100" value="${Math.round(s.alvo)}" title="${s.fixa?'meta fixada por você. Apague para voltar ao proporcional':'proporcional aos dias do bloco'}" onchange="salvarMeta('s${k+1}',this.value)">${s.fixa?'':' <span style="opacity:.55">auto</span>'}</div>
       <div class="pp">${s.pct.toFixed(0)}% da semana · ${s.pctAcum.toFixed(0)}% acumulado</div></div>`).join('')}</div>
-    <p class="nota">Alterou a meta total e as semanas ainda não foram ajustadas? Elas dividem por quatro automaticamente até você mexer.</p>
+    <p class="nota">O mês é dividido em blocos de 7 dias corridos, então mês de 29 dias ou mais tem 5 semanas, a última mais curta. A meta marcada como "auto" acompanha os dias do bloco. Digitou um valor, ele fica fixo. Apagou, volta ao automático.</p>
   </div>
 
   <h2><span class="q"></span>Despesas por categoria</h2>
@@ -647,9 +675,10 @@ async function salvarRepasse(ano_mes,campo,valor){
 }
 async function salvarMeta(campo,valor){
   const k=chave(ANO,MES), M=metaDoMes(ANO,MES);
-  const linha={ano_mes:k,total:M.total,s1:M.s[0],s2:M.s[1],s3:M.s[2],s4:M.s[3]};
-  linha[campo]=+valor||0;
-  if(campo==='total'&&!M.registro){linha.s1=linha.s2=linha.s3=linha.s4=linha.total/4;}
+  const linha={ano_mes:k,total:M.total,s1:M.s[0],s2:M.s[1],s3:M.s[2],s4:M.s[3],s5:M.s[4]};
+  // campo vazio volta ao calculo proporcional
+  linha[campo]= (valor===''||valor==null) ? null : (+valor||0);
+  if(campo==='total'&&linha.total==null) linha.total=0;
   const {error}=await sb.from('metas_mes').upsert(linha,{onConflict:'ano_mes'});
   if(error) return toast('Erro ao salvar meta: '+error.message,true);
   const i=D.metas_mes.findIndex(x=>x.ano_mes===k);
@@ -884,7 +913,7 @@ function verRecebiveis(){
   h+=`<h2><span class="q"></span>Recebido em ${MESES[MES]} · ${rs(totalRec)}</h2>`;
   if(!recParc.length&&!recLanc.length) h+='<div class="vazio">Nada baixado neste mês.</div>';
   else{
-    h+=`<div class="cartao"><table class="receb"><thead><tr>
+    h+=`<div class="cartao"><table class="recebido"><thead><tr>
       <th>Origem</th><th>Data do pagamento</th><th class="d">Valor</th><th class="acoes"></th>
     </tr></thead><tbody>`;
     recParc.sort((a,b)=>+b.valor-+a.valor).forEach(p=>{h+=`<tr>
@@ -944,6 +973,8 @@ function tabelaParcelas(lista,vencido,dentro){
   return h+`</tbody></table>${dentro?'':'</div>'}`;
 }
 function abrirMes(k){REC_ABERTO=(REC_ABERTO===k?null:k);verRecebiveis();}
+function abrirDespesa(k){DESP_ABERTO=(DESP_ABERTO===k?null:k);verDespesas();}
+function abrirCategoria(k){CAT_ABERTO=(CAT_ABERTO===k?null:k);verConfig();}
 async function desfazer(id){
   const {error}=await sb.from('parcelas').update({pago:false,data_pagamento:null}).eq('id',id);
   if(error)return toast('Erro: '+error.message,true);
@@ -976,29 +1007,36 @@ function verDespesas(){
   <h2><span class="q"></span>Todas as despesas por categoria matriz</h2>`;
   if(!g.length) h+='<div class="vazio">Nenhuma despesa lançada neste mês.</div>';
   else{
-    h+=`<div class="cartao rolagem"><table><thead><tr>
-      <th>Categoria</th><th>Descrição</th><th>Venc.</th><th>Situação</th><th class="d">Valor</th><th class="d">% do mês</th><th></th>
-    </tr></thead><tbody>`;
     g.forEach(([m,o])=>{
-      const orfa=(m==='Sem categoria');
-      h+=`<tr class="matriz"><td>${esc(m)}${orfa?' <span class="tag al">arrumar</span>':''}</td><td colspan="3">${
-        orfa?'<span class="rotulo" style="font-size:10px">escolha a matriz de cada linha abaixo</span>':''}</td>
-        <td class="d">${rs(o.total)}</td><td class="d">${(o.total/dp.total*100).toFixed(0)}%</td><td></td></tr>`;
-      Object.keys(o.filhos).sort((a,b)=>o.filhos[b]-o.filhos[a]).forEach(cat=>{
-        desp.filter(l=>l.categoria===cat).sort((a,b)=>String(a.data).localeCompare(String(b.data))).forEach(l=>{
-          h+=`<tr class="filho">
-            <td>${orfa
-              ? `<select class="ed" onchange="adotarCategoria('${esc(l.categoria)}',this.value)"><option value="">${esc(l.categoria)} → escolher…</option>${matrizes('despesa').map(x=>`<option value="${x.id}">mover para ${esc(x.nome)}</option>`).join('')}</select>`
-              : esc(l.categoria)}</td>
-            <td><input class="ed" value="${esc(l.descricao||'')}" onchange="up('lancamentos','${l.id}','descricao',this.value)"></td>
-            <td><input class="ed dt" type="date" value="${String(l.data).slice(0,10)}" onchange="up('lancamentos','${l.id}','data',this.value)"></td>
-            <td><button class="tag ${l.pago?'ok':'al'}" onclick="up('lancamentos','${l.id}','pago',${!l.pago})">${l.pago?'pago':'a pagar'}</button></td>
-            <td class="d"><input class="ed n" style="width:104px" type="number" step="0.01" value="${l.valor}" onchange="upNum('lancamentos','${l.id}','valor',this.value)"></td>
-            <td class="d">${(+l.valor/dp.total*100).toFixed(1)}%</td>
-            <td><button class="x" onclick="del('lancamentos','${l.id}')" aria-label="Remover">✕</button></td></tr>`;});
-      });
+      const orfa=(m==='Sem categoria'), aberto=DESP_ABERTO===m;
+      const qtd=Object.keys(o.filhos).reduce((s,c)=>s+desp.filter(l=>l.categoria===c).length,0);
+      h+=`<div class="cartao" style="margin-bottom:8px;padding:0">
+        <button class="cabecalho" onclick="abrirDespesa('${esc(m).replace(/'/g,"&#39;")}')" aria-expanded="${aberto}">
+          <span class="seta ${aberto?'on':''}">▸</span>
+          <span style="flex:1;text-align:left"><strong>${esc(m)}</strong>${orfa?' <span class="tag al">arrumar</span>':''}
+            <span class="rotulo" style="font-size:10px;display:block;margin-top:2px">${qtd} lançamento${qtd>1?'s':''} · ${(o.total/dp.total*100).toFixed(0)}% do mês</span></span>
+          <span class="num" style="font-size:18px;white-space:nowrap">${rs(o.total)}</span>
+        </button>
+        <div class="corpo ${aberto?'':'oculto'}">`;
+      if(aberto){
+        h+=`<table class="desp"><thead><tr><th>Categoria</th><th>Descrição</th><th>Venc.</th>
+          <th>Situação</th><th class="d">Valor</th><th class="acoes"></th></tr></thead><tbody>`;
+        Object.keys(o.filhos).sort((a,b)=>o.filhos[b]-o.filhos[a]).forEach(cat=>{
+          desp.filter(l=>l.categoria===cat).sort((a,b)=>String(a.data).localeCompare(String(b.data))).forEach(l=>{
+            h+=`<tr>
+              <td>${orfa
+                ? `<select class="ed" onchange="adotarCategoria('${esc(l.categoria)}',this.value)"><option value="">${esc(l.categoria)} → escolher…</option>${matrizes('despesa').map(x=>`<option value="${x.id}">mover para ${esc(x.nome)}</option>`).join('')}</select>`
+                : `<span class="rotulo" style="font-size:10px">${esc(l.categoria)}</span>`}</td>
+              <td><input class="ed" value="${esc(l.descricao||'')}" onchange="up('lancamentos','${l.id}','descricao',this.value)"></td>
+              <td><input class="ed dt" type="date" value="${String(l.data).slice(0,10)}" onchange="up('lancamentos','${l.id}','data',this.value)"></td>
+              <td><button class="tag ${l.pago?'ok':'al'}" onclick="up('lancamentos','${l.id}','pago',${!l.pago})">${l.pago?'pago':'a pagar'}</button></td>
+              <td class="d"><input class="ed n lim" type="number" step="0.01" value="${l.valor}" onchange="upNum('lancamentos','${l.id}','valor',this.value)"></td>
+              <td class="acoes"><button class="x" onclick="del('lancamentos','${l.id}')" aria-label="Remover">✕</button></td></tr>`;});
+        });
+        h+='</tbody></table>';
+      }
+      h+='</div></div>';
     });
-    h+=`</tbody></table></div>`;
   }
 
   h+=`<h2><span class="q"></span>Pagamentos fixos</h2>`;
@@ -1479,25 +1517,29 @@ function verConfig(){
     <button class="btn" onclick="novoProduto()">Adicionar produto</button>
   </div><p class="nota">Produto inativo some dos formulários novos mas continua nos contratos antigos. Só dá para apagar produto sem contrato ativo.</p></div>
 
-  <h2><span class="q"></span>Categorias · edite o nome e o escopo direto na tabela</h2>
-  <div class="cartao rolagem"><table><thead><tr>
-    <th>Categoria</th><th>Dentro de</th><th>Escopo</th><th>Tipo</th><th></th>
-  </tr></thead><tbody>
-  ${matrizes('despesa').concat(matrizes('entrada')).map(m=>
-    `<tr class="matriz">
-      <td><input class="ed nm" value="${esc(m.nome)}" onchange="up('categorias','${m.id}','nome',this.value)"></td>
-      <td class="rotulo" style="font-size:10px">matriz</td>
-      <td><select class="ed" onchange="up('categorias','${m.id}','escopo',this.value)">${['ambos','empresa','pessoal'].map(e=>`<option value="${e}"${m.escopo===e?' selected':''}>${e}</option>`).join('')}</select></td>
-      <td class="rotulo" style="font-size:10px">${m.tipo}</td><td></td></tr>`+
-    filhosDe(m.id).map(f=>`<tr class="filho">
-      <td><input class="ed nm" value="${esc(f.nome)}" onchange="up('categorias','${f.id}','nome',this.value)"></td>
-      <td><select class="ed" onchange="up('categorias','${f.id}','parent_id',this.value)">${matrizes(f.tipo).map(x=>`<option value="${x.id}"${x.id===f.parent_id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></td>
-      <td><select class="ed" onchange="up('categorias','${f.id}','escopo',this.value)">${['ambos','empresa','pessoal'].map(e=>`<option value="${e}"${f.escopo===e?' selected':''}>${e}</option>`).join('')}</select></td>
-      <td class="rotulo" style="font-size:10px">${f.tipo}</td>
-      <td><button class="x" onclick="del('categorias','${f.id}')" aria-label="Remover">✕</button></td></tr>`).join('')
-  ).join('')}
-  </tbody></table>
-  <p class="nota">Renomear a categoria aqui não renomeia nos lançamentos antigos, porque eles guardam o nome. Se renomear, ajuste os lançamentos pela aba Lançamentos.</p></div>
+  <h2><span class="q"></span>Categorias · clique na matriz para abrir</h2>
+  ${matrizes('despesa').concat(matrizes('entrada')).map(m=>{
+    const fs=filhosDe(m.id), aberto=CAT_ABERTO===m.id;
+    return `<div class="cartao" style="margin-bottom:8px;padding:0">
+      <button class="cabecalho" onclick="abrirCategoria('${m.id}')" aria-expanded="${aberto}">
+        <span class="seta ${aberto?'on':''}">▸</span>
+        <span style="flex:1;text-align:left"><strong>${esc(m.nome)}</strong>
+          <span class="rotulo" style="font-size:10px;display:block;margin-top:2px">${fs.length} categoria${fs.length===1?'':'s'} · ${m.tipo} · ${esc(m.escopo||'ambos')}</span></span>
+      </button>
+      <div class="corpo ${aberto?'':'oculto'}">${aberto?`
+        <div class="formlinha" style="padding-top:14px;margin-bottom:14px">
+          <div class="campo"><label>Nome da matriz</label><input class="ed nm" value="${esc(m.nome)}" onchange="up('categorias','${m.id}','nome',this.value)"></div>
+          <div class="campo"><label>Escopo</label><select class="ed" onchange="up('categorias','${m.id}','escopo',this.value)">${['ambos','empresa','pessoal'].map(e=>`<option value="${e}"${m.escopo===e?' selected':''}>${e}</option>`).join('')}</select></div>
+        </div>
+        ${fs.length?`<table class="cats"><thead><tr><th>Categoria</th><th>Escopo</th><th>Mover para</th><th class="acoes"></th></tr></thead><tbody>
+        ${fs.map(f=>`<tr>
+          <td><input class="ed nm" value="${esc(f.nome)}" onchange="up('categorias','${f.id}','nome',this.value)"></td>
+          <td><select class="ed" onchange="up('categorias','${f.id}','escopo',this.value)">${['ambos','empresa','pessoal'].map(e=>`<option value="${e}"${f.escopo===e?' selected':''}>${e}</option>`).join('')}</select></td>
+          <td><select class="ed" onchange="up('categorias','${f.id}','parent_id',this.value)">${matrizes(f.tipo).map(x=>`<option value="${x.id}"${x.id===f.parent_id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></td>
+          <td class="acoes"><button class="x" onclick="del('categorias','${f.id}')" aria-label="Remover">✕</button></td>
+        </tr>`).join('')}</tbody></table>`:'<div class="vazio">Nenhuma categoria dentro desta matriz.</div>'}
+        <p class="nota">Renomear aqui não renomeia nos lançamentos antigos, porque eles guardam o nome como texto.</p>`:''}</div>
+    </div>`}).join('')}
   <div class="cartao" style="margin-top:12px"><div class="formlinha">
     <div class="campo"><label>Nova categoria</label><input id="ctNome"></div>
     <div class="campo"><label>Dentro de</label><select id="ctPai">${matrizes('despesa').concat(matrizes('entrada')).map(m=>`<option value="${m.id}">${esc(m.nome)}</option>`).join('')}</select></div>
