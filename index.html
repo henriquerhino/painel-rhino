@@ -117,7 +117,6 @@ tr.filho td:first-child{padding-left:26px;color:var(--medio)}
 .ed:focus{border-color:var(--verde);background:var(--grafite);outline:none}
 .ed.n{font-family:var(--mono);text-align:right;min-width:0;-moz-appearance:textfield}
 .ed.n::-webkit-outer-spin-button,.ed.n::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
-.ed.lim{width:118px} .ed.mini{width:70px}
 table.revisar td{padding:9px 12px} table.revisar th{padding:10px 12px}
 table.revisar td.nome{min-width:250px}
 
@@ -157,6 +156,27 @@ footer{border-top:1px solid var(--linha);padding:20px;text-align:center}
 .seta{color:var(--fraco);font-size:13px;transition:transform .15s;flex:none}
 .seta.on{transform:rotate(90deg);color:var(--verde)}
 .corpo{padding:0 17px 17px;border-top:1px solid var(--linha)}
+table.contratos,table.receb{table-layout:fixed;width:100%}
+table.contratos td,table.receb td{padding:8px 9px}
+table.contratos th,table.receb th{padding:9px}
+table.contratos td.nome,table.receb td.nome{min-width:0;width:auto;white-space:normal}
+td .sub{display:flex;align-items:center;gap:5px;margin-top:3px;font-family:var(--mono);
+  font-size:10px;letter-spacing:.04em;color:var(--fraco);flex-wrap:wrap}
+.ed.mudo{color:var(--fraco);font-size:10px;font-family:var(--mono);padding:1px 3px;min-width:0}
+.ed.mudo:hover{color:var(--cinza)}
+select.ed.mudo{width:auto;min-width:0;max-width:170px}
+th.acoes,td.acoes{width:132px;text-align:right;white-space:nowrap}
+table.contratos th.d:nth-child(2),table.contratos td.d:nth-child(2){width:120px}
+table.contratos th.d:nth-child(3),table.contratos td.d:nth-child(3),
+table.contratos th.d:nth-child(4),table.contratos td.d:nth-child(4){width:96px}
+table.contratos th.d:nth-child(5),table.contratos td.d:nth-child(5){width:74px}
+table.contratos th:nth-child(6),table.contratos td:nth-child(6){width:150px}
+table.contratos th:nth-child(7),table.contratos td:nth-child(7){width:132px}
+table.receb th:nth-child(2),table.receb td:nth-child(2){width:78px}
+.ed.lim{width:100%;max-width:118px} .ed.mini{width:100%;max-width:64px}
+.ed.dt{width:100%;max-width:142px}
+@media(max-width:900px){table.contratos,table.receb{table-layout:auto}
+  .cartao>table{display:block;overflow-x:auto}}
 .dropzona{border:1px dashed var(--linha);padding:22px;text-align:center;color:var(--fraco);font-size:13.5px}
 .dropzona.ativo{border-color:var(--verde);color:var(--verde)}
 .miniaturas{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
@@ -226,6 +246,7 @@ let FILTRO={ini:'',fim:'',cat:'',tipo:''};
 let IA={estado:'ocioso',itens:[],erro:''};
 let PRINTS=[];
 let CART_ABERTO=null;
+let REC_ABERTO=null;
 let D={config:{},produtos:[],mentorados:[],contratos:[],parcelas:[],lancamentos:[],recorrencias:[],
   cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[],repasses:[]};
 const G={};
@@ -680,38 +701,16 @@ function verContratos(){
   const at=lst.filter(c=>c.status==='ativo');
   const mrrDe=l=>l.reduce((s,c)=>s+ +c.valor_total/Math.max(1,c.meses),0);
   const venc=at.filter(c=>c.d<0), d30=at.filter(c=>c.d>=0&&c.d<=30);
-  const rever=lst.filter(c=>!c.revisado&&c.status!=='cancelado').sort((a,b)=>recebidoDe(b.id)-recebidoDe(a.id));
-  const revOk=at.filter(c=>c.revisado);
   const recebidoTotal=D.parcelas.filter(p=>p.pago).reduce((s,p)=>s+ +p.valor,0);
   const aReceber=D.parcelas.filter(p=>!p.pago).reduce((s,p)=>s+ +p.valor,0);
+
   let h=`<h2><span class="q"></span>Contratos</h2>
   <div class="grade g4">
-    ${kpi('Já recebido',rsc(recebidoTotal),'soma de tudo que foi baixado')}
-    ${kpi('A receber',rsc(aReceber),'parcelas em aberto, hoje')}
-    ${kpi('MRR ativo',rsc(mrrDe(revOk)),`${revOk.length} contratos confirmados${rever.length?` · ${rever.length} de fora`:''}`)}
+    ${kpi('Já recebido',rsc(recebidoTotal),'tudo que foi baixado')}
+    ${kpi('A receber',rsc(aReceber),'parcelas em aberto')}
+    ${kpi('MRR ativo',rsc(mrrDe(at)),`${at.length} contratos ativos`)}
     ${kpi('Vencem em 30d',`${d30.length}`,venc.length?`${venc.length} já venceram`:'nenhum vencido',venc.length?'neg':'av')}
   </div>
-  ${rever.length?`<p class="nota" style="margin-top:-2px">O MRR ignora os ${rever.length} contratos ainda sem o valor cheio. Ele sobe conforme você preenche abaixo.</p>`:''}
-  ${rever.length?`
-  <h2><span class="q"></span>Revisar · ${rever.length} contratos com só a entrada</h2>
-  <div class="linhafina" style="margin-bottom:12px;border-left-color:var(--ambar)">
-    <span>Digite o valor cheio e em quantas parcelas ficou o saldo. As parcelas futuras nascem na hora, já em Recebíveis.</span>
-  </div>
-  <div class="cartao rolagem"><table class="revisar"><thead><tr>
-    <th>Mentorado</th><th class="d">Já recebido</th><th class="d">Valor cheio</th>
-    <th class="d">Parcelas</th><th>1ª parcela</th><th class="d">Fica em</th><th></th>
-  </tr></thead><tbody>
-  ${rever.map(c=>{const rec=recebidoDe(c.id);return `<tr>
-    <td class="nome">${esc(c.m.nome)}<div class="rotulo" style="font-size:9px;margin-top:2px">${esc(nomeProd(c.produto_id))}</div></td>
-    <td class="d" style="color:var(--medio)">${rs(rec)}</td>
-    <td class="d"><input class="ed n lim" type="number" step="0.01" id="rt-${c.id}" placeholder="${Math.round(rec)}" oninput="previaRev('${c.id}',${rec})"></td>
-    <td class="d"><input class="ed n mini" type="number" id="rp-${c.id}" value="5" oninput="previaRev('${c.id}',${rec})"></td>
-    <td><input class="ed dt" type="date" id="ri-${c.id}" value="${iso(new Date(HOJE.getFullYear(),HOJE.getMonth()+1,10))}"></td>
-    <td class="d" id="rv-${c.id}" style="color:var(--fraco)">—</td>
-    <td><button class="btn" style="padding:5px 13px;font-size:12px" onclick="salvarRevisao('${c.id}')">Gerar</button></td>
-  </tr>`}).join('')}
-  </tbody></table>
-  <p class="nota">O já recebido vira a entrada e não é alterado. A duração do contrato fica igual ao número de parcelas mais o mês da entrada.</p></div>`:''}
 
   <h2><span class="q"></span>Novo contrato</h2>
   <div class="cartao"><div class="formlinha">
@@ -725,91 +724,80 @@ function verContratos(){
     <div class="campo"><label>Calls</label><input id="cnCalls" type="number" value="0"></div>
     <button class="btn" onclick="novoContrato()">Adicionar</button>
   </div></div>
-  <h2><span class="q"></span>Todos · ${lst.length} contratos</h2>
-  <div class="cartao rolagem"><table><thead><tr>
-    <th>Mentorado</th><th>Produto</th><th class="d">Valor cheio</th><th class="d">Recebido</th><th class="d">Saldo</th>
-    <th class="d">Parc.</th><th class="d">Valor parc.</th><th>Vence</th><th class="d">MRR</th><th class="d">Calls</th><th>Situação</th><th></th>
+
+  <h2><span class="q"></span>Todos · ${lst.length} contratos · tudo editável</h2>
+  <div class="cartao"><table class="contratos"><thead><tr>
+    <th>Mentorado</th><th class="d">Valor cheio</th><th class="d">Recebido</th><th class="d">Saldo</th>
+    <th class="d">Parc.</th><th>Vence</th><th>Situação</th><th class="acoes"></th>
   </tr></thead><tbody>`;
   lst.forEach(c=>{
+    const rec=recebidoDe(c.id), sal=saldoDe(c);
     const tg=c.status==='cancelado'?'<span class="tag mal">saiu</span>':
              c.status==='renovado'?'<span class="tag ok">renovado</span>':
              c.status==='concluido'?'<span class="tag">concluído</span>':
              c.d<0?`<span class="tag mal">venceu há ${-c.d}d</span>`:
              c.d<=30?`<span class="tag al">${c.d}d</span>`:`<span class="tag">${c.d}d</span>`;
     h+=`<tr>
-      <td class="nome"><input class="ed nm" value="${esc(c.m.nome)}" onchange="up('mentorados','${c.m.id}','nome',this.value)"></td>
-      <td><select class="ed" onchange="up('contratos','${c.id}','produto_id',this.value)">${D.produtos.map(p=>`<option value="${p.id}"${p.id===c.produto_id?' selected':''}>${esc(p.nome)}</option>`).join('')}</select></td>
-      <td class="d"><input class="ed n" style="width:106px" type="number" step="0.01" value="${c.valor_total}" onchange="upNum('contratos','${c.id}','valor_total',this.value)"></td>
-      <td class="d">${rsc(recebidoDe(c.id))}</td>
-      <td class="d ${saldoDe(c)>0?'av':''}">${rsc(saldoDe(c))}</td>
-      <td class="d"><input class="ed n" style="width:62px" type="number" value="${c.parcelas_saldo||0}" onchange="upNum('contratos','${c.id}','parcelas_saldo',this.value)"></td>
-      <td class="d">${rsc(parcelaDe(c))}</td>
+      <td class="nome">
+        <input class="ed nm" value="${esc(c.m.nome)}" onchange="up('mentorados','${c.m.id}','nome',this.value)">
+        <div class="sub">
+          <select class="ed mudo" onchange="up('contratos','${c.id}','produto_id',this.value)">${D.produtos.map(p=>`<option value="${p.id}"${p.id===c.produto_id?' selected':''}>${esc(p.nome)}</option>`).join('')}</select>
+          <span>calls</span>
+          <input class="ed n mudo" style="width:34px" type="number" value="${c.m.calls_feitas}" onchange="upNum('mentorados','${c.m.id}','calls_feitas',this.value)">/<input class="ed n mudo" style="width:34px" type="number" value="${c.m.calls_contratadas}" onchange="upNum('mentorados','${c.m.id}','calls_contratadas',this.value)">
+        </div>
+      </td>
+      <td class="d"><input class="ed n lim" type="number" step="0.01" value="${c.valor_total}" onchange="upNum('contratos','${c.id}','valor_total',this.value)"></td>
+      <td class="d" style="color:var(--medio)">${rsc(rec)}</td>
+      <td class="d ${sal>0?'av':''}">${rsc(sal)}</td>
+      <td class="d"><input class="ed n mini" type="number" value="${c.parcelas_saldo||0}" onchange="upNum('contratos','${c.id}','parcelas_saldo',this.value)"></td>
       <td><input class="ed dt" type="date" value="${String(c.data_fim).slice(0,10)}" onchange="up('contratos','${c.id}','data_fim',this.value)"></td>
-      <td class="d">${c.status==='ativo'?rsc(+c.valor_total/Math.max(1,c.meses)):'—'}</td>
-      <td class="d" style="white-space:nowrap"><input class="ed n" style="width:46px" type="number" value="${c.m.calls_feitas}" onchange="upNum('mentorados','${c.m.id}','calls_feitas',this.value)">/<input class="ed n" style="width:46px" type="number" value="${c.m.calls_contratadas}" onchange="upNum('mentorados','${c.m.id}','calls_contratadas',this.value)"></td>
       <td><select class="ed" onchange="mudaStatus('${c.id}',this.value)">${['ativo','renovado','concluido','cancelado'].map(s=>`<option value="${s}"${s===c.status?' selected':''}>${s}</option>`).join('')}</select>
-        <div style="margin-top:4px">${tg}</div></td>
-      <td><button class="x" onclick="del('mentorados','${c.m.id}')" aria-label="Remover">✕</button></td>
+        <div class="sub">${tg}</div></td>
+      <td class="acoes">
+        <button class="btnv" style="padding:3px 8px;font-size:11px" title="Gerar as parcelas do saldo" onclick="regerar('${c.id}')">Parcelas</button>
+        <button class="x" onclick="del('mentorados','${c.m.id}')" aria-label="Remover">✕</button>
+      </td>
     </tr>`;});
-  h+='</tbody></table></div>';
+  h+=`</tbody></table>
+  <p class="nota">Saldo é o valor cheio menos o recebido. O botão Parcelas apaga as parcelas em aberto e gera de novo, dividindo o saldo pelo número da coluna Parc. Nada que já foi pago é alterado.</p></div>`;
   document.getElementById('v-contr').innerHTML=h;
 }
-function previaRev(id,recebido){
-  const total=+document.getElementById('rt-'+id).value||0;
-  const n=Math.max(1,+document.getElementById('rp-'+id).value||1);
-  const el=document.getElementById('rv-'+id); if(!el)return;
-  if(!total){el.textContent='—';el.style.color='var(--fraco)';return;}
-  if(total<recebido){el.textContent='menor que o recebido';el.style.color='var(--vermelho)';return;}
-  el.textContent=rs((total-recebido)/n); el.style.color='var(--verde)';
-}
 
-/* Regera as parcelas em aberto de um contrato a partir do valor cheio.
-   Nada do que ja foi pago e tocado. */
-async function salvarRevisao(id){
+/* Regera as parcelas em aberto a partir do valor cheio e do numero de parcelas.
+   O que ja foi pago fica intacto. */
+async function regerar(id){
   const c=D.contratos.find(x=>x.id===id); if(!c) return;
-  const total=+document.getElementById('rt-'+id).value||0;
-  const duracao=Math.max(1,(+document.getElementById('rp-'+id).value||0)+1);
-  const n=Math.max(0,+document.getElementById('rp-'+id).value||0);
-  const ini=document.getElementById('ri-'+id).value;
-  const recebido=recebidoDe(id);
-  if(!total) return toast('Informe o valor cheio do contrato.',true);
-  if(total<recebido) return toast(`O valor cheio não pode ser menor que os ${rs(recebido)} já recebidos.`,true);
-  const saldo=total-recebido;
-  if(saldo>0&&!n) return toast('Informe em quantas parcelas ficou o saldo.',true);
-  if(saldo>0&&!ini) return toast('Informe a data da primeira parcela.',true);
+  const rec=recebidoDe(id), saldo=+c.valor_total-rec, n=+c.parcelas_saldo||0;
+  if(saldo<0) return toast(`O valor cheio está menor que os ${rs(rec)} já recebidos.`,true);
+  if(saldo>0&&!n) return toast('Informe em quantas parcelas fica o saldo na coluna Parc.',true);
+  const m=D.mentorados.find(x=>x.id===c.mentorado_id);
+  if(!confirm(`${m?m.nome:'Contrato'}\n\nSaldo de ${rs(saldo)} em ${n} parcelas de ${rs(n?saldo/n:0)}, a partir do próximo mês.\n\nAs parcelas em aberto de hoje serão substituídas. Confirma?`)) return;
 
-  const di=ini?dObj(ini):new Date(HOJE.getFullYear(),HOJE.getMonth()+1,10);
-  const fim=new Date(di.getFullYear(),di.getMonth()+Math.max(0,n-1),di.getDate());
-
-  const {error:e1}=await sb.from('contratos').update({
-    valor_total:total, entrada:recebido, meses:duracao, parcelas_saldo:n,
-    revisado:true, data_fim:iso(fim)}).eq('id',id);
-  if(e1) return toast('Erro ao salvar: '+e1.message,true);
-
-  // limpa so as parcelas ainda em aberto
-  const abertasDoContrato=D.parcelas.filter(p=>p.contrato_id===id&&!p.pago).map(p=>p.id);
-  if(abertasDoContrato.length){
-    const {error:e2}=await sb.from('parcelas').delete().in('id',abertasDoContrato);
-    if(e2) return toast('Erro ao limpar parcelas: '+e2.message,true);
-    D.parcelas=D.parcelas.filter(p=>!abertasDoContrato.includes(p.id));
+  const abertasId=D.parcelas.filter(p=>p.contrato_id===id&&!p.pago).map(p=>p.id);
+  if(abertasId.length){
+    const {error}=await sb.from('parcelas').delete().in('id',abertasId);
+    if(error) return toast('Erro ao limpar: '+error.message,true);
+    D.parcelas=D.parcelas.filter(p=>!abertasId.includes(p.id));
   }
-
-  let novas=[];
   if(saldo>0&&n>0){
+    const di=new Date(HOJE.getFullYear(),HOJE.getMonth()+1,10);
     const pagas=D.parcelas.filter(p=>p.contrato_id===id).length;
-    const base=Math.floor(saldo/n*100)/100;
+    const base=Math.floor(saldo/n*100)/100, novas=[];
     for(let i=0;i<n;i++){
-      const v=new Date(di.getFullYear(),di.getMonth()+i,di.getDate());
-      // a ultima parcela absorve a sobra de centavos
-      const valor=i===n-1 ? +(saldo-base*(n-1)).toFixed(2) : base;
-      novas.push({contrato_id:id,numero:pagas+i+1,valor,vencimento:iso(v),pago:false});
+      const v=new Date(di.getFullYear(),di.getMonth()+i,10);
+      novas.push({contrato_id:id,numero:pagas+i+1,
+        valor:i===n-1?+(saldo-base*(n-1)).toFixed(2):base,vencimento:iso(v),pago:false});
     }
-    const {data,error:e3}=await sb.from('parcelas').insert(novas).select();
-    if(e3) return toast('Erro ao gerar parcelas: '+e3.message,true);
+    const {data,error}=await sb.from('parcelas').insert(novas).select();
+    if(error) return toast('Erro ao gerar: '+error.message,true);
     D.parcelas.push(...(data||[]));
+    const fim=new Date(di.getFullYear(),di.getMonth()+n-1,10);
+    await sb.from('contratos').update({entrada:rec,meses:n+1,revisado:true,data_fim:iso(fim)}).eq('id',id);
+    Object.assign(c,{entrada:rec,meses:n+1,revisado:true,data_fim:iso(fim)});
+    toast(`${n} parcelas de ${rs(saldo/n)} geradas.`);
+  } else {
+    toast('Contrato quitado, sem parcelas em aberto.');
   }
-  Object.assign(c,{valor_total:total,entrada:recebido,meses:duracao,parcelas_saldo:n,revisado:true,data_fim:iso(fim)});
-  toast(saldo>0?`${novas.length} parcelas de ${rs(saldo/n)} geradas.`:'Contrato quitado, sem parcelas em aberto.');
   desenhar();
 }
 
@@ -862,37 +850,107 @@ async function mudaStatus(id,st){
 function verRecebiveis(){
   const ab=abertas();
   const f=(a,b)=>ab.filter(p=>-p.d>=a&&(b===null||-p.d<=b));
-  const aV=ab.filter(p=>p.d>=0), f1=f(1,30), f2=f(31,60), f3=f(61,null);
+  const atr=ab.filter(p=>p.d<0), f1=f(1,30), f2=f(31,60), f3=f(61,null);
   const sm=a=>a.reduce((s,p)=>s+ +p.valor,0);
+
+  // recebido no mes selecionado: parcelas baixadas + entradas avulsas
+  const recParc=D.parcelas.filter(p=>p.pago&&noMes(p.data_pagamento||p.vencimento,ANO,MES)).map(p=>{
+    const c=D.contratos.find(x=>x.id===p.contrato_id);
+    return {...p,tipo:'parcela',contrato:c,mentorado:c?D.mentorados.find(x=>x.id===c.mentorado_id):null};
+  });
+  const recLanc=D.lancamentos.filter(l=>l.tipo==='entrada'&&l.pago&&noMes(l.data,ANO,MES))
+    .map(l=>({...l,tipo:'lancamento'}));
+  const totalRec=recParc.reduce((s,p)=>s+ +p.valor,0)+recLanc.reduce((s,l)=>s+ +l.valor,0);
+
+  // futuras agrupadas por mes
+  const futuras={};
+  ab.filter(p=>p.d>=0).forEach(p=>{
+    const k=String(p.vencimento).slice(0,7);
+    (futuras[k]=futuras[k]||[]).push(p);
+  });
+  const meses=Object.keys(futuras).sort();
+
   let h=`<h2><span class="q"></span>Recebíveis</h2>
   <div class="grade g4">
-    ${kpi('A vencer',rsc(sm(aV)),`${aV.length} parcelas`)}
-    ${kpi('1 a 30 dias',rsc(sm(f1)),`${f1.length} vencidas`,f1.length?'av':'')}
-    ${kpi('31 a 60 dias',rsc(sm(f2)),`${f2.length} vencidas`,f2.length?'av':'')}
-    ${kpi('Mais de 60 dias',rsc(sm(f3)),`${f3.length} vencidas`,f3.length?'neg':'')}
+    ${kpi('Vencido',rsc(sm(atr)),`${atr.length} parcelas`,atr.length?'neg':'')}
+    ${kpi('1 a 30 dias',rsc(sm(f1)),`${f1.length} parcelas`,f1.length?'av':'')}
+    ${kpi('31 a 60 dias',rsc(sm(f2)),`${f2.length} parcelas`,f2.length?'av':'')}
+    ${kpi('Mais de 60 dias',rsc(sm(f3)),`${f3.length} parcelas`,f3.length?'neg':'')}
   </div>
-  <h2><span class="q"></span>Em aberto · tudo editável</h2>`;
-  if(!ab.length){h+='<div class="vazio">Nenhuma parcela em aberto.</div>';document.getElementById('v-receb').innerHTML=h;return;}
-  h+=`<div class="cartao rolagem"><table><thead><tr>
-    <th>Mentorado</th><th>Produto</th><th class="d">Parcela</th><th>Vencimento</th><th>Situação</th><th class="d">Valor</th><th></th>
-  </tr></thead><tbody>`;
-  ab.forEach(p=>{
-    const at=-p.d;
-    const tg=p.d>=0?`<span class="tag">a vencer · ${p.d}d</span>`:
-      at>60?'<span class="tag mal">vencida 60+</span>':at>30?'<span class="tag mal">vencida 31-60</span>':`<span class="tag al">vencida ${at}d</span>`;
-    h+=`<tr>
-      <td class="nome"><input class="ed nm" value="${esc(p.mentorado?.nome||'')}" onchange="up('mentorados','${p.mentorado?.id}','nome',this.value)"></td>
-      <td><select class="ed" onchange="up('contratos','${p.contrato.id}','produto_id',this.value)">${D.produtos.map(x=>`<option value="${x.id}"${x.id===p.contrato.produto_id?' selected':''}>${esc(x.nome)}</option>`).join('')}</select></td>
-      <td class="d"><input class="ed n" style="width:56px" type="number" value="${p.numero}" onchange="upNum('parcelas','${p.id}','numero',this.value)">/${p.contrato.meses}</td>
-      <td><input class="ed dt" type="date" value="${String(p.vencimento).slice(0,10)}" onchange="up('parcelas','${p.id}','vencimento',this.value)"></td>
-      <td>${tg}</td>
-      <td class="d"><input class="ed n" style="width:104px" type="number" step="0.01" value="${p.valor}" onchange="upNum('parcelas','${p.id}','valor',this.value)"></td>
-      <td style="white-space:nowrap"><button class="btnv" style="padding:4px 10px;font-size:12px" onclick="baixar('${p.id}')">Baixar</button>
-      <button class="x" onclick="del('parcelas','${p.id}')" aria-label="Remover">✕</button></td>
+
+  <h2><span class="q"></span>Vencido · ${atr.length} parcelas · ${rs(sm(atr))}</h2>`;
+  h+= atr.length ? tabelaParcelas(atr,true) : '<div class="vazio">Nada vencido. Cobrança em dia.</div>';
+
+  h+=`<h2><span class="q"></span>Recebido em ${MESES[MES]} · ${rs(totalRec)}</h2>`;
+  if(!recParc.length&&!recLanc.length) h+='<div class="vazio">Nada baixado neste mês.</div>';
+  else{
+    h+=`<div class="cartao"><table class="receb"><thead><tr>
+      <th>Origem</th><th>Data do pagamento</th><th class="d">Valor</th><th class="acoes"></th>
+    </tr></thead><tbody>`;
+    recParc.sort((a,b)=>+b.valor-+a.valor).forEach(p=>{h+=`<tr>
+      <td class="nome"><input class="ed nm" value="${esc(p.mentorado?.nome||'')}" onchange="up('mentorados','${p.mentorado?.id}','nome',this.value)">
+        <div class="sub">${esc(nomeProd(p.contrato?.produto_id))} · parcela ${p.numero}</div></td>
+      <td><input class="ed dt" type="date" value="${String(p.data_pagamento||p.vencimento).slice(0,10)}" onchange="up('parcelas','${p.id}','data_pagamento',this.value)"></td>
+      <td class="d"><input class="ed n lim" type="number" step="0.01" value="${p.valor}" onchange="upNum('parcelas','${p.id}','valor',this.value)"></td>
+      <td class="acoes"><button class="btnv" style="padding:3px 9px;font-size:11px" onclick="desfazer('${p.id}')">Desfazer</button></td>
     </tr>`;});
-  h+='</tbody></table></div>';
+    recLanc.sort((a,b)=>+b.valor-+a.valor).forEach(l=>{h+=`<tr>
+      <td class="nome"><input class="ed nm" value="${esc(l.descricao||'')}" onchange="up('lancamentos','${l.id}','descricao',this.value)">
+        <div class="sub">${esc(nomeProd(l.produto_id))} · lançamento avulso</div></td>
+      <td><input class="ed dt" type="date" value="${String(l.data).slice(0,10)}" onchange="up('lancamentos','${l.id}','data',this.value)"></td>
+      <td class="d"><input class="ed n lim" type="number" step="0.01" value="${l.valor}" onchange="upNum('lancamentos','${l.id}','valor',this.value)"></td>
+      <td class="acoes"><button class="x" onclick="del('lancamentos','${l.id}')" aria-label="Remover">✕</button></td>
+    </tr>`;});
+    h+=`</tbody></table>
+    <p class="nota">Desfazer devolve a parcela para em aberto, sem apagar nada. Valor e data são editáveis direto aqui.</p></div>`;
+  }
+
+  h+=`<h2><span class="q"></span>A vencer · ${meses.length} meses</h2>`;
+  if(!meses.length) h+='<div class="vazio">Nenhuma parcela futura cadastrada.</div>';
+  else meses.forEach(k=>{
+    const [a,m]=k.split('-').map(Number);
+    const lista=futuras[k].sort((x,y)=>String(x.vencimento).localeCompare(String(y.vencimento)));
+    const total=lista.reduce((s,p)=>s+ +p.valor,0);
+    const aberto=REC_ABERTO===k;
+    h+=`<div class="cartao" style="margin-bottom:8px;padding:0">
+      <button class="cabecalho" onclick="abrirMes('${k}')" aria-expanded="${aberto}">
+        <span class="seta ${aberto?'on':''}">▸</span>
+        <span style="flex:1;text-align:left"><strong>${MESES[m-1]} ${a}</strong>
+          <span class="rotulo" style="font-size:10px;display:block;margin-top:2px">${lista.length} parcela${lista.length>1?'s':''}</span></span>
+        <span class="num" style="font-size:18px;white-space:nowrap">${rs(total)}</span>
+      </button>
+      <div class="corpo ${aberto?'':'oculto'}">${aberto?tabelaParcelas(lista,false,true):''}</div>
+    </div>`;
+  });
   document.getElementById('v-receb').innerHTML=h;
 }
+
+function tabelaParcelas(lista,vencido,dentro){
+  let h=`${dentro?'':'<div class="cartao">'}<table class="receb"><thead><tr>
+    <th>Mentorado</th><th class="d">Parc.</th><th>Vencimento</th>${vencido?'<th>Atraso</th>':''}<th class="d">Valor</th><th class="acoes"></th>
+  </tr></thead><tbody>`;
+  lista.forEach(p=>{
+    const at=-p.d;
+    h+=`<tr>
+      <td class="nome"><input class="ed nm" value="${esc(p.mentorado?.nome||'')}" onchange="up('mentorados','${p.mentorado?.id}','nome',this.value)">
+        <div class="sub">${esc(nomeProd(p.contrato?.produto_id))}</div></td>
+      <td class="d"><input class="ed n mini" type="number" value="${p.numero}" onchange="upNum('parcelas','${p.id}','numero',this.value)"></td>
+      <td><input class="ed dt" type="date" value="${String(p.vencimento).slice(0,10)}" onchange="up('parcelas','${p.id}','vencimento',this.value)"></td>
+      ${vencido?`<td>${at>60?'<span class="tag mal">60+ dias</span>':at>30?'<span class="tag mal">31-60 dias</span>':`<span class="tag al">${at} dias</span>`}</td>`:''}
+      <td class="d"><input class="ed n lim" type="number" step="0.01" value="${p.valor}" onchange="upNum('parcelas','${p.id}','valor',this.value)"></td>
+      <td class="acoes"><button class="btnv" style="padding:3px 9px;font-size:11px" onclick="baixar('${p.id}')">Baixar</button>
+      <button class="x" onclick="del('parcelas','${p.id}')" aria-label="Remover">✕</button></td>
+    </tr>`;});
+  return h+`</tbody></table>${dentro?'':'</div>'}`;
+}
+function abrirMes(k){REC_ABERTO=(REC_ABERTO===k?null:k);verRecebiveis();}
+async function desfazer(id){
+  const {error}=await sb.from('parcelas').update({pago:false,data_pagamento:null}).eq('id',id);
+  if(error)return toast('Erro: '+error.message,true);
+  const p=D.parcelas.find(x=>x.id===id);if(p){p.pago=false;p.data_pagamento=null;}
+  toast('Parcela voltou para em aberto.');desenhar();
+}
+
 async function baixar(id){
   const {error}=await sb.from('parcelas').update({pago:true,data_pagamento:iso(HOJE)}).eq('id',id);
   if(error)return toast('Erro: '+error.message,true);
@@ -922,12 +980,16 @@ function verDespesas(){
       <th>Categoria</th><th>Descrição</th><th>Venc.</th><th>Situação</th><th class="d">Valor</th><th class="d">% do mês</th><th></th>
     </tr></thead><tbody>`;
     g.forEach(([m,o])=>{
-      h+=`<tr class="matriz"><td>${esc(m)}</td><td colspan="3"></td>
+      const orfa=(m==='Sem categoria');
+      h+=`<tr class="matriz"><td>${esc(m)}${orfa?' <span class="tag al">arrumar</span>':''}</td><td colspan="3">${
+        orfa?'<span class="rotulo" style="font-size:10px">escolha a matriz de cada linha abaixo</span>':''}</td>
         <td class="d">${rs(o.total)}</td><td class="d">${(o.total/dp.total*100).toFixed(0)}%</td><td></td></tr>`;
       Object.keys(o.filhos).sort((a,b)=>o.filhos[b]-o.filhos[a]).forEach(cat=>{
         desp.filter(l=>l.categoria===cat).sort((a,b)=>String(a.data).localeCompare(String(b.data))).forEach(l=>{
           h+=`<tr class="filho">
-            <td>${esc(l.categoria)}</td>
+            <td>${orfa
+              ? `<select class="ed" onchange="adotarCategoria('${esc(l.categoria)}',this.value)"><option value="">${esc(l.categoria)} → escolher…</option>${matrizes('despesa').map(x=>`<option value="${x.id}">mover para ${esc(x.nome)}</option>`).join('')}</select>`
+              : esc(l.categoria)}</td>
             <td><input class="ed" value="${esc(l.descricao||'')}" onchange="up('lancamentos','${l.id}','descricao',this.value)"></td>
             <td><input class="ed dt" type="date" value="${String(l.data).slice(0,10)}" onchange="up('lancamentos','${l.id}','data',this.value)"></td>
             <td><button class="tag ${l.pago?'ok':'al'}" onclick="up('lancamentos','${l.id}','pago',${!l.pago})">${l.pago?'pago':'a pagar'}</button></td>
@@ -964,6 +1026,25 @@ function verDespesas(){
   </div></div>`;
   document.getElementById('v-desp').innerHTML=h;
 }
+/* Cria ou reaponta uma categoria orfa para dentro de uma matriz. */
+async function adotarCategoria(nome,parent_id){
+  if(!parent_id) return;
+  const pai=D.categorias.find(c=>c.id===parent_id);
+  const ja=D.categorias.find(c=>c.nome===nome);
+  if(ja){
+    const {error}=await sb.from('categorias').update({parent_id,matriz:false}).eq('id',ja.id);
+    if(error) return toast('Erro: '+error.message,true);
+    ja.parent_id=parent_id; ja.matriz=false;
+  } else {
+    const {data,error}=await sb.from('categorias').insert({nome,parent_id,matriz:false,
+      tipo:'despesa',escopo:pai?.escopo||'ambos',ordem:99}).select().single();
+    if(error) return toast('Erro: '+error.message,true);
+    D.categorias.push(data);
+  }
+  toast(`"${nome}" agora fica em ${pai?pai.nome:'a matriz escolhida'}.`);
+  desenhar();
+}
+
 async function novoFixo(){
   const cat=document.getElementById('fCat').value;
   const r={descricao:document.getElementById('fDesc').value.trim(),categoria:cat,
