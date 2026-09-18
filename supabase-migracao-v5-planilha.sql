@@ -11,3 +11,8 @@ create unique index if not exists lancamentos_origem_id_key on public.lancamento
 
 -- consulta rápida do que veio da planilha
 create index if not exists lancamentos_origem_idx on public.lancamentos (origem);
+
+-- garante a linha única de configurações (id = 1), usada por "Salvar configurações"
+insert into public.config (id) values (1) on conflict (id) do nothing;
+
+-- (aplicada no projeto fcwxkelokmqwmivjembv em 18/09/2026 como migração "v5_planilha_origem")

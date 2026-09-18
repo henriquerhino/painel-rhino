@@ -326,7 +326,8 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
 /* Planilha do Google que alimenta o painel (aba financeira). O painel lê o CSV público
    e grava no Supabase toda vez que abre; veja o bloco PLANILHA mais abaixo. */
-const PLANILHA={id:'1WsgpupBx_CXdEf_zI1vUXjAemtuUQdGNJ2eje2Er4Sc',gid:0,ano:2026,segundos:60};
+const PLANILHA={id:'1WsgpupBx_CXdEf_zI1vUXjAemtuUQdGNJ2eje2Er4Sc',gid:0,ano:2026,segundos:60,
+  receitas:['consultoria']}; // mentoria e framework já vêm dos contratos/parcelas do painel
 
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 const MESC=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
@@ -1842,16 +1843,20 @@ async function del(tabela,id){
 </script>
 <script>
 /* ================= PLANILHA (Google Sheets -> Supabase) =================
-   Toda vez que o painel abre ele baixa o CSV público da aba financeira, lê as linhas
-   "Recebimento …" (receitas por origem), os grupos de despesa e a linha "Objetivo",
-   e grava tudo em `lancamentos` / `metas_mes` com a etiqueta origem = 'planilha'.
-   Regras:
+   Toda vez que o painel abre ele baixa o CSV público da aba financeira, lê a linha
+   "Recebimento Consultoria", os grupos de despesa e a linha "Objetivo", e grava em
+   `lancamentos` / `metas_mes` com a etiqueta origem = 'planilha'.
+   Regras (pensadas para não duplicar o que já existe no painel):
+   - receita de Mentoria e Framework NÃO entra: ela já vem dos contratos/parcelas;
+     da planilha só entra a receita de Consultoria (PLANILHA.receitas);
    - só meses até o mês atual (o resto da planilha é projeção);
+   - um mês que já tem lançamento digitado no painel (sem origem) é do painel:
+     a planilha não escreve nele (vale por tipo: despesa / entrada);
    - cada célula vira um lançamento com origem_id estável (pl:ANO:tipo:item:MM);
-   - linha nova: entra completa; linha que já existe: só o valor acompanha a planilha
-     (situação, categoria e descrição editadas no painel ficam);
-   - célula apagada na planilha: o lançamento correspondente é removido;
-   - nada que foi digitado no painel (sem origem) é tocado.                        */
+     linha nova entra completa, linha existente só tem o valor atualizado;
+   - célula apagada na planilha remove o lançamento correspondente;
+   - categorias seguem o esquema que já existe no painel (Despesas fixas · Pessoal,
+     Cartões · empresa, Colaboradores, Impostos…); o item da planilha vai na descrição. */
 
 function csvParse(t){
   const rows=[];let row=[],cell='',q=false;
@@ -1876,7 +1881,7 @@ function brl(s){
   return isNaN(v)?null:(neg?-v:v);
 }
 const slug=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-const limparItem=l=>l.replace(/\s*-\s*\d{1,2}(\s*e\s*\d{1,2})?\s*$/,'').replace(/\s+/g,' ').trim();
+const limparItem=l=>l.replace(/\s*-\s*\d{1,2}(\s*e\s*\d{1,2})?\s*$/,'').replace(/\s+/g,' ').replace(/\)\)/g,')').trim();
 const diaDoItem=l=>{const m=l.match(/-\s*(\d{1,2})(?:\s*e\s*\d{1,2})?\s*$/);const d=m?+m[1]:0;return d>=1&&d<=31?d:null;};
 
 /* Lê a aba financeira: label na coluna A e os 12 meses nas colunas B..M. */
@@ -1897,42 +1902,43 @@ function lerFinanceira(rows){
       if(/^TOTAL DAS DESPESAS/.test(L)){sec='fim';continue;}
       if(/^TOTAL$/.test(L)){grupo=null;continue;}
       if(label&&!temValor){grupo=label;continue;}
-      if(temValor) out.despesas.push({grupo:grupo||'Extras & provisões',label:label||`${grupo||'Despesa'} (sem descrição)`,vals});
+      if(temValor) out.despesas.push({grupo:grupo||'Extras',label:label||`${grupo||'Despesa'} (sem descrição)`,vals});
       continue;
     }
     if(sec==='meta'){ if(/^OBJETIVO/.test(L)) out.metas=vals; continue; }
   }
   return out;
 }
-function matrizDoGrupo(g){
-  const G=g.toLowerCase();
-  if(/cart/.test(G)) return 'Cartões';
-  if(/casa|fixo/.test(G)) return 'Casa & fixos';
-  if(/colaborador|ferramenta|investimento/.test(G)) return 'Colaboradores & ferramentas';
-  return 'Extras & provisões';
-}
-function escopoDoItem(grupo,label){
-  const s=(grupo+' '+label).toLowerCase();
-  if(/\bpj\b|\(empresa\)|contador|ferramenta|flowize|imposto|inss|taxas|aluguel rec|mentorias|ana felic|marcos cavalcanti|nexus|acl[aã]o|framework|repasse jefferson|caixa postal|treino/.test(s)) return 'empresa';
-  if(/uso pessoal|\bpf\b|suplemento|terapia|moda|diarista|seguro|celular|mercado|lazer|financiamento|aluguel sp|condom|energia|provis|ipva|extras|sams|casa/.test(s)) return 'pessoal';
-  return /colaborador/.test(s)?'empresa':'pessoal';
+/* Decide categoria (do esquema que já existe no painel), matriz de reserva e escopo de um item. */
+function classificar(grupo,label){
+  const s=(grupo+' » '+label).toLowerCase(), g=grupo.toLowerCase();
+  const emp=/\bpj\b|\(empresa\)/.test(s);
+  if(/cart/.test(g)) return emp?{cat:'Cartões · empresa',mat:'Cartões',esc:'empresa'}:{cat:'Cartões · pessoal',mat:'Cartões',esc:'pessoal'};
+  if(/imposto|inss|taxa/.test(label.toLowerCase())) return {cat:'Impostos',mat:'Impostos',esc:'empresa'};
+  if(/repasse jefferson|repasse soc|provis|ipva|manuten/.test(s)) return {cat:'Provisões financeiras',mat:'Provisões financeiras',esc:/repasse/.test(s)?'empresa':'pessoal'};
+  if(/carteira de invest|aporte/.test(s)) return {cat:'Investimentos',mat:'Investimentos',esc:'ambos'};
+  if(/despesas extras|extra/.test(label.toLowerCase())) return {cat:'Despesas extras',mat:'Despesas extras',esc:'pessoal'};
+  if(/casa|fixo/.test(g)) return /aluguel rec/.test(s)?{cat:'Despesas fixas · Empresa',mat:'Despesas fixas · Empresa',esc:'empresa'}:{cat:'Despesas fixas · Pessoal',mat:'Despesas fixas · Pessoal',esc:'pessoal'};
+  if(/colaborador/.test(g)){
+    if(/terapia|diarista|seguro|celular|sa[uú]de|treino|suplemento/.test(s)) return {cat:'Despesas fixas · Pessoal',mat:'Despesas fixas · Pessoal',esc:'pessoal'};
+    if(/flowize|vivo|caixa postal|ferramenta|moda|hubla|cal\.com|typeform|plataforma|aplicativo/.test(s)) return {cat:'Despesas fixas · Empresa',mat:'Despesas fixas · Empresa',esc:'empresa'};
+    return {cat:'Colaboradores',mat:'Colaboradores',esc:'empresa'};
+  }
+  return {cat:'Despesas extras',mat:'Despesas extras',esc:'pessoal'};
 }
 function receitaDe(label){
   const L=label.toLowerCase();
-  if(/framework/.test(L)) return {cat:'Framework',re:/framework/i};
-  if(/mentoria/.test(L)) return {cat:'Mentoria Rhino',re:/rhino|mentoria/i};
-  return {cat:'Consultoria',re:/consultoria/i};
+  if(/framework/.test(L)) return {chave:'framework',cat:'Receita de contrato',re:[/framework/i]};
+  if(/mentoria/.test(L)) return {chave:'mentoria',cat:'Receita de contrato',re:[/mentoria/i,/rhino/i]};
+  return {chave:'consultoria',cat:'Receita avulsa',re:[/consultoria/i]};
 }
-/* Garante que cada categoria usada exista, dentro da matriz certa. Reaproveita o que já existe. */
+const achaCat=(nome,tipo)=>D.categorias.find(c=>(!tipo||c.tipo===tipo)&&c.nome.trim().toLowerCase()===nome.trim().toLowerCase());
+/* Garante que cada categoria usada exista (reaproveita o que já existe; cria só o que falta). */
 async function garantirCategorias(itens){
-  const acha=(nome,tipo,matriz)=>D.categorias.find(c=>c.tipo===tipo&&(matriz?c.matriz:true)&&c.nome.trim().toLowerCase()===nome.trim().toLowerCase());
-  const matrizesNovas=new Map();
+  const matrizesNovas=new Map(), filhas=new Map();
   itens.forEach(it=>{
-    if(it.tipo==='entrada'){ // reaproveita a matriz de entrada que já existir
-      const m=D.categorias.find(c=>c.matriz&&c.tipo==='entrada'&&/receita|entrada/i.test(c.nome))||D.categorias.find(c=>c.matriz&&c.tipo==='entrada');
-      if(m) it.matriz=m.nome;
-    }
-    if(!acha(it.matriz,it.tipo,true)&&!matrizesNovas.has(it.tipo+'|'+it.matriz))
+    if(achaCat(it.nome,it.tipo)) return;
+    if(!achaCat(it.matriz,it.tipo)&&!matrizesNovas.has(it.tipo+'|'+it.matriz))
       matrizesNovas.set(it.tipo+'|'+it.matriz,{nome:it.matriz,tipo:it.tipo,escopo:'ambos',matriz:true,parent_id:null,ordem:90});
   });
   if(matrizesNovas.size){
@@ -1940,11 +1946,10 @@ async function garantirCategorias(itens){
     if(error) throw new Error('categorias: '+error.message);
     D.categorias.push(...(data||[]));
   }
-  const filhas=new Map();
   itens.forEach(it=>{
-    if(D.categorias.some(c=>c.nome.trim().toLowerCase()===it.nome.trim().toLowerCase())) return;
-    const m=acha(it.matriz,it.tipo,true); if(!m) return;
-    if(!filhas.has(it.nome.toLowerCase())) filhas.set(it.nome.toLowerCase(),{nome:it.nome,tipo:it.tipo,escopo:it.escopo,matriz:false,parent_id:m.id,ordem:95});
+    if(achaCat(it.nome,it.tipo)||achaCat(it.nome)) return;
+    const m=achaCat(it.matriz,it.tipo); if(!m||it.nome.toLowerCase()===it.matriz.toLowerCase()) return;
+    if(!filhas.has(it.nome.toLowerCase())) filhas.set(it.nome.toLowerCase(),{nome:it.nome,tipo:it.tipo,escopo:it.escopo==='ambos'?'ambos':it.escopo,matriz:false,parent_id:m.id,ordem:95});
   });
   if(filhas.size){
     const {data,error}=await sb.from('categorias').insert([...filhas.values()]).select();
@@ -1957,37 +1962,45 @@ async function gravarPlanilha(dados){
   const ano=PLANILHA.ano;
   const mesMax = ano<HOJE.getFullYear() ? 11 : ano>HOJE.getFullYear() ? -1 : HOJE.getMonth();
   if(mesMax<0) return 'o ano da planilha ainda não começou';
-  const hojeIso=iso(HOJE), linhas=[], cats=[];
+  const hojeIso=iso(HOJE), todas=[], cats=[];
+  // meses que já têm lançamento digitado no painel: a planilha não escreve neles
+  const manuais={despesa:new Set(),entrada:new Set()};
+  D.lancamentos.forEach(l=>{ if(!l.origem&&l.data) manuais[l.tipo]?.add(String(l.data).slice(0,7)); });
 
   dados.receitas.forEach(({label,vals})=>{
-    const {cat,re}=receitaDe(label); const pid=D.produtos.find(p=>re.test(p.nome))?.id||null;
-    cats.push({nome:cat,matriz:'Receitas',tipo:'entrada',escopo:'empresa'});
+    const r=receitaDe(label);
+    if(!(PLANILHA.receitas||['consultoria']).includes(r.chave)) return;
+    const pid=r.re.map(re=>D.produtos.find(p=>re.test(p.nome))).find(Boolean)?.id||null;
+    cats.push({nome:r.cat,matriz:'Receitas',tipo:'entrada',escopo:'empresa'});
     vals.forEach((v,m)=>{ if(m>mesMax||!v||v<=0) return; const mm=String(m+1).padStart(2,'0');
-      linhas.push({origem:'planilha',origem_id:`pl:${ano}:r:${slug(cat)}:${mm}`,tipo:'entrada',categoria:cat,
+      todas.push({origem:'planilha',origem_id:`pl:${ano}:r:${r.chave}:${mm}`,tipo:'entrada',categoria:r.cat,
         descricao:label.replace(/^Recebimento\s*/i,'').trim()+' (planilha)',valor:+v.toFixed(2),
         data:`${ano}-${mm}-01`,competencia:`${ano}-${mm}-01`,escopo:'empresa',produto_id:pid,pago:true}); });
   });
   dados.despesas.forEach(({grupo,label,vals})=>{
-    const nome=limparItem(label), dia=diaDoItem(label), esc=escopoDoItem(grupo,label), mat=matrizDoGrupo(grupo);
-    cats.push({nome,matriz:mat,tipo:'despesa',escopo:esc});
+    const nome=limparItem(label), dia=diaDoItem(label), c=classificar(grupo,label);
+    cats.push({nome:c.cat,matriz:c.mat,tipo:'despesa',escopo:c.esc});
     vals.forEach((v,m)=>{ if(m>mesMax||v==null||v<=0) return; const mm=String(m+1).padStart(2,'0');
       const ult=new Date(ano,m+1,0).getDate(), d=String(Math.min(dia||10,ult)).padStart(2,'0'), data=`${ano}-${mm}-${d}`;
       const id=`pl:${ano}:d:${slug(nome)}:${mm}`;
-      const rep=linhas.find(l=>l.origem_id===id); if(rep){rep.valor=+(rep.valor+v).toFixed(2);return;} // mesmo item duas vezes na planilha: soma
-      linhas.push({origem:'planilha',origem_id:id,tipo:'despesa',categoria:nome,descricao:nome,valor:+v.toFixed(2),
-        data,competencia:`${ano}-${mm}-01`,escopo:esc,produto_id:null,pago:data<=hojeIso}); });
+      const rep=todas.find(l=>l.origem_id===id); if(rep){rep.valor=+(rep.valor+v).toFixed(2);return;} // mesmo item duas vezes na planilha: soma
+      todas.push({origem:'planilha',origem_id:id,tipo:'despesa',categoria:c.cat,descricao:/cart/i.test(grupo)?'Fatura '+nome:nome,valor:+v.toFixed(2),
+        data,competencia:`${ano}-${mm}-01`,escopo:c.esc==='ambos'?'pessoal':c.esc,produto_id:null,pago:data<=hojeIso}); });
   });
-  if(!linhas.length) return 'nenhum valor até o mês atual';
-  await garantirCategorias(cats);
+  if(!todas.length) return 'nenhum valor até o mês atual';
+  const linhas=todas.filter(l=>!manuais[l.tipo].has(l.competencia.slice(0,7)));
+  const pulados=[...new Set(todas.filter(l=>manuais[l.tipo].has(l.competencia.slice(0,7))).map(l=>l.competencia.slice(0,7)))].sort();
+  if(linhas.length) await garantirCategorias(cats);
 
   const {data:ex,error:e0}=await sb.from('lancamentos').select('id,origem_id,valor').eq('origem','planilha');
   if(e0) throw new Error(/origem/.test(e0.message)?'rode o arquivo supabase-migracao-v5-planilha.sql no Supabase':e0.message);
   const mapa=new Map((ex||[]).map(x=>[x.origem_id,x]));
-  const ids=new Set(linhas.map(l=>l.origem_id));
+  const idsTodas=new Set(todas.map(l=>l.origem_id));
   const novos=linhas.filter(l=>!mapa.has(l.origem_id));
   const mudados=linhas.filter(l=>mapa.has(l.origem_id)&&Math.abs(+mapa.get(l.origem_id).valor-l.valor)>0.005)
     .map(l=>({id:mapa.get(l.origem_id).id,valor:l.valor}));
-  const sobras=(ex||[]).filter(x=>x.origem_id&&x.origem_id.startsWith(`pl:${ano}:`)&&!ids.has(x.origem_id)&&(+x.origem_id.slice(-2)-1)<=mesMax);
+  // célula apagada na planilha (ou item renomeado): remove o lançamento que veio dela
+  const sobras=(ex||[]).filter(x=>x.origem_id&&x.origem_id.startsWith(`pl:${ano}:`)&&!idsTodas.has(x.origem_id)&&(+x.origem_id.slice(-2)-1)<=mesMax);
 
   if(novos.length){const {error}=await sb.from('lancamentos').upsert(novos,{onConflict:'origem_id'}); if(error) throw new Error(error.message);}
   if(mudados.length){const {error}=await sb.from('lancamentos').upsert(mudados,{onConflict:'id'}); if(error) throw new Error(error.message);}
@@ -2002,6 +2015,7 @@ async function gravarPlanilha(dados){
   const p=[];
   if(novos.length)p.push(`${novos.length} novos`); if(mudados.length)p.push(`${mudados.length} atualizados`);
   if(sobras.length)p.push(`${sobras.length} removidos`); if(metas.length)p.push(`${metas.length} meta${metas.length>1?'s':''}`);
+  if(pulados.length)p.push(`${pulados.map(k=>MESC[+k.slice(5)-1]).join(', ')} já lançado${pulados.length>1?'s':''} no painel`);
   return p.length?p.join(', '):'sem mudanças';
 }
 async function recarregar(tabelas){
@@ -2027,8 +2041,8 @@ async function sincronizarPlanilha({auto,manual}={}){
     const resumo=await gravarPlanilha(dados);
     SYNC={estado:'ok',quando:new Date(),resumo,erro:''};
     try{localStorage.setItem('rhino-sync-ts',String(Date.now()));localStorage.setItem('rhino-sync-resumo',resumo);}catch(e){}
-    if(manual||resumo!=='sem mudanças') toast('Planilha: '+resumo);
-    if(resumo!=='sem mudanças') await recarregar(['lancamentos','metas_mes','categorias']); else atualizarSync();
+    if(manual||/novos|atualizados|removidos|meta/.test(resumo)) toast('Planilha: '+resumo);
+    if(/novos|atualizados|removidos|meta/.test(resumo)) await recarregar(['lancamentos','metas_mes','categorias']); else atualizarSync();
   }catch(e){
     SYNC={estado:'erro',quando:SYNC.quando,resumo:'',erro:String(e.message||e)};
     if(manual) toast('Planilha: '+SYNC.erro,true);

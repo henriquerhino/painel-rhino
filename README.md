@@ -16,15 +16,15 @@ Abas: **Dashboard · Contratos · Recebíveis · Despesas · Lançamentos · Car
 
 ### Sincronização com a planilha
 - A planilha precisa estar compartilhada como **qualquer pessoa com o link · leitor**. O painel lê o CSV público da aba pelo endpoint `gviz` (não precisa de chave, senha nem servidor).
+- **O que entra:** despesas (todos os grupos), a receita de **Consultoria** e a meta do mês (linha *Objetivo*). **O que não entra:** receita de Mentoria e Framework — ela já vem dos contratos e parcelas do painel (os valores batem com a planilha).
 - Só entram **meses até o mês atual**; o restante da planilha é projeção.
-- Cada célula vira um lançamento com etiqueta **planilha** e um id estável (`pl:2026:d:aluguel-sp:09`). Assim a sincronização nunca duplica.
+- **Mês que já tem lançamento digitado no painel é do painel**: a planilha não escreve nele (vale por tipo, despesa ou entrada). Assim agosto e setembro de 2026, lançados à mão, continuam como estão, e a planilha preenche os meses anteriores e os próximos.
+- Cada célula vira um lançamento com etiqueta **planilha** e um id estável (`pl:2026:d:aluguel-sp:07`). Assim a sincronização nunca duplica.
 - Linha nova: entra completa (situação *pago* quando a data já passou; a data é o dia que aparece no nome do item, ex. `Aluguel SP - 05`). Linha existente: **só o valor** acompanha a planilha; situação, categoria e descrição editadas no painel ficam.
 - Célula apagada na planilha: o lançamento é removido. Lançamentos digitados no painel nunca são tocados.
-- Receitas entram no dia 1 do mês (a planilha só tem o total mensal). A meta do mês vem da linha *Objetivo*.
-- Categorias são criadas automaticamente: matrizes **Casa & fixos**, **Cartões**, **Colaboradores & ferramentas**, **Extras & provisões** e **Receitas**, com um item por linha da planilha. Ajuste escopo (empresa/pessoal) e organização em *Configurações → Categorias*.
-- Para trocar a planilha ou a aba, edite a constante `PLANILHA` no topo do `index.html` (`id`, `gid` da aba, `ano`).
-
-> Se a planilha e o painel forem usados para lançar a **mesma** despesa, ela aparece duas vezes. Combine: quem lança na planilha não lança no painel (e vice-versa).
+- Receitas entram no dia 1 do mês (a planilha só tem o total mensal).
+- Categorias seguem o esquema que já existe no painel (*Despesas fixas · Pessoal*, *Cartões · empresa*, *Colaboradores*, *Impostos*, *Provisões financeiras*…); o item da planilha vai na descrição. Só cria categoria se faltar.
+- Para trocar a planilha, a aba ou quais receitas entram, edite a constante `PLANILHA` no topo do `index.html` (`id`, `gid`, `ano`, `receitas`).
 
 ---
 
