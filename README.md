@@ -2,7 +2,7 @@
 
 Painel financeiro do Team Rhino: um único `index.html` (sem build, sem servidor) que roda no GitHub Pages, guarda os dados no **Supabase** e lê a planilha **PLANILHA FINANCEIRA E RESULTADOS 2026** do Google sozinho, toda vez que abre.
 
-Abas: **Dashboard · Contratos · Recebíveis · Despesas · Lançamentos · Cartões · Investimentos · Configurações**. Tudo editável direto na tela; no celular as tabelas viram listas e a navegação fica na barra de baixo.
+Abas: **Dashboard · Contratos · Recebíveis · Despesas · Lançamentos · Cartões · Investimentos · Configurações**. Visual escuro (fundo preto, cartões de vidro, botões-pílula). Contratos, Recebíveis, Despesas e Cartões são **cartões**: um por mentorado / parcela / despesa / cartão de crédito, com a ação principal direto nele (Baixar parcela, Marcar pago, Ver compras) e um botão **Editar** que abre os campos no próprio cartão (salva ao sair do campo). Filtros por situação e busca no topo de cada aba. No Dashboard a **meta semanal** é um widget que passa de semana em semana (4 semanas em mês de 28 dias, 5 nos outros). No celular a navegação fica na barra de baixo e o botão **Mais** abre o menu de tela cheia.
 
 ---
 
@@ -45,12 +45,12 @@ O site no GitHub Pages é público, mas os dados só aparecem depois do login (S
 
 ## Estrutura do código (`index.html`)
 
-- `<style>`: visual claro (versão “Clara”), tokens em `:root`, regras de celular em `@media(max-width:720px)`.
+- `<style>`: visual escuro, tokens em `:root`, regras de celular em `@media(max-width:720px)`.
 - `PLANILHA`, `SUPABASE_*`: configurações.
-- Cálculos (`caixaMes`, `despesasMes`, `semanas`, `repasseAno`…), agente local e chamada da IA.
-- Uma função `ver…()` por aba; `desenhar()` redesenha a aba ativa e rotula as tabelas para o celular.
+- Cálculos (`caixaMes`, `despesasMes`, `semanas`…), agente local e chamada da IA.
+- Uma função `ver…()` por aba (Contratos, Recebíveis, Despesas e Cartões montam cartões com `card…()`); `desenhar()` redesenha a aba ativa e rotula as tabelas restantes para o celular.
 - Bloco **PLANILHA**: `csvParse`, `lerFinanceira`, `gravarPlanilha`, `sincronizarPlanilha`.
 
-Tabelas no Supabase: `config, produtos, mentorados, contratos, parcelas, lancamentos, recorrencias, cartoes, parcelamentos, assinaturas, metas_mes, investimentos, investimentos_hist, categorias, repasses, analises`.
+Tabelas no Supabase: `config, produtos, mentorados, contratos, parcelas, lancamentos, recorrencias, cartoes, parcelamentos, assinaturas, metas_mes, investimentos, investimentos_hist, categorias, analises`. A tabela `repasses` (sociedade encerrada) não é mais usada pelo painel.
 
 `app.html` é uma versão antiga e não é usada pelo site.
