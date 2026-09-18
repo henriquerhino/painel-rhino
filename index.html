@@ -2034,7 +2034,9 @@ async function gravarPlanilha(dados){
   const sobras=(ex||[]).filter(x=>x.origem_id&&x.origem_id.startsWith(`pl:${ano}:`)&&!idsTodas.has(x.origem_id)&&(+x.origem_id.slice(-2)-1)<=mesMax);
 
   if(novos.length){const {error}=await sb.from('lancamentos').upsert(novos,{onConflict:'origem_id'}); if(error) throw new Error(error.message);}
-  if(mudados.length){const {error}=await sb.from('lancamentos').upsert(mudados,{onConflict:'id'}); if(error) throw new Error(error.message);}
+  if(mudados.length){ // update linha a linha: upsert parcial esbarra nas colunas obrigatórias (data, tipo…)
+    const rs=await Promise.all(mudados.map(m=>sb.from('lancamentos').update({valor:m.valor}).eq('id',m.id)));
+    const falha=rs.find(r=>r.error); if(falha) throw new Error(falha.error.message); }
   if(sobras.length){const {error}=await sb.from('lancamentos').delete().in('id',sobras.map(x=>x.id)); if(error) throw new Error(error.message);}
 
   let metas=[];
