@@ -327,7 +327,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 /* Planilha do Google que alimenta o painel (aba financeira). O painel lê o CSV público
    e grava no Supabase toda vez que abre; veja o bloco PLANILHA mais abaixo. */
 const PLANILHA={id:'1WsgpupBx_CXdEf_zI1vUXjAemtuUQdGNJ2eje2Er4Sc',gid:0,ano:2026,segundos:60,
-  receitas:['consultoria']}; // mentoria e framework já vêm dos contratos/parcelas do painel
+  receitas:['consultoria','mentoria','framework']}; // quais linhas "Recebimento …" entram como receita
 
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 const MESC=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
@@ -511,14 +511,17 @@ function agrupaPorMatriz(porCat){
 }
 
 /* ================= CÁLCULOS ================= */
+/* Caixa recebido no mês. Se a planilha tem receita para o mês, ela é a fonte
+   (as parcelas baixadas no painel ficam só para cobrança); senão, parcelas + entradas. */
+const mesDaPlanilha=(a,m)=>D.lancamentos.some(l=>l.origem==='planilha'&&l.tipo==='entrada'&&noMes(l.data,a,m));
 function caixaMes(a,m){
-  let t=0;const pp={};
-  D.parcelas.filter(p=>p.pago&&noMes(p.data_pagamento||p.vencimento,a,m)).forEach(p=>{
+  let t=0;const pp={};const planilha=mesDaPlanilha(a,m);
+  if(!planilha) D.parcelas.filter(p=>p.pago&&noMes(p.data_pagamento||p.vencimento,a,m)).forEach(p=>{
     const c=D.contratos.find(x=>x.id===p.contrato_id);if(!c)return;
     t+=+p.valor;pp[c.produto_id]=(pp[c.produto_id]||0)+ +p.valor;});
   D.lancamentos.filter(l=>l.tipo==='entrada'&&l.pago&&noMes(l.data,a,m)).forEach(l=>{
     t+=+l.valor;pp[l.produto_id]=(pp[l.produto_id]||0)+ +l.valor;});
-  return {total:t,pp};
+  return {total:t,pp,planilha};
 }
 function despesasMes(a,m){
   let t=0;const pc={};
@@ -573,16 +576,25 @@ function semanas(a,m){
   const ult=new Date(a,m+1,0).getDate();
   const faixas=blocosSemana(a,m);
   const M=metaDoMes(a,m); let acum=0;
+  // com a planilha como fonte, o total do mês não tem data por recebimento: o que as parcelas
+  // baixadas não explicam entra na semana de hoje (mês atual) ou na última semana (mês fechado)
+  const cx=caixaMes(a,m);
+  const mesAtual=(a===HOJE.getFullYear()&&m===HOJE.getMonth());
+  const semanaHoje=faixas.findIndex(([i,f])=>HOJE.getDate()>=i&&HOJE.getDate()<=f);
+  const semanaResto=cx.planilha?(mesAtual&&semanaHoje>=0?semanaHoje:faixas.length-1):-1;
+  const datados=faixas.map(([i,f])=>{let v=0;
+    D.parcelas.filter(p=>p.pago&&noMes(p.data_pagamento||p.vencimento,a,m)).forEach(p=>{
+      const dd=dObj(p.data_pagamento||p.vencimento).getDate();if(dd>=i&&dd<=f)v+=+p.valor;});
+    D.lancamentos.filter(l=>l.tipo==='entrada'&&l.pago&&l.origem!=='planilha'&&noMes(l.data,a,m)).forEach(l=>{
+      const dd=dObj(l.data).getDate();if(dd>=i&&dd<=f)v+=+l.valor;});
+    return v;});
+  const resto=cx.planilha?Math.max(0,cx.total-datados.reduce((s,x)=>s+x,0)):0;
   return faixas.map(([i,f],k)=>{
     const dias=f-i+1;
     // meta da semana: o que você digitou, ou o proporcional aos dias do bloco
     const alvo = M.s[k]!=null ? M.s[k] : M.total*dias/ult;
     const fixa = M.s[k]!=null;
-    let v=0;
-    D.parcelas.filter(p=>p.pago&&noMes(p.data_pagamento||p.vencimento,a,m)).forEach(p=>{
-      const dd=dObj(p.data_pagamento||p.vencimento).getDate();if(dd>=i&&dd<=f)v+=+p.valor;});
-    D.lancamentos.filter(l=>l.tipo==='entrada'&&l.pago&&noMes(l.data,a,m)).forEach(l=>{
-      const dd=dObj(l.data).getDate();if(dd>=i&&dd<=f)v+=+l.valor;});
+    let v=datados[k]+(k===semanaResto?resto:0);
     acum+=v;
     return {n:k+1,ini:i,fim:f,dias,valor:v,alvo,fixa,
             pct:alvo?v/alvo*100:0,acum,pctAcum:M.total?acum/M.total*100:0};
@@ -763,7 +775,7 @@ function verDash(){
       <div class="barra ${s.pct>=100?'':s.pct>=60?'a':'r'}" style="height:5px;margin-top:6px"><i style="width:${Math.min(100,s.pct)}%"></i></div>
       <div class="pp">meta <input type="number" step="100" value="${Math.round(s.alvo)}" title="${s.fixa?'meta fixada por você. Apague para voltar ao proporcional':'proporcional aos dias do bloco'}" onchange="salvarMeta('s${k+1}',this.value)">${s.fixa?'':' <span style="opacity:.6">auto</span>'}</div>
       <div class="pp">${s.pct.toFixed(0)}% da semana · ${s.pctAcum.toFixed(0)}% acumulado</div></div>`).join('')}</div>
-    <p class="nota">O mês é dividido em blocos de 7 dias corridos, então mês de 29 dias ou mais tem 5 semanas, a última mais curta. A meta marcada como “auto” acompanha os dias do bloco. Digitou um valor, ele fica fixo. Apagou, volta ao automático.</p>
+    <p class="nota">O mês é dividido em blocos de 7 dias corridos, então mês de 29 dias ou mais tem 5 semanas, a última mais curta. A meta marcada como “auto” acompanha os dias do bloco. Digitou um valor, ele fica fixo. Apagou, volta ao automático.${cx.planilha?' Neste mês o total recebido vem da planilha, que não tem data por recebimento: as semanas mostram as parcelas baixadas no painel e o restante entra na semana atual.':''}</p>
   </div>
 
   <div class="grade g2" style="margin-top:22px">
@@ -1103,7 +1115,7 @@ function verRecebiveis(){
   });
   const recLanc=D.lancamentos.filter(l=>l.tipo==='entrada'&&l.pago&&noMes(l.data,ANO,MES))
     .map(l=>({...l,tipo:'lancamento'}));
-  const totalRec=recParc.reduce((s,p)=>s+ +p.valor,0)+recLanc.reduce((s,l)=>s+ +l.valor,0);
+  const cxm=caixaMes(ANO,MES), totalRec=cxm.total;
 
   // futuras agrupadas por mes
   const futuras={};
@@ -1144,7 +1156,7 @@ function verRecebiveis(){
       <td class="acoes"><button class="x" onclick="del('lancamentos','${l.id}')" aria-label="Remover">✕</button></td>
     </tr>`;});
     h+=`</tbody></table></div>
-    <p class="nota">Desfazer devolve a parcela para em aberto, sem apagar nada. Valor e data são editáveis direto aqui.</p>`;
+    <p class="nota">Desfazer devolve a parcela para em aberto, sem apagar nada. Valor e data são editáveis direto aqui.${cxm.planilha?' O total do mês é o da planilha; as parcelas baixadas aqui servem para a cobrança e já estão dentro desse total.':''}</p>`;
   }
 
   h+=`<h2>A vencer <span class="rotulo">${meses.length} meses</span></h2>`;
@@ -1846,15 +1858,17 @@ async function del(tabela,id){
    Toda vez que o painel abre ele baixa o CSV público da aba financeira, lê a linha
    "Recebimento Consultoria", os grupos de despesa e a linha "Objetivo", e grava em
    `lancamentos` / `metas_mes` com a etiqueta origem = 'planilha'.
-   Regras (pensadas para não duplicar o que já existe no painel):
-   - receita de Mentoria e Framework NÃO entra: ela já vem dos contratos/parcelas;
-     da planilha só entra a receita de Consultoria (PLANILHA.receitas);
+   Regras:
+   - a planilha é a fonte dos números do mês: receitas (Consultoria, Mentoria, Framework)
+     e despesas; nos meses em que ela tem receita, o "recebido" do painel é o dela
+     (as parcelas baixadas ficam só para a cobrança);
    - só meses até o mês atual (o resto da planilha é projeção);
-   - um mês que já tem lançamento digitado no painel (sem origem) é do painel:
-     a planilha não escreve nele (vale por tipo: despesa / entrada);
+   - "Carteira de investimentos" e "Provisões financeiras" não entram como despesa
+     (são aporte e reserva; o TOTAL DAS DESPESAS da planilha também não os soma);
    - cada célula vira um lançamento com origem_id estável (pl:ANO:tipo:item:MM);
      linha nova entra completa, linha existente só tem o valor atualizado;
    - célula apagada na planilha remove o lançamento correspondente;
+   - lançamentos digitados no painel (sem origem) nunca são tocados;
    - categorias seguem o esquema que já existe no painel (Despesas fixas · Pessoal,
      Cartões · empresa, Colaboradores, Impostos…); o item da planilha vai na descrição. */
 
@@ -1896,7 +1910,9 @@ function lerFinanceira(rows){
     if(/^PLANILHA FINANCEIRA|^RECEITAS$/.test(L)){sec='rec';continue;}
     if(L==='DESPESAS'){sec='desp';grupo=null;continue;}
     if(/^META/.test(L)){sec='meta';continue;}
-    if(/^BALAN|^CARTEIRAS? DE INVESTIMENTO/.test(L)){sec='fim';continue;}
+    // fim da parte financeira: "BALANÇO" ou o cabeçalho "Carteiras de investimento" (sem valores;
+    // a linha "Carteira de investimentos" dentro das despesas tem valores e é tratada adiante)
+    if(/^BALAN/.test(L)||(/^CARTEIRAS? DE INVESTIMENTO/.test(L)&&!temValor)){sec='fim';continue;}
     if(sec==='rec'){ if(/^RECEBIMENTO/.test(L)) out.receitas.push({label,vals}); continue; }
     if(sec==='desp'){
       if(/^TOTAL DAS DESPESAS/.test(L)){sec='fim';continue;}
@@ -1963,13 +1979,10 @@ async function gravarPlanilha(dados){
   const mesMax = ano<HOJE.getFullYear() ? 11 : ano>HOJE.getFullYear() ? -1 : HOJE.getMonth();
   if(mesMax<0) return 'o ano da planilha ainda não começou';
   const hojeIso=iso(HOJE), todas=[], cats=[];
-  // meses que já têm lançamento digitado no painel: a planilha não escreve neles
-  const manuais={despesa:new Set(),entrada:new Set()};
-  D.lancamentos.forEach(l=>{ if(!l.origem&&l.data) manuais[l.tipo]?.add(String(l.data).slice(0,7)); });
 
   dados.receitas.forEach(({label,vals})=>{
     const r=receitaDe(label);
-    if(!(PLANILHA.receitas||['consultoria']).includes(r.chave)) return;
+    if(!(PLANILHA.receitas||['consultoria','mentoria','framework']).includes(r.chave)) return;
     const pid=r.re.map(re=>D.produtos.find(p=>re.test(p.nome))).find(Boolean)?.id||null;
     cats.push({nome:r.cat,matriz:'Receitas',tipo:'entrada',escopo:'empresa'});
     vals.forEach((v,m)=>{ if(m>mesMax||!v||v<=0) return; const mm=String(m+1).padStart(2,'0');
@@ -1978,6 +1991,7 @@ async function gravarPlanilha(dados){
         data:`${ano}-${mm}-01`,competencia:`${ano}-${mm}-01`,escopo:'empresa',produto_id:pid,pago:true}); });
   });
   dados.despesas.forEach(({grupo,label,vals})=>{
+    if(/carteira de invest|provis[õo]es/i.test(label)) return; // aporte e reserva não são despesa
     const nome=limparItem(label), dia=diaDoItem(label), c=classificar(grupo,label);
     cats.push({nome:c.cat,matriz:c.mat,tipo:'despesa',escopo:c.esc});
     vals.forEach((v,m)=>{ if(m>mesMax||v==null||v<=0) return; const mm=String(m+1).padStart(2,'0');
@@ -1988,9 +2002,8 @@ async function gravarPlanilha(dados){
         data,competencia:`${ano}-${mm}-01`,escopo:c.esc==='ambos'?'pessoal':c.esc,produto_id:null,pago:data<=hojeIso}); });
   });
   if(!todas.length) return 'nenhum valor até o mês atual';
-  const linhas=todas.filter(l=>!manuais[l.tipo].has(l.competencia.slice(0,7)));
-  const pulados=[...new Set(todas.filter(l=>manuais[l.tipo].has(l.competencia.slice(0,7))).map(l=>l.competencia.slice(0,7)))].sort();
-  if(linhas.length) await garantirCategorias(cats);
+  const linhas=todas;
+  await garantirCategorias(cats);
 
   const {data:ex,error:e0}=await sb.from('lancamentos').select('id,origem_id,valor').eq('origem','planilha');
   if(e0) throw new Error(/origem/.test(e0.message)?'rode o arquivo supabase-migracao-v5-planilha.sql no Supabase':e0.message);
@@ -2015,7 +2028,6 @@ async function gravarPlanilha(dados){
   const p=[];
   if(novos.length)p.push(`${novos.length} novos`); if(mudados.length)p.push(`${mudados.length} atualizados`);
   if(sobras.length)p.push(`${sobras.length} removidos`); if(metas.length)p.push(`${metas.length} meta${metas.length>1?'s':''}`);
-  if(pulados.length)p.push(`${pulados.map(k=>MESC[+k.slice(5)-1]).join(', ')} já lançado${pulados.length>1?'s':''} no painel`);
   return p.length?p.join(', '):'sem mudanças';
 }
 async function recarregar(tabelas){

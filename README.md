@@ -16,9 +16,10 @@ Abas: **Dashboard · Contratos · Recebíveis · Despesas · Lançamentos · Car
 
 ### Sincronização com a planilha
 - A planilha precisa estar compartilhada como **qualquer pessoa com o link · leitor**. O painel lê o CSV público da aba pelo endpoint `gviz` (não precisa de chave, senha nem servidor).
-- **O que entra:** despesas (todos os grupos), a receita de **Consultoria** e a meta do mês (linha *Objetivo*). **O que não entra:** receita de Mentoria e Framework — ela já vem dos contratos e parcelas do painel (os valores batem com a planilha).
+- **A planilha é a fonte dos números do mês.** Entram as três receitas (*Recebimento Consultoria / Mentoria / FRAMEWORK*), todas as despesas e a meta (linha *Objetivo*). Nos meses em que a planilha tem receita, o “Recebido” do Dashboard é o dela; as parcelas baixadas no painel continuam valendo para cobrança (Recebíveis), mas não somam de novo.
+- *Carteira de investimentos* e *Provisões financeiras* não entram como despesa (são aporte e reserva; o *TOTAL DAS DESPESAS* da planilha também não os soma).
 - Só entram **meses até o mês atual**; o restante da planilha é projeção.
-- **Mês que já tem lançamento digitado no painel é do painel**: a planilha não escreve nele (vale por tipo, despesa ou entrada). Assim agosto e setembro de 2026, lançados à mão, continuam como estão, e a planilha preenche os meses anteriores e os próximos.
+- Lançamentos digitados no painel nunca são tocados — por isso não digite no painel o que já está na planilha, ou o valor aparece duas vezes. O painel é para o que a planilha não tem: contratos, parcelas, cartões, investimentos e lançamentos avulsos.
 - Cada célula vira um lançamento com etiqueta **planilha** e um id estável (`pl:2026:d:aluguel-sp:07`). Assim a sincronização nunca duplica.
 - Linha nova: entra completa (situação *pago* quando a data já passou; a data é o dia que aparece no nome do item, ex. `Aluguel SP - 05`). Linha existente: **só o valor** acompanha a planilha; situação, categoria e descrição editadas no painel ficam.
 - Célula apagada na planilha: o lançamento é removido. Lançamentos digitados no painel nunca são tocados.
