@@ -21,6 +21,11 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 type Reg = Record<string, any>;
 const env = (k: string) => Deno.env.get(k) ?? "";
 const sb = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
+// O id do número e a frase de verificação do webhook não são segredo de verdade: podem vir da tabela
+// assessor_segredos (só o servidor lê). O token e a chave secreta do app continuam só nos Secrets.
+const CFG: Reg = {}; let cfgEm = 0;
+async function carregarCfg() { if (Date.now() - cfgEm < 60000) return; const { data } = await sb.from("assessor_segredos").select("chave,valor").in("chave", ["whatsapp_phone_id", "whatsapp_verify_token"]); for (const r of data || []) CFG[r.chave] = r.valor; cfgEm = Date.now(); }
+const cfg = (k: string) => env(k) || CFG[k.toLowerCase()] || "";
 const GRAPH = `https://graph.facebook.com/${env("WHATSAPP_GRAPH_VERSION") || "v22.0"}`;
 const MODELO = env("ASSESSOR_MODELO") || "claude-sonnet-5";
 const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
@@ -361,7 +366,7 @@ async function responder(contato: Reg, texto: string, botao: string | null, cont
 
 // ------------------------------------------------------------------ WhatsApp
 async function wa(corpo: Reg) {
-  const r = await fetch(`${GRAPH}/${env("WHATSAPP_PHONE_ID")}/messages`, { method: "POST", headers: { Authorization: `Bearer ${env("WHATSAPP_TOKEN")}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", ...corpo }) });
+  const r = await fetch(`${GRAPH}/${cfg("WHATSAPP_PHONE_ID")}/messages`, { method: "POST", headers: { Authorization: `Bearer ${env("WHATSAPP_TOKEN")}`, "Content-Type": "application/json" }, body: JSON.stringify({ messaging_product: "whatsapp", ...corpo }) });
   if (!r.ok) console.error("WhatsApp recusou:", r.status, (await r.text()).slice(0, 300));
   return r.ok;
 }
@@ -472,7 +477,7 @@ async function montarRelatorio(tipo: string, D: Reg, contato: Reg): Promise<stri
     `Contra ${F.mes_anterior.mes}: recebido ${rsc(F.mes_anterior.recebido)}, resultado ${rsc(F.mes_anterior.resultado)}`, g.length ? `*Maiores grupos de despesa*\n${g.map(([k, v]) => `• ${k}: ${rsc(v)}`).join("\n")}` : "", "O fechamento ficou gravado no painel."].filter(Boolean).join("\n\n");
 }
 async function rotina(tipo: string, textoAviso?: string) {
-  if (!env("WHATSAPP_TOKEN") || !env("WHATSAPP_PHONE_ID")) return { ok: false, motivo: "WhatsApp ainda não configurado" };
+  if (!env("WHATSAPP_TOKEN") || !cfg("WHATSAPP_PHONE_ID")) return { ok: false, motivo: "WhatsApp ainda não configurado" };
   const { data: contatos } = await sb.from("assessor_contatos").select("*").eq("ativo", true).eq("recebe_relatorios", true); if (!contatos?.length) return { ok: false, motivo: "nenhum número autorizado" };
   const D = tipo === "aviso" ? null : await carregar(); const enviados: string[] = [];
   for (const c of contatos) {
@@ -489,9 +494,9 @@ async function rotina(tipo: string, textoAviso?: string) {
 
 // ------------------------------------------------------------------ entrada
 Deno.serve(async (req) => {
-  const url = new URL(req.url);
+  const url = new URL(req.url); await carregarCfg();
   if (req.method === "GET") { // verificação do webhook pela Meta
-    const ok = url.searchParams.get("hub.mode") === "subscribe" && !!env("WHATSAPP_VERIFY_TOKEN") && url.searchParams.get("hub.verify_token") === env("WHATSAPP_VERIFY_TOKEN");
+    const ok = url.searchParams.get("hub.mode") === "subscribe" && !!cfg("WHATSAPP_VERIFY_TOKEN") && url.searchParams.get("hub.verify_token") === cfg("WHATSAPP_VERIFY_TOKEN");
     return ok ? new Response(url.searchParams.get("hub.challenge") || "", { status: 200 }) : new Response("token de verificação não confere", { status: 403 });
   }
   if (req.method !== "POST") return json({ erro: "Use POST." }, 405);
@@ -503,7 +508,7 @@ Deno.serve(async (req) => {
     if (!seg?.valor || cron !== seg.valor) return json({ erro: "não autorizado" }, 401);
     const b = JSON.parse(corpo || "{}");
     try {
-      if (b.status) return json({ ia: !!env("ANTHROPIC_API_KEY"), whatsapp_token: !!env("WHATSAPP_TOKEN"), whatsapp_phone_id: !!env("WHATSAPP_PHONE_ID"), whatsapp_app_secret: !!env("WHATSAPP_APP_SECRET"), whatsapp_verify_token: !!env("WHATSAPP_VERIFY_TOKEN"), audio: !!(env("GROQ_API_KEY") || env("OPENAI_API_KEY")), modelo: MODELO });
+      if (b.status) return json({ ia: !!env("ANTHROPIC_API_KEY"), whatsapp_token: !!env("WHATSAPP_TOKEN"), whatsapp_phone_id: !!cfg("WHATSAPP_PHONE_ID"), whatsapp_app_secret: !!env("WHATSAPP_APP_SECRET"), whatsapp_verify_token: !!cfg("WHATSAPP_VERIFY_TOKEN"), audio: !!(env("GROQ_API_KEY") || env("OPENAI_API_KEY")), modelo: MODELO });
       if (b.rotina) return json(await rotina(String(b.rotina), b.texto));
       if (b.previa) return json({ texto: await montarRelatorio(String(b.previa), await carregar(), { nome: b.nome || "Henrique", prefs: {} }) });
       if (b.teste) { // conversa de teste, sem WhatsApp: devolve a resposta em JSON
