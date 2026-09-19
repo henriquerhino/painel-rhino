@@ -510,6 +510,12 @@ Deno.serve(async (req) => {
     const b = JSON.parse(corpo || "{}");
     try {
       if (b.status) return json({ ia: !!env("ANTHROPIC_API_KEY"), whatsapp_token: !!env("WHATSAPP_TOKEN"), whatsapp_phone_id: !!cfg("WHATSAPP_PHONE_ID"), whatsapp_app_secret: !!env("WHATSAPP_APP_SECRET"), whatsapp_verify_token: !!cfg("WHATSAPP_VERIFY_TOKEN"), audio: !!(env("GROQ_API_KEY") || env("OPENAI_API_KEY")), modelo: MODELO });
+      if (b.meta) { // diagnóstico e assinatura da conta do WhatsApp neste app: usa o token do cofre e nunca o devolve
+        const H = { Authorization: `Bearer ${env("WHATSAPP_TOKEN")}` }, waba = String(b.waba_id || "").replace(/\D/g, "");
+        const g = async (u: string, init?: RequestInit) => { const r = await fetch(`${GRAPH}/${u}`, { ...init, headers: H }); return { status: r.status, corpo: await r.json().catch(() => null) }; };
+        if (b.meta === "assinar") return json(await g(`${waba}/subscribed_apps`, { method: "POST" }));
+        return json({ numero: await g(`${cfg("WHATSAPP_PHONE_ID")}?fields=display_phone_number,verified_name,quality_rating,platform_type,code_verification_status`), apps_assinados: await g(`${waba}/subscribed_apps`) });
+      }
       if (b.rotina) return json(await rotina(String(b.rotina), b.texto));
       if (b.previa) return json({ texto: await montarRelatorio(String(b.previa), await carregar(), { nome: b.nome || "Henrique", prefs: {} }) });
       if (b.teste) { // conversa de teste, sem WhatsApp: devolve a resposta em JSON
