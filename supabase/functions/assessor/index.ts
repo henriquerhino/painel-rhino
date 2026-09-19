@@ -104,6 +104,20 @@ function resumoMes(D: Reg, a: number, m: number) {
     mes_anterior: { mes: MESES[ant.getUTCMonth()], recebido: +cxA.total.toFixed(2), despesas: +dpA.total.toFixed(2), resultado: +(cxA.total - dpA.total).toFixed(2) } };
 }
 
+// ------------------------------------------------------------------ Google Agenda (pela função "agenda")
+async function agenda(corpo: Reg): Promise<Reg> {
+  const { data: seg } = await sb.from("assessor_segredos").select("valor").eq("chave", "cron").maybeSingle();
+  const r = await fetch(`${env("SUPABASE_URL")}/functions/v1/agenda`, { method: "POST", headers: { "Content-Type": "application/json", "x-rhino-cron": seg?.valor || "" }, body: JSON.stringify(corpo) });
+  const j = await r.json(); if (j.erro) throw new Error(j.erro); return j;
+}
+async function agendaLigada() { const { data } = await sb.from("assessor_segredos").select("chave").eq("chave", "google_url").maybeSingle(); return !!data; }
+const msSP = (local: string) => Date.parse(String(local).slice(0, 16) + ":00-03:00");            // "2026-09-24T16:00" (São Paulo) -> instante
+const localSP = (ms: number) => new Date(ms - 3 * 3600 * 1000).toISOString().slice(0, 16);         // instante -> "2026-09-24T16:00"
+async function acharEvento(id: string): Promise<Reg | null> {
+  const H = hojeSP(), r = await agenda({ acao: "listar", de: `${somaIso(H.iso, -2)}T00:00:00`, ate: `${somaIso(H.iso, 90)}T23:59:59` });
+  return (r.eventos || []).find((e: Reg) => e.id === id) || null;
+}
+
 // ------------------------------------------------------------------ ferramentas do Claude
 const TOOLS = [
   { name: "resumo_mes", description: "Números de um mês: recebido (a planilha é a fonte), despesas, resultado, margem, meta, semana atual, saldo projetado e o mês anterior para comparar. Sem parâmetros = mês atual.", input_schema: { type: "object", properties: { ano: { type: "integer" }, mes: { type: "integer", description: "1 a 12" } } } },
@@ -111,10 +125,12 @@ const TOOLS = [
   { name: "contratos", description: "Contratos dos mentorados com valor, recebido, saldo, fim, situação e calls. Traz contrato_id.", input_schema: { type: "object", properties: { filtro: { type: "string", enum: ["ativos", "vencidos", "vencendo_30", "renovados", "nao_renovaram", "cancelados", "todos"] }, nome: { type: "string" } }, required: ["filtro"] } },
   { name: "despesas", description: "Despesas de um mês (sem parâmetros = mês atual). Traz lancamento_id, descrição, categoria, grupo, valor, vencimento e se está paga.", input_schema: { type: "object", properties: { ano: { type: "integer" }, mes: { type: "integer" }, filtro: { type: "string", enum: ["a_pagar", "pagas", "todas"] }, busca: { type: "string" } } } },
   { name: "cartoes", description: "Fatura projetada de cada cartão no mês atual e o total já comprometido nos próximos 6 meses.", input_schema: { type: "object", properties: {} } },
+  { name: "agenda", description: "Google Agenda do dono. acao=listar traz os compromissos entre duas datas (sem datas = hoje) com evento_id, horário, link do Meet e o mentorado ligado ao evento. acao=livre traz os horários livres de um dia, entre 08:00 e 20:00.", input_schema: { type: "object", properties: { acao: { type: "string", enum: ["listar", "livre"] }, de: { type: "string", description: "AAAA-MM-DD" }, ate: { type: "string", description: "AAAA-MM-DD" }, dia: { type: "string", description: "AAAA-MM-DD" }, duracao_min: { type: "integer" } }, required: ["acao"] } },
   { name: "linha_do_tempo", description: "O que aconteceu nos últimos dias: baixas, renovações, cobranças, mudanças vindas da planilha.", input_schema: { type: "object", properties: { dias: { type: "integer" } } } },
   { name: "propor_acao", description: "Única forma de alterar dados. NÃO grava nada: registra a proposta, e o sistema pede a confirmação do usuário com botões. Use os ids vindos das outras ferramentas. Depois de chamar, diga em uma frase o que vai ser feito e peça a confirmação; nunca diga que já foi feito.",
     input_schema: { type: "object", properties: {
-      tipo: { type: "string", enum: ["baixar_parcela", "desfazer_baixa", "lancar_despesa", "marcar_despesa_paga", "encerrar_contrato", "renovar_contrato"] },
+      tipo: { type: "string", enum: ["baixar_parcela", "desfazer_baixa", "lancar_despesa", "marcar_despesa_paga", "encerrar_contrato", "renovar_contrato", "criar_reuniao", "remarcar_reuniao", "cancelar_reuniao"] },
+      titulo: { type: "string" }, inicio: { type: "string", description: "AAAA-MM-DDTHH:MM no horário de São Paulo" }, duracao_min: { type: "integer", description: "padrão 60" }, mentorado_id: { type: "string", description: "quando a reunião é com um mentorado (vem da ferramenta contratos)" }, convidados: { type: "array", items: { type: "string" }, description: "e-mails para convidar" }, meet: { type: "boolean", description: "padrão true" }, evento_id: { type: "string" },
       parcela_id: { type: "string" }, data: { type: "string", description: "AAAA-MM-DD; padrão hoje" }, valor: { type: "number", description: "baixa parcial ou valor da despesa" },
       lancamento_id: { type: "string" }, pago: { type: "boolean" }, descricao: { type: "string" }, categoria: { type: "string", description: "nome exato de uma categoria de despesa do painel" },
       contrato_id: { type: "string" }, situacao: { type: "string", enum: ["nao_renovou", "cancelou"] },
@@ -133,7 +149,7 @@ async function usarFerramenta(D: Reg, contato: Reg, nome: string, inp: Reg): Pro
   if (nome === "contratos") {
     const q = norm(inp.nome), f = inp.filtro;
     const L = D.contratos.map((c: Reg) => { const m = mentoradoDe(D, c); if (!m) return null; const ps = D.parcelas.filter((p: Reg) => p.contrato_id === c.id), rec = ps.filter((p: Reg) => p.pago).reduce((s: number, p: Reg) => s + +p.valor, 0);
-      return { contrato_id: c.id, mentorado: m.nome, produto: nomeProd(D, c.produto_id), situacao: c.status, valor_total: +c.valor_total, recebido: +rec.toFixed(2), saldo: +Math.max(0, +c.valor_total - rec).toFixed(2), inicio: c.data_inicio, fim: c.data_fim, dias_para_o_fim: diasAte(c.data_fim), calls: `${m.calls_feitas || 0}/${m.calls_contratadas || 0}`, e_renovacao: !!c.renovacao_de }; })
+      return { contrato_id: c.id, mentorado_id: m.id, mentorado: m.nome, produto: nomeProd(D, c.produto_id), situacao: c.status, valor_total: +c.valor_total, recebido: +rec.toFixed(2), saldo: +Math.max(0, +c.valor_total - rec).toFixed(2), inicio: c.data_inicio, fim: c.data_fim, dias_para_o_fim: diasAte(c.data_fim), calls: `${m.calls_feitas || 0}/${m.calls_contratadas || 0}`, e_renovacao: !!c.renovacao_de }; })
       .filter((x: Reg | null): x is Reg => !!x).filter((x: Reg) => !q || norm(x.mentorado).includes(q))
       .filter((x: Reg) => f === "todos" ? true : f === "ativos" ? x.situacao === "ativo" : f === "vencidos" ? x.situacao === "ativo" && x.dias_para_o_fim < 0 : f === "vencendo_30" ? x.situacao === "ativo" && x.dias_para_o_fim >= 0 && x.dias_para_o_fim <= 30 : f === "renovados" ? x.situacao === "renovado" : f === "nao_renovaram" ? x.situacao === "concluido" : x.situacao === "cancelado");
     return { quantidade: L.length, contratos: L.sort((a: Reg, b: Reg) => a.dias_para_o_fim - b.dias_para_o_fim).slice(0, 40) };
@@ -147,6 +163,12 @@ async function usarFerramenta(D: Reg, contato: Reg, nome: string, inp: Reg): Pro
   if (nome === "cartoes") {
     const meses = [0, 1, 2, 3, 4, 5].map((i) => { const d = new Date(Date.UTC(H.ano, H.mes + i, 1)); return { mes: `${MESES[d.getUTCMonth()]}/${d.getUTCFullYear()}`, total: +D.cartoes.reduce((s: number, c: Reg) => s + faturaCartao(D, c.id, d.getUTCFullYear(), d.getUTCMonth()), 0).toFixed(2) }; });
     return { cartoes: D.cartoes.map((c: Reg) => ({ nome: c.nome, vence_dia: c.dia_vencimento, fatura_do_mes: +faturaCartao(D, c.id, H.ano, H.mes).toFixed(2) })).filter((c: Reg) => c.fatura_do_mes > 0), comprometido_por_mes: meses, observacao: "As faturas efetivas do mês aparecem nas despesas (grupo Cartões), vindas da planilha." };
+  }
+  if (nome === "agenda") {
+    if (!(await agendaLigada())) return { erro: "O Google Agenda ainda não está conectado. A conexão é feita no painel, aba Agenda." };
+    if (inp.acao === "livre") return await agenda({ acao: "livre", dia: inp.dia || H.iso, duracao_min: inp.duracao_min || 60 });
+    const de = inp.de || inp.dia || H.iso, ate = inp.ate || de, r = await agenda({ acao: "listar", de: `${de}T00:00:00`, ate: `${ate}T23:59:59` });
+    return { de, ate, eventos: (r.eventos || []).map((e: Reg) => ({ evento_id: e.id, titulo: e.titulo, inicio: e.inicio, fim: e.fim, dia_inteiro: e.dia_inteiro, meet: e.meet || null, mentorado: e.mentorado?.nome || null, calls_do_mentorado: e.mentorado?.calls || null })) };
   }
   if (nome === "linha_do_tempo") { const { data } = await sb.from("eventos").select("criado_em,origem,tipo,titulo").gte("criado_em", new Date(Date.now() - (inp.dias || 3) * 86400000).toISOString()).order("criado_em", { ascending: false }).limit(25); return data || []; }
   if (nome === "propor_acao") return await proporAcao(D, contato, inp);
@@ -181,6 +203,23 @@ async function proporAcao(D: Reg, contato: Reg, a: Reg) {
     a.entrada = Math.max(0, +a.entrada || 0); if (a.entrada > a.valor_total) return { erro: "a entrada é maior que o valor total" }; a.meses = Math.max(1, Math.round(+a.meses || c.meses || 6)); a.parcelas = Math.max(0, Math.round(a.parcelas ?? c.parcelas_saldo ?? 5)); a.data_inicio = dataOk(a.data_inicio);
     if (a.valor_total - a.entrada > 0 && !a.parcelas) return { erro: "informe em quantas parcelas fica o saldo" };
     resumo = `Renovar ${mentoradoDe(D, c)?.nome}: contrato novo de ${rs(a.valor_total)} · entrada ${rs(a.entrada)} em ${dbr(a.data_inicio)} + ${a.parcelas}x de ${rs(a.parcelas ? (a.valor_total - a.entrada) / a.parcelas : 0)} · ${a.meses} meses · o contrato atual vira “renovado”`;
+  } else if (a.tipo === "criar_reuniao" || a.tipo === "remarcar_reuniao" || a.tipo === "cancelar_reuniao") {
+    if (!(await agendaLigada())) return { erro: "O Google Agenda ainda não está conectado. A conexão é feita no painel, aba Agenda." };
+    let atual: Reg | null = null;
+    if (a.tipo !== "criar_reuniao") { atual = await acharEvento(String(a.evento_id || "")); if (!atual) return { erro: "evento_id não encontrado; consulte a agenda primeiro" }; }
+    if (a.tipo === "cancelar_reuniao") resumo = `Cancelar na agenda: ${atual!.titulo} · ${dbr(atual!.inicio)} às ${String(atual!.inicio).slice(11, 16)}${(atual!.convidados || []).length ? " · os convidados são avisados" : ""}`;
+    else {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(a.inicio || ""))) return { erro: "informe inicio como AAAA-MM-DDTHH:MM (horário de São Paulo)" };
+      a.inicio = String(a.inicio).slice(0, 16); if (msSP(a.inicio) < Date.now() - 5 * 60000) return { erro: "esse horário já passou" };
+      const dur = a.duracao_min ? Math.max(15, Math.round(+a.duracao_min)) : atual ? Math.max(15, Math.round((Date.parse(atual.fim) - Date.parse(atual.inicio)) / 60000)) : 60;
+      a.fim = localSP(msSP(a.inicio) + dur * 60000);
+      const dia = a.inicio.slice(0, 10), doDia = await agenda({ acao: "listar", de: `${dia}T00:00:00`, ate: `${dia}T23:59:59` }), ini = msSP(a.inicio), fim = msSP(a.fim);
+      const cruza = (doDia.eventos || []).filter((e: Reg) => !e.dia_inteiro && e.id !== a.evento_id && Date.parse(e.inicio) < fim && Date.parse(e.fim) > ini);
+      const aviso = cruza.length ? ` · ATENÇÃO: cruza com ${cruza.map((e: Reg) => `${e.titulo} (${localSP(Date.parse(e.inicio)).slice(11)})`).join(", ")}` : "";
+      if (a.tipo === "remarcar_reuniao") { a.inicio_antigo = localSP(Date.parse(atual!.inicio)); a.fim_antigo = localSP(Date.parse(atual!.fim)); resumo = `Remarcar: ${atual!.titulo} · de ${dbr(atual!.inicio)} ${a.inicio_antigo.slice(11)} para ${dbr(dia)} das ${a.inicio.slice(11)} às ${a.fim.slice(11)}${aviso}`; }
+      else { const m = a.mentorado_id ? D.mentorados.find((x: Reg) => x.id === a.mentorado_id) : null; a.titulo = String(a.titulo || (m ? `Call · ${m.nome}` : "Reunião")).slice(0, 120); a.convidados = (a.convidados || []).filter((e: unknown) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(e)));
+        resumo = `Marcar na agenda: ${a.titulo} · ${dbr(dia)} das ${a.inicio.slice(11)} às ${a.fim.slice(11)}${a.meet === false ? "" : " · com link do Meet"}${a.convidados.length ? ` · convidar ${a.convidados.join(", ")}` : ""}${aviso}`; }
+    }
   } else return { erro: "tipo de ação desconhecido" };
   await sb.from("assessor_pendentes").update({ estado: "expirada", resolvido_em: new Date().toISOString() }).eq("telefone", contato.telefone).eq("estado", "pendente");
   const { data, error } = await sb.from("assessor_pendentes").insert({ telefone: contato.telefone, acao: a, resumo }).select().single();
@@ -189,7 +228,7 @@ async function proporAcao(D: Reg, contato: Reg, a: Reg) {
 }
 
 async function executar(pend: Reg, contato: Reg): Promise<{ texto: string; eventoId?: string }> {
-  const a = pend.acao as Reg, H = hojeSP(); const titulo = pend.resumo; let tipo = "acao", desfazer: Reg | null = null, ref: Reg = {};
+  const a = pend.acao as Reg, H = hojeSP(); const titulo = pend.resumo; let tipo = "acao", desfazer: Reg | null = null, ref: Reg = {}, extra = "";
   const falha = (m: string) => { throw new Error(m); };
   if (a.tipo === "baixar_parcela") {
     const { data: p } = await sb.from("parcelas").select("*").eq("id", a.parcela_id).single(); if (!p || p.pago) falha("a parcela já não está em aberto");
@@ -219,10 +258,15 @@ async function executar(pend: Reg, contato: Reg): Promise<{ texto: string; event
     if (ps.length) await sb.from("parcelas").insert(ps);
     await sb.from("contratos").update({ status: "renovado", encerrado_em: H.iso }).eq("id", old.id); await sb.from("mentorados").update({ status: "ativo" }).eq("id", old.mentorado_id);
     tipo = "renovacao"; ref = { ref_tabela: "contratos", ref_id: c.id }; desfazer = { tipo: "renovacao", novo_id: c.id, antigo_id: old.id, status_antigo: old.status };
-  }
+  } else if (a.tipo === "criar_reuniao") {
+    const r = await agenda({ acao: "criar", titulo: a.titulo, inicio: a.inicio, fim: a.fim, convidados: a.convidados || [], meet: a.meet !== false, mentorado_id: a.mentorado_id || "" });
+    tipo = "agenda"; desfazer = { tipo: "reuniao", id: r.evento.id }; extra = r.evento.meet ? `\n${r.evento.meet}` : "";
+  } else if (a.tipo === "remarcar_reuniao") {
+    await agenda({ acao: "mover", id: a.evento_id, inicio: a.inicio, fim: a.fim }); tipo = "agenda"; desfazer = { tipo: "reuniao_movida", id: a.evento_id, inicio: a.inicio_antigo, fim: a.fim_antigo };
+  } else if (a.tipo === "cancelar_reuniao") { await agenda({ acao: "cancelar", id: a.evento_id }); tipo = "agenda"; }
   const { data: ev } = await sb.from("eventos").insert({ origem: "assessor", tipo, titulo, detalhe: { telefone: contato.telefone, por: contato.nome }, desfazer, ...ref }).select().single();
   await sb.from("assessor_pendentes").update({ estado: "confirmada", resolvido_em: new Date().toISOString() }).eq("id", pend.id);
-  return { texto: `*Feito.* ${titulo}.${a.tipo === "baixar_parcela" ? "\nO faturamento do mês não muda: ele vem da planilha." : ""}`, eventoId: desfazer ? ev?.id : undefined };
+  return { texto: `*Feito.* ${titulo}.${extra}${a.tipo === "baixar_parcela" ? "\nO faturamento do mês não muda: ele vem da planilha." : ""}`, eventoId: desfazer ? ev?.id : undefined };
 }
 async function ajustarMentorado(id: string) {
   const { data: cs } = await sb.from("contratos").select("status").eq("mentorado_id", id); if (!cs) return;
@@ -241,6 +285,8 @@ async function desfazerEvento(contato: Reg, eventoId?: string): Promise<string> 
   else if (z.tipo === "lancamento") await sb.from("lancamentos").delete().eq("id", z.id);
   else if (z.tipo === "pago") await sb.from("lancamentos").update({ pago: z.pago }).eq("id", z.id);
   else if (z.tipo === "contrato") { const { data: c } = await sb.from("contratos").update({ status: "ativo", encerrado_em: null }).eq("id", z.id).select().single(); if (c) await ajustarMentorado(c.mentorado_id); }
+  else if (z.tipo === "reuniao") await agenda({ acao: "cancelar", id: z.id });
+  else if (z.tipo === "reuniao_movida") await agenda({ acao: "mover", id: z.id, inicio: z.inicio, fim: z.fim });
   else if (z.tipo === "renovacao") { const { data: pagas } = await sb.from("parcelas").select("id,pago,vencimento").eq("contrato_id", z.novo_id); if ((pagas || []).filter((p) => p.pago).length > 1) return "A renovação já tem parcelas baixadas depois da entrada. Desfaça pelo painel para não perder nada.";
     await sb.from("parcelas").delete().eq("contrato_id", z.novo_id); await sb.from("contratos").delete().eq("id", z.novo_id); await sb.from("contratos").update({ status: z.status_antigo || "ativo", encerrado_em: null }).eq("id", z.antigo_id); }
   await sb.from("eventos").update({ desfeito_em: new Date().toISOString() }).eq("id", ev.id);
@@ -249,7 +295,7 @@ async function desfazerEvento(contato: Reg, eventoId?: string): Promise<string> 
 }
 
 // ------------------------------------------------------------------ cérebro
-function sistema(contato: Reg) {
+function sistema(contato: Reg, temAgenda: boolean) {
   const H = hojeSP(), prefs = contato.prefs || {};
   return `Você é o Assessor Rhino, o assessor financeiro e de agenda do Consulting Framework / RHINO (mentoria para profissionais de fitness; produtos: Consulting Framework, Mentoria RHINO, Consultoria RHINO). Você conversa pelo WhatsApp com ${contato.nome}${contato.papel === "dono" ? ", dono do negócio" : ", da equipe"}.
 Hoje é ${["domingo","segunda","terça","quarta","quinta","sexta","sábado"][H.sem]}, ${dbr(H.iso)}, ${H.hora} em São Paulo.
@@ -265,7 +311,8 @@ Regras do negócio que você precisa respeitar:
 - O faturamento de cada mês vem da planilha da Ana. Dar baixa em parcela só tira da cobrança; não soma de novo. Diga isso quando alguém tiver medo de duplicar.
 - Para QUALQUER alteração use a ferramenta propor_acao e peça a confirmação. Você nunca grava nada sozinho e nunca diz "feito" antes de o sistema confirmar.
 - Você não movimenta dinheiro, não é contador nem consultor de investimentos. Em dúvida fiscal, diga para validar com o contador.
-- Reuniões e agenda ainda não estão ligadas: se pedirem, explique que essa parte entra quando o Google Agenda for conectado.`;
+- Você não manda mensagem para alunos. A cobrança com um toque fica no painel (Recebíveis → Quem me deve); não ofereça "preparar cobrança".
+${temAgenda ? `- Agenda: use a ferramenta agenda para ver compromissos ("o que eu tenho hoje?") e horários livres. Para marcar, remarcar ou cancelar use propor_acao (criar_reuniao, remarcar_reuniao, cancelar_reuniao). Horários sempre de São Paulo; resolva "quinta", "amanhã" a partir da data de hoje. Se a reunião for com um mentorado, ache o mentorado_id com a ferramenta contratos e passe junto: é assim que a call entra na contagem dele. Se o resumo da proposta avisar que cruza com outro compromisso, diga isso e ofereça outro horário livre.` : `- O Google Agenda ainda não está conectado. Se pedirem agenda ou reunião, diga que a conexão é feita no painel, aba Agenda, e leva 5 minutos.`}`;
 }
 async function chamarClaude(system: string, messages: Reg[], tools: Reg[]) {
   const r = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: { "content-type": "application/json", "x-api-key": env("ANTHROPIC_API_KEY"), "anthropic-version": "2023-06-01" }, body: JSON.stringify({ model: MODELO, max_tokens: 1200, system, messages, tools }) });
@@ -274,7 +321,7 @@ async function chamarClaude(system: string, messages: Reg[], tools: Reg[]) {
 }
 async function pensar(contato: Reg, conteudo: unknown): Promise<string> {
   if (!env("ANTHROPIC_API_KEY")) return "Falta a chave da IA (ANTHROPIC_API_KEY) nos segredos do Supabase.";
-  const D = await carregar();
+  const D = await carregar(), temAgenda = await agendaLigada();
   const { data: hist } = await sb.from("assessor_mensagens").select("direcao,texto").eq("telefone", contato.telefone).not("texto", "is", null).order("criado_em", { ascending: false }).limit(10);
   const msgs: Reg[] = [];
   for (const h of (hist || []).reverse()) { const role = h.direcao === "in" ? "user" : "assistant"; if (msgs.length && msgs[msgs.length - 1].role === role) msgs[msgs.length - 1].content += "\n" + h.texto; else msgs.push({ role, content: h.texto }); }
@@ -282,7 +329,7 @@ async function pensar(contato: Reg, conteudo: unknown): Promise<string> {
   if (msgs.length && msgs[msgs.length - 1].role === "user") msgs.pop(); // a mensagem atual já foi gravada no histórico
   msgs.push({ role: "user", content: conteudo });
   for (let volta = 0; volta < 6; volta++) {
-    const resp = await chamarClaude(sistema(contato), msgs, TOOLS);
+    const resp = await chamarClaude(sistema(contato, temAgenda), msgs, TOOLS);
     const usos = (resp.content || []).filter((b: Reg) => b.type === "tool_use");
     if (resp.stop_reason !== "tool_use" || !usos.length) return (resp.content || []).filter((b: Reg) => b.type === "text").map((b: Reg) => b.text).join("\n").trim() || "Não consegui montar a resposta. Tenta de novo?";
     msgs.push({ role: "assistant", content: resp.content });
@@ -397,8 +444,11 @@ async function montarRelatorio(tipo: string, D: Reg, contato: Reg): Promise<stri
   if (tipo === "bom_dia") {
     const em3 = somaIso(H.iso, 3), contas = D.lancamentos.filter((l: Reg) => l.tipo === "despesa" && !l.pago && String(l.data) >= H.iso && String(l.data) <= em3).sort((a: Reg, b: Reg) => String(a.data).localeCompare(String(b.data)));
     const entram = abertas(D).filter((p: Reg) => p.d >= 0 && p.d <= 3), s = R.semana_atual!, pend = pendenciasTexto(D);
+    let agendaHoje = "";
+    try { if (await agendaLigada()) { const r = await agenda({ acao: "listar", de: `${H.iso}T00:00:00`, ate: `${H.iso}T23:59:59` }); const L = (r.eventos || []).filter((e: Reg) => !e.dia_inteiro);
+      agendaHoje = L.length ? `*Agenda de hoje*\n${L.slice(0, 8).map((e: Reg) => `• ${localSP(Date.parse(e.inicio)).slice(11)} ${e.titulo}`).join("\n")}` : "*Agenda de hoje:* nenhum compromisso marcado."; } } catch (_) { agendaHoje = ""; }
     const { data: evs } = await sb.from("eventos").select("titulo").eq("origem", "planilha").gte("criado_em", new Date(Date.now() - 24 * 3600 * 1000).toISOString()).order("criado_em", { ascending: false }).limit(3);
-    return [`*Bom dia, ${nome}.* ${["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"][H.sem]}, ${dbr(H.iso)}.`,
+    return [`*Bom dia, ${nome}.* ${["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"][H.sem]}, ${dbr(H.iso)}.`, agendaHoje,
       `*${MESES[H.mes][0].toUpperCase() + MESES[H.mes].slice(1)} até aqui*\nEntrou ${rsc(R.recebido)} · saiu ${rsc(R.despesas_total)}\nResultado ${rsc(R.resultado)}${R.margem_pct != null ? ` (${R.margem_pct.toFixed(0)}%)` : ""}${R.meta ? ` · ${R.pct_da_meta}% da meta` : ""}`,
       `*Semana ${s.n}* (${s.de} a ${s.ate}): ${rsc(s.valor)} de ${rsc(s.alvo)} · ${s.pct.toFixed(0)}%`,
       contas.length ? `*Vence até ${dbr(em3)}*\n${contas.slice(0, 6).map((l: Reg) => `• ${dbr(l.data)} ${l.descricao || l.categoria} · ${rsc(l.valor)}`).join("\n")}${contas.length > 6 ? `\n• e mais ${contas.length - 6}` : ""}` : "*Contas:* nada vence nos próximos 3 dias.",
