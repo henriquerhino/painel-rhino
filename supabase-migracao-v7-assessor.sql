@@ -137,3 +137,34 @@ create policy acesso_logado on public.assessor_mensagens for select to authentic
 create policy acesso_logado on public.assessor_pendentes for select to authenticated using (true);
 insert into public.assessor_segredos(chave,valor) values ('cron', replace(gen_random_uuid()::text||gen_random_uuid()::text,'-',''))
   on conflict (chave) do nothing;
+
+-- ---------- agendador (aplicado como v7b, v7c e v7d) ----------
+-- Precisa das extensões pg_cron e pg_net (Database -> Extensions no Supabase).
+create extension if not exists pg_cron with schema pg_catalog;
+create extension if not exists pg_net with schema extensions;
+
+-- chama uma Edge Function do projeto com o segredo interno (só o banco usa)
+create or replace function public.rhino_chamar(p_funcao text, p_corpo jsonb default '{}'::jsonb)
+returns bigint language plpgsql security definer set search_path = public, extensions, net as $$
+declare v_seg text; v_id bigint;
+begin
+  select valor into v_seg from public.assessor_segredos where chave='cron';
+  select net.http_post(
+    url := 'https://fcwxkelokmqwmivjembv.supabase.co/functions/v1/' || p_funcao,
+    headers := jsonb_build_object('Content-Type','application/json','x-rhino-cron',v_seg),
+    body := p_corpo, timeout_milliseconds := 60000) into v_id;
+  return v_id;
+end $$;
+revoke all on function public.rhino_chamar(text,jsonb) from public, anon, authenticated;
+revoke execute on function public.gravar_fechamento(text, boolean) from authenticated;
+
+-- horários em UTC (São Paulo = UTC-3)
+select cron.schedule('rhino-planilha-horaria',  '7 * * * *',    $$select public.rhino_chamar('planilha')$$);
+select cron.schedule('rhino-fechamento-mensal', '10 9 1 * *',   $$select public.gravar_fechamento()$$);
+select cron.schedule('rhino-assessor-bom-dia',  '30 10 * * 1-6', $$select public.rhino_chamar('assessor', '{"rotina":"bom_dia"}'::jsonb)$$); -- 07:30 seg a sáb
+select cron.schedule('rhino-assessor-semana',   '0 21 * * 5',   $$select public.rhino_chamar('assessor', '{"rotina":"semana"}'::jsonb)$$);  -- sexta 18:00
+select cron.schedule('rhino-assessor-mes',      '40 10 1 * *',  $$select public.rhino_chamar('assessor', '{"rotina":"mes"}'::jsonb)$$);     -- dia 1, 07:40
+select cron.schedule('rhino-limpa-http',        '15 6 * * *',   $$delete from net._http_response where created < now() - interval '7 days'$$);
+
+-- a tabela de backup dos lançamentos manuais fica fechada (só o servidor lê)
+alter table if exists public.lancamentos_backup_20260918 enable row level security;

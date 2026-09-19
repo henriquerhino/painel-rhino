@@ -28,6 +28,19 @@ As despesas do mês ficam em **grupos** (Cartões, Despesas fixas, Colaboradores
 ### Cartões — edição segura
 “Ver compras” lista parcelamentos e assinaturas **só para leitura**. **Editar** na linha abre um bloco com todos os campos (descrição, valor, total de parcelas, mês da 1ª parcela, categoria, cartão, escopo; assinatura: valor, cartão, ativa/pausada) e só grava em **Salvar**. Compras quitadas/futuras e assinaturas pausadas ficam em “fora da fatura deste mês”.
 
+### Dashboard — o que pede ação hoje
+- **Pendências de hoje**: uma lista só, com o botão que resolve cada item — contratos vencidos ou vencendo, parcelas vencidas (e quantas batem com a planilha), contas atrasadas ou que vencem em 3 dias, fixos não lançados, fatura de cartão chegando e itens da planilha muito acima da média de 3 meses.
+- **Comparativo e projeção**: despesas contra o mês anterior, quanto o mês anterior fechou, "se o que falta entrar" (recebido + parcelas que ainda vencem, descontando o que a aba de alunos já mostra como pago) e o **saldo projetado do mês**.
+- **Linha do tempo**: baixas, renovações, encerramentos, cobranças, mudanças de receita vindas da planilha e o que o assessor fez (tabela `eventos`).
+
+### Cobrança com 1 toque
+Em Recebíveis, **Quem me deve** agrupa as parcelas vencidas por pessoa. **Cobrar no WhatsApp** abre a conversa com a mensagem pronta (texto e chave PIX em Configurações; o WhatsApp do aluno fica no cadastro dele). O painel anota a data da cobrança; quem envia é você.
+
+### Assessor no WhatsApp e rotinas do servidor
+- Função `planilha`: a mesma sincronização do painel, rodando no servidor de hora em hora (pg_cron).
+- `gravar_fechamento()`: no dia 1 grava o fechamento do mês anterior em `fechamentos`.
+- Função `assessor`: WhatsApp oficial da Meta. Responde com os números do painel, propõe ações e só grava depois do **Confirmar** (com **Desfazer** por 24 h), lê foto de comprovante ou boleto e manda os relatórios automáticos. Só atende os números autorizados em Configurações. Passo a passo para ligar: [ASSESSOR-WHATSAPP.md](ASSESSOR-WHATSAPP.md).
+
 ### Lançamentos
 Resumo do período (entradas, saídas, resultado, quantidade), atalhos **Tudo · Entradas · Saídas · A pagar · Da planilha · Digitados aqui**, busca, e o filtro de período/grupo + relatório em PDF recolhido. Linhas da planilha têm valor travado e não têm ✕.
 
@@ -62,6 +75,7 @@ Resumo do período (entradas, saídas, resultado, quantidade), atalhos **Tudo ·
 1. **Supabase**: rode, no SQL Editor, os arquivos de migração que ainda não rodou:
    - `supabase-migracao-v5-planilha.sql` — `origem` e `origem_id` em `lancamentos` (sincronização com a planilha);
    - `supabase-migracao-v6-renovacao.sql` — `renovacao_de` e `encerrado_em` em `contratos` (renovação e encerramento). *Já aplicada no projeto em 18/09/2026.*
+   - `supabase-migracao-v7-assessor.sql` — cobrança, `eventos`, `fechamentos`, tabelas do assessor e os agendamentos. *Já aplicada.* O código das funções está em `supabase/functions/`.
 2. **GitHub Pages**: suba o `index.html` (Add file → Upload files → Commit). O site atualiza em ~1 minuto.
 3. Abra o painel, entre, e confira no Dashboard o status **“Planilha sincronizada às …”**. Em *Configurações → Planilha do Google* estão o ID, as abas e a última sincronização.
 
@@ -84,6 +98,6 @@ O site no GitHub Pages é público, mas os dados só aparecem depois do login (S
   - Despesas: `secaoDespesas` / `linhaDespesa` (lista segmentada). Cartões: `linhaCompra` / `linhaAssinatura` / `salvarCompra` / `salvarAssinatura`.
 - Bloco **PLANILHA**: `csvParse`, `lerFinanceira`, `gravarPlanilha`, `sincronizarPlanilha`, e `lerAlunos` / `lerAbaAlunos` (aba de alunos, só leitura).
 
-Tabelas no Supabase: `config, produtos, mentorados, contratos, parcelas, lancamentos, recorrencias, cartoes, parcelamentos, assinaturas, metas_mes, investimentos, investimentos_hist, categorias, analises`. A tabela `repasses` (sociedade encerrada) não é mais usada pelo painel.
+Tabelas no Supabase: `config, produtos, mentorados, contratos, parcelas, lancamentos, recorrencias, cartoes, parcelamentos, assinaturas, metas_mes, investimentos, investimentos_hist, categorias, analises, eventos, fechamentos, assessor_contatos, assessor_mensagens, assessor_pendentes, assessor_segredos` (esta última só o servidor lê). A tabela `repasses` (sociedade encerrada) não é mais usada pelo painel.
 
 `app.html` é uma versão antiga e não é usada pelo site.
