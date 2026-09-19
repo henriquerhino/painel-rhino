@@ -426,11 +426,14 @@ async function processarMensagem(m: Reg) {
   }
 }
 async function assinaturaOk(req: Request, corpo: string) {
-  const seg = env("WHATSAPP_APP_SECRET"), ass = req.headers.get("x-hub-signature-256") || ""; if (!seg || !ass.startsWith("sha256=")) return false;
+  const seg = env("WHATSAPP_APP_SECRET").trim(), ass = req.headers.get("x-hub-signature-256") || ""; if (!seg || !ass.startsWith("sha256=")) return false;
   const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(seg), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const mac = new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode(corpo)));
   const hex = [...mac].map((b) => b.toString(16).padStart(2, "0")).join(""), dada = ass.slice(7);
-  if (hex.length !== dada.length) return false; let dif = 0; for (let i = 0; i < hex.length; i++) dif |= hex.charCodeAt(i) ^ dada.charCodeAt(i); return dif === 0;
+  let dif = hex.length === dada.length ? 0 : 1; for (let i = 0; i < Math.min(hex.length, dada.length); i++) dif |= hex.charCodeAt(i) ^ dada.charCodeAt(i);
+  // pista para diagnóstico, sem revelar o segredo: a chave secreta de um app da Meta tem 32 caracteres de 0-9 e a-f
+  if (dif !== 0) console.error("assinatura da Meta não confere", { tamanho_da_chave: seg.length, formato_esperado: /^[0-9a-f]{32}$/.test(seg) });
+  return dif === 0;
 }
 
 // ------------------------------------------------------------------ relatórios automáticos
