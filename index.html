@@ -2660,12 +2660,26 @@ function verAgenda(){
   for(let i=0;i<7;i++){const d=new Date(ini);d.setDate(d.getDate()+i);const k=iso(d), doDia=evs.filter(e=>String(e.dia_inteiro?e.inicio:iso(new Date(e.inicio))).slice(0,10)===k);
     if(!doDia.length&&k!==hojeIso)continue;
     h+=`<div class="lsec" style="margin-top:12px${k===hojeIso?';border-color:rgba(255,255,255,.35)':''}"><div class="lsec-h" style="cursor:default"><span class="pt" style="background:${k===hojeIso?'#fff':'var(--faint)'}"></span><span class="nm"><b>${DIAS_SEM[d.getDay()]}, ${dbr(k)}${k===hojeIso?' · hoje':''}</b><span>${doDia.length?`${doDia.length} ${plural(doDia.length,'compromisso','compromissos')}`:'nada marcado'}</span></span></div>
-      ${doDia.map(e=>`<div class="lrow p3"><span class="st ${e.mentorado?'ok':'inf'}"></span><div class="ds"><b>${e.dia_inteiro?'dia inteiro':`${horaDe(e.inicio)} – ${horaDe(e.fim)}`} · ${esc(e.titulo)}</b><span>${e.mentorado?`${esc(e.mentorado.nome)} · calls ${esc(e.mentorado.calls)}`:'sem mentorado ligado'}${e.criado_pelo_assessor?' · marcado pelo assessor':''}</span></div><div class="ac">${e.meet?`<a class="btn xs" href="${esc(e.meet)}" target="_blank" rel="noopener">Meet</a>`:''}${e.link?`<a class="btnv xs" href="${esc(e.link)}" target="_blank" rel="noopener">Abrir</a>`:''}</div></div>`).join('')}</div>`;}
+      ${doDia.map(e=>`<div class="lrow p3"><span class="st ${e.mentorado?'ok':'inf'}"></span><div class="ds"><b>${e.dia_inteiro?'dia inteiro':`${horaDe(e.inicio)} – ${horaDe(e.fim)}`} · ${esc(e.titulo)}</b><span>${e.mentorado?`${esc(e.mentorado.nome)} · calls ${esc(e.mentorado.calls)}${e.mentorado.via==='vinculo'?' · ligado por você':''}`:'sem mentorado ligado'}${e.criado_pelo_assessor?' · marcado pelo assessor':''}</span></div><div class="ac">${e.dia_inteiro?'':e.mentorado?(e.mentorado.via==='vinculo'?`<button class="btnv xs" data-desligar="${esc(e.chave)}">Desligar</button>`:''):`<select class="ed" style="max-width:190px" data-ligar="${esc(e.chave)}" aria-label="Ligar a um mentorado"><option value="">ligar a um mentorado…</option>${mentoradosAtivos().map(m=>`<option value="${m.id}">${esc(m.nome)}</option>`).join('')}</select>`}${e.meet?`<a class="btn xs" href="${esc(e.meet)}" target="_blank" rel="noopener">Meet</a>`:''}${e.link?`<a class="btnv xs" href="${esc(e.link)}" target="_blank" rel="noopener">Abrir</a>`:''}</div></div>`).join('')}</div>`;}
   if(!evs.length)h+='<div class="cartao vazio" style="margin-top:12px">Nenhum compromisso nesta semana.</div>';
   const sem=semCallHaMuito();
   if(sem.length)h+=`<h2>Sem call há mais de 30 dias <span class="rotulo">${sem.length} ${plural(sem.length,'mentorado','mentorados')} com contrato ativo</span></h2><div class="lsec">${sem.slice(0,12).map(x=>`<div class="lrow p3"><span class="st al"></span><div class="ds"><b>${esc(x.m.nome)}</b><span>${x.ult?`última call em ${dbr(x.ult)}`:'nenhuma call contada ainda'} · calls ${x.m.calls_feitas||0}/${x.m.calls_contratadas||0}</span></div><span class="tg">${tag(`${x.d} dias`,'al')}</span></div>`).join('')}</div>`;
-  h+=`<p class="nota">Uma call entra na contagem do mentorado quando o compromisso já aconteceu e o título traz o nome dele (nome inteiro, ou primeiro e último nome), ou quando foi o assessor que marcou. A conferência roda de 3 em 3 horas. Para marcar, remarcar ou cancelar, peça ao assessor no WhatsApp ou use o Google Agenda.</p>`;
+  h+=`<p class="nota">Uma call entra na contagem do mentorado quando o compromisso já aconteceu e está ligado a ele: pelo nome no título (nome inteiro, ou primeiro e último nome), porque foi o assessor que marcou, ou porque você ligou o título aqui (“ligar a um mentorado” vale para todos os compromissos com o mesmo título, como “Framework &lt;&gt; Willian”). A conferência roda de 3 em 3 horas. Para marcar, remarcar ou cancelar, peça ao assessor no WhatsApp ou use o Google Agenda.</p>`;
   el.innerHTML=h;
+  el.querySelectorAll('[data-ligar]').forEach(s=>s.onchange=()=>{if(s.value)vincularTitulo(s.dataset.ligar,s.value);});
+  el.querySelectorAll('[data-desligar]').forEach(b=>b.onclick=()=>desvincularTitulo(b.dataset.desligar));
+}
+/* Liga um título de compromisso (ex.: "Framework <> Willian") a um mentorado: vale para todos os compromissos com esse título. */
+const mentoradosAtivos=()=>D.mentorados.filter(m=>D.contratos.some(c=>c.mentorado_id===m.id&&c.status==='ativo')).sort((a,b)=>a.nome.localeCompare(b.nome));
+async function vincularTitulo(chave,mentorado_id){
+  const {error}=await sb.from('agenda_vinculos').upsert({chave,mentorado_id},{onConflict:'chave'});
+  if(error)return toast('Erro: '+error.message,true);
+  const m=D.mentorados.find(x=>x.id===mentorado_id);toast(`Compromissos com esse título agora contam como call de ${m?m.nome:'mentorado'}.`);carregarAgenda(true);
+}
+async function desvincularTitulo(chave){
+  const {error}=await sb.from('agenda_vinculos').delete().eq('chave',chave);
+  if(error)return toast('Erro: '+error.message,true);
+  toast('Ligação removida.');carregarAgenda(true);
 }
 </script>
 <script>

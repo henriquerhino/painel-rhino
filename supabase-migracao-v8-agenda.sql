@@ -18,3 +18,13 @@ $$;
 revoke all on function public.somar_call(uuid) from public, anon, authenticated;
 
 select cron.schedule('rhino-agenda-calls', '20 */3 * * *', $$select public.rhino_chamar('agenda', '{"acao":"contar_calls"}'::jsonb)$$);
+
+-- v9 · liga um título de compromisso a um mentorado (aplicada como "v9_agenda_vinculos")
+create table if not exists public.agenda_vinculos (
+  chave text primary key,
+  mentorado_id uuid not null references public.mentorados(id) on delete cascade,
+  criado_em timestamptz not null default now()
+);
+alter table public.agenda_vinculos enable row level security;
+drop policy if exists acesso_logado on public.agenda_vinculos;
+create policy acesso_logado on public.agenda_vinculos for all to authenticated using (true) with check (true);

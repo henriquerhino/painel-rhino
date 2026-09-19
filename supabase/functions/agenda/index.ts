@@ -34,15 +34,16 @@ async function falar(url: string, corpo: Reg) {
 async function ponte(corpo: Reg) { const s = await segredos(); if (!s.url || !s.chave) throw new Error("Google Agenda ainda não conectado"); return await falar(s.url, { ...corpo, chave: s.chave }); }
 
 /** Liga o evento a um mentorado: pelo id gravado pelo assessor ou pelo nome no título (nome inteiro, ou primeiro + último nome). */
-function casar(ev: Reg, mentorados: Reg[]) {
-  if (ev.mentorado_id) { const m = mentorados.find((x) => x.id === ev.mentorado_id); if (m) return m; }
+function casar(ev: Reg, mentorados: Reg[], vinculos: Reg[]) {
+  if (ev.mentorado_id) { const m = mentorados.find((x) => x.id === ev.mentorado_id); if (m) return { ...m, via: "assessor" }; }
+  const v = vinculos.find((x) => x.chave === norm(ev.titulo)); if (v) { const m = mentorados.find((x) => x.id === v.mentorado_id); if (m) return { ...m, via: "vinculo" }; }
   const t = " " + norm(ev.titulo) + " ";
   const c = mentorados.filter((m) => { const n = norm(m.nome), p = n.split(" ").filter((x) => x.length > 2); if (p.length < 2) return false; return t.includes(" " + n + " ") || (t.includes(" " + p[0] + " ") && t.includes(" " + p[p.length - 1] + " ")); });
-  return c.length === 1 ? c[0] : null;
+  return c.length === 1 ? { ...c[0], via: "nome" } : null;
 }
 async function listar(de: string, ate: string) {
-  const [{ eventos }, { data: mentorados }] = await Promise.all([ponte({ acao: "listar", de: comFuso(de), ate: comFuso(ate) }), sb.from("mentorados").select("id,nome,calls_feitas,calls_contratadas")]);
-  return (eventos as Reg[]).map((ev) => { const m = casar(ev, mentorados || []); return { ...ev, mentorado: m ? { id: m.id, nome: m.nome, calls: `${m.calls_feitas || 0}/${m.calls_contratadas || 0}` } : null }; });
+  const [{ eventos }, { data: mentorados }, { data: vinculos }] = await Promise.all([ponte({ acao: "listar", de: comFuso(de), ate: comFuso(ate) }), sb.from("mentorados").select("id,nome,calls_feitas,calls_contratadas"), sb.from("agenda_vinculos").select("chave,mentorado_id")]);
+  return (eventos as Reg[]).map((ev) => { const m = casar(ev, mentorados || [], vinculos || []); return { ...ev, chave: norm(ev.titulo), mentorado: m ? { id: m.id, nome: m.nome, via: m.via, calls: `${m.calls_feitas || 0}/${m.calls_contratadas || 0}` } : null }; });
 }
 async function livres(dia: string, duracaoMin: number) {
   const evs = (await listar(`${dia}T00:00:00`, `${dia}T23:59:59`)).filter((e) => !e.dia_inteiro).map((e) => [Date.parse(e.inicio), Date.parse(e.fim)]).sort((a, b) => a[0] - b[0]);
