@@ -256,6 +256,11 @@ h2 .dir{margin-left:auto;font-weight:500;font-size:13px}
 .ledit{padding:0 16px 14px}
 .ledit .ctr-edit{margin-top:0}
 .lrow .st.inf{background:var(--info)}
+.lrow.p3{grid-template-columns:10px minmax(0,1fr) auto}
+.lrow.p3 .tx{font-size:14px;color:var(--mut);line-height:1.45}
+.lrow.p3 .tx b{color:#fff;font-weight:600}
+.lrow .st.mal{background:var(--neg)}
+textarea{min-height:74px;line-height:1.45}
 .lfoot{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--ln2)}
 .lfoot .nota{flex:1;min-width:220px}
 .lfoot .ac{display:flex;gap:6px;flex-wrap:wrap}
@@ -391,6 +396,7 @@ td .sub{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:12px;co
   .op small{margin-left:auto;text-align:right}
   .ctr-banner{margin:-14px -14px 12px}
   .lrow,.lsec.conc .lrow{grid-template-columns:10px minmax(0,1fr) auto;row-gap:6px;padding:10px 12px}
+  .lrow.p3 .ac,.lrow.p3 .tg{grid-column:3;grid-row:1;align-self:center}
   .lrow .tg{grid-column:2;grid-row:2;justify-self:start;align-self:center}
   .lrow .ac{grid-column:2/-1;grid-row:2;justify-content:flex-end}
   .lsec.conc .lrow .tg{grid-row:auto}
@@ -515,7 +521,8 @@ let FORMS={};            // id do formulário -> aberto?
 let SYNC={estado:'ocioso',quando:null,resumo:'',erro:''};
 let ALUNOS={estado:'ocioso',linhas:[],erro:''};   // aba de alunos da planilha (conferência de Recebíveis)
 let D={config:{},produtos:[],mentorados:[],contratos:[],parcelas:[],lancamentos:[],recorrencias:[],
-  cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[],analises:[]};
+  cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[],analises:[],
+  eventos:[],fechamentos:[],assessor_contatos:[]};
 const G={};
 
 const rs=v=>'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -616,14 +623,14 @@ function irPara(a){
 
 async function carregar(){
   const t=['config','produtos','mentorados','contratos','parcelas','lancamentos','recorrencias','cartoes',
-    'parcelamentos','assinaturas','metas_mes','investimentos','investimentos_hist','categorias','analises'];
-  const r=await Promise.all(t.map(x=>sb.from(x).select('*')));
+    'parcelamentos','assinaturas','metas_mes','investimentos','investimentos_hist','categorias','analises','eventos','fechamentos','assessor_contatos'];
+  const r=await Promise.all(t.map(x=>x==='eventos'?sb.from(x).select('*').order('criado_em',{ascending:false}).limit(80):sb.from(x).select('*')));
   let faltou=[];
   r.forEach((res,i)=>{if(res.error){faltou.push(t[i]);return;} D[t[i]]=res.data||[];});
   D.config=(Array.isArray(D.config)&&D.config[0])||D.config||{};
   D.produtos.sort((a,b)=>(a.ordem||0)-(b.ordem||0));
   D.categorias.sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-  if(faltou.length) toast('Rode o supabase-migracao-v4.sql. Faltando: '+faltou.join(', '),true);
+  if(faltou.length) toast('Faltam tabelas no Supabase ('+faltou.join(', ')+'). Rode as migrações que estão no repositório (a última é a v7).',true);
   marca(); desenhar();
 }
 function marca(){
@@ -932,22 +939,33 @@ function verDash(){
   const chipsProd=Object.entries(cx.pp).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1])
     .map(([k,v],i)=>tag(`${esc(nomeProd(k))} ${rsc(v)}`,i===0?'ok':'')).join('');
   const nSem=semanas(ANO,MES).length;
+  // comparativo com o mês anterior: receita só compara em mês fechado (o mês em andamento ainda está entrando)
+  const dAnt=new Date(ANO,MES-1,1), cxAnt=caixaMes(dAnt.getFullYear(),dAnt.getMonth()), dpAnt=despesasMes(dAnt.getFullYear(),dAnt.getMonth()), nomeAnt=MESES[dAnt.getMonth()];
+  const proj=mesAtual()?projecaoMes():null;
+  const comparativo=[
+    mesAtual()?(cxAnt.total?tag(`${nomeAnt} fechou em ${rsc(cxAnt.total)}`):''):tagVariacao(cx.total,cxAnt.total,nomeAnt,true),
+    dpAnt.total?tag(`despesas ${dp.total>=dpAnt.total?'+':''}${((dp.total/dpAnt.total-1)*100).toFixed(0)}% vs ${nomeAnt}`,Math.abs(dp.total/dpAnt.total-1)<.03?'':dp.total>dpAnt.total?'mal':'ok'):'',
+    proj&&proj.falta>0?tag(`se o que falta entrar: ${rsc(proj.recebido)}`,'inf'):''
+  ].join('');
 
   let h=`<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center;padding-top:6px">${syncHtml()}${btnSync()}</div>
   <div style="margin-top:22px"><div class="faint" style="font-size:14px">Recebido em ${MESES[MES]} de ${ANO}</div>
     <div class="hero-num">${rs(cx.total)}</div>
     <div class="hero-sub">${M.total?`${pct.toFixed(0)}% da meta de <b>${rsc(M.total)}</b>${falta>0?` · faltam ${rsc(falta)}${mesAtual()?` em ${restam} dias`:''}`:' · meta batida'}`:'sem meta definida para o mês'}${cx.planilha?'':' · pelas parcelas baixadas no painel'}</div>
     ${chipsProd?`<div class="chips" style="margin-top:14px">${chipsProd}</div>`:''}
+    <div class="chips" style="margin-top:10px">${comparativo}</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><button class="btn" onclick="irPara('lanc')">Novo lançamento</button><button class="btnv" onclick="irPara('receb')">Ver recebíveis</button></div>
   </div>
+  ${blocoPendencias()}
 
   <h2>Meta semanal <span class="rotulo">${nSem} semanas em ${MESES[MES]}</span></h2>
   ${widgetSemana()}
   <p class="nota">O mês é dividido em blocos de 7 dias: meses de 28 dias têm 4 semanas, os outros têm 5 (a última mais curta). A meta da semana é proporcional aos dias; se você digitar um valor, ele fica fixo.${cx.planilha?' O total do mês vem da planilha, que não tem data por recebimento: as semanas mostram as parcelas baixadas no painel e o restante entra na semana atual.':''}</p>
 
-  <div class="grade g2" style="margin-top:22px">
+  <div class="grade ${proj?'g3':'g2'}" style="margin-top:22px">
     ${hero('Caixa da empresa',rsc(reservaTotal()),`${rsc(somaCaixa())} em conta + ${rsc(somaInvestido())} investido`,'big')}
     ${hero('Resultado do mês',rsc(res),`recebido menos despesas de ${rsc(dp.total)}${cx.total?` · margem ${(res/cx.total*100).toFixed(0)}%`:''}`,res>=0?'':'r')}
+    ${proj?hero('Saldo projetado do mês',rsc(proj.saldo),`recebido + ${rsc(proj.falta)} que ainda vence − todas as despesas · estimativa`,proj.saldo>=0?'':'r'):''}
   </div>
   <div class="grade g4" style="margin-top:12px">
     ${kpi('A receber em 30 dias',rsc(noM.reduce((s,p)=>s+ +p.valor,0)),`${noM.length} parcelas a vencer`,'',"irPara('receb')")}
@@ -983,6 +1001,8 @@ function verDash(){
         ||'<div class="vazio">Sem fatura projetada.</div>'}
       <div class="tot"><span>Total</span><span>${rs(fat)}</span></div></div></div>
   </div>
+
+  ${blocoLinhaTempo()}
 
   <h2>Agente financeiro <button class="btn sm dir" id="btIA" onclick="rodarIA()" ${IA.estado==='rodando'?'disabled':''}>
     ${IA.estado==='rodando'?'<span class="girando"></span>Analisando…':
@@ -1168,6 +1188,7 @@ function cardContrato(x){
       <div><label>Vence em</label><input type="date" value="${String(c.data_fim||'').slice(0,10)}" onchange="up('contratos','${c.id}','data_fim',this.value)"></div>
       <div><label>Calls feitas</label><input type="number" value="${m.calls_feitas||0}" onchange="upNum('mentorados','${m.id}','calls_feitas',this.value)"></div>
       <div><label>Calls contratadas</label><input type="number" value="${m.calls_contratadas||0}" onchange="upNum('mentorados','${m.id}','calls_contratadas',this.value)"></div>
+      <div><label>WhatsApp (para cobrança)</label><input inputmode="tel" placeholder="(11) 99999-9999" value="${esc(m.whatsapp||'')}" onchange="up('mentorados','${m.id}','whatsapp',this.value.replace(/\D/g,''))"></div>
       <div class="full" style="display:flex;justify-content:flex-end"><button class="btnv xs perigo" onclick="del('mentorados','${m.id}')">Apagar mentorado e contratos (remove o histórico)</button></div>
     </div>`;
   }
@@ -1248,11 +1269,15 @@ async function encerrarContrato(id,st){
     ? `${x.m.nome} não renovou.\n\nO contrato é encerrado e os ${rs(x.rec)} já faturados ficam guardados no histórico.${ab?`\n\nAinda há ${ab} parcela(s) em aberto (${rs(vab)}): elas continuam em Recebíveis para cobrança.`:''}\n\nConfirma?`
     : `${x.m.nome} cancelou.\n\nOs ${rs(x.rec)} já pagos continuam no histórico.${ab?`\n\nAs ${ab} parcela(s) em aberto (${rs(vab)}) deixam de ser cobradas e saem de Recebíveis.`:''}\n\nConfirma o cancelamento?`;
   if(!confirm(msg))return;
-  if(await gravarSituacao(id,st,{encerrado_em:iso(HOJE)})){CTR_SIT=null;CTR_RENOVA=null;toast(st==='concluido'?'Contrato encerrado. Histórico guardado.':'Contrato cancelado. Histórico guardado.');desenhar();}
+  if(await gravarSituacao(id,st,{encerrado_em:iso(HOJE)})){CTR_SIT=null;CTR_RENOVA=null;
+    registrar(st==='concluido'?'encerramento':'cancelamento',`${x.m.nome} ${st==='concluido'?'não renovou':'cancelou'} · ${rs(x.rec)} faturados ficam no histórico`,null,{tabela:'contratos',id});toast(st==='concluido'?'Contrato encerrado. Histórico guardado.':'Contrato cancelado. Histórico guardado.');desenhar();}
 }
 async function reativarContrato(id){
   if(!confirm('Reativar este contrato? Ele volta para a lista de ativos.'))return;
-  if(await gravarSituacao(id,'ativo',{encerrado_em:null})){toast('Contrato reativado.');desenhar();}
+  if(await gravarSituacao(id,'ativo',{encerrado_em:null})){
+    const c=D.contratos.find(k=>k.id===id), m=c?D.mentorados.find(k=>k.id===c.mentorado_id):null;
+    registrar('reativacao',`Contrato de ${m?.nome||'mentorado'} reativado`,null,{tabela:'contratos',id});
+    toast('Contrato reativado.');desenhar();}
 }
 async function mudaStatus(id,st){ if(await gravarSituacao(id,st,st==='ativo'?{encerrado_em:null}:{encerrado_em:iso(HOJE)})){toast('Situação atualizada.');desenhar();} }
 /* Renovou: cria o contrato novo do mesmo mentorado, ligado ao anterior, e marca o anterior como renovado. */
@@ -1282,6 +1307,7 @@ async function criarRenovacao(oldId){
   await gravarSituacao(oldId,'renovado',{encerrado_em:iso(HOJE)});
   if(m){const patch={status:'ativo'}; if(calls>0)patch.calls_contratadas=(+m.calls_contratadas||0)+calls;
     await sb.from('mentorados').update(patch).eq('id',m.id);Object.assign(m,patch);}
+  registrar('renovacao',`${m?m.nome:'Mentorado'} renovou · ${rs(valor)} · entrada ${rs(entrada)} + ${nParc}x`,null,{tabela:'contratos',id:c.id});
   CTR_RENOVA=null;CTR_SIT=null;CTR_ABERTO=c.id;FILTRO_CTR='ativos';BUSCA_CTR='';
   setTimeout(()=>{const el=document.getElementById('ctr_'+c.id);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},120);
   toast(`Renovação de ${m?m.nome:'mentorado'} criada: entrada ${rs(entrada)} e ${nParc} parcelas de ${rs(nParc?(valor-entrada)/nParc:0)}.`);
@@ -1350,6 +1376,7 @@ async function novoContrato(){
   D.mentorados.push(m);D.contratos.push(c);D.parcelas.push(...(pp||[]));
   ['cnNome','cnValor'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('cnEntrada').value='0';
+  registrar('contrato',`Contrato novo: ${nome} · ${rs(valor)}`,null,{tabela:'contratos',id:c.id});
   toast(`${nome} adicionado. Entrada ${rs(entrada)} e ${nParc} parcelas de ${rs(nParc?(valor-entrada)/nParc:0)}.`);
   FILTRO_CTR='ativos'; desenhar();
 }
@@ -1417,6 +1444,7 @@ async function baixarSugeridas(){
   const rsp=await Promise.all(sug.map(s=>sb.from('parcelas').update({pago:true,data_pagamento:String(s.p.vencimento).slice(0,10)}).eq('id',s.p.id)));
   const falha=rsp.find(r=>r.error); if(falha)toast('Erro: '+falha.error.message,true);
   sug.forEach((s,i)=>{if(!rsp[i].error){const p=D.parcelas.find(x=>x.id===s.p.id);if(p){p.pago=true;p.data_pagamento=String(s.p.vencimento).slice(0,10);}}});
+  registrar('baixa',`Conferência com a planilha: ${rsp.filter(r=>!r.error).length} parcelas baixadas · ${rs(sug.reduce((s,x)=>s+ +x.p.valor,0))}`);
   toast(`${rsp.filter(r=>!r.error).length} parcelas baixadas. Faturamento inalterado.`);desenhar();
 }
 
@@ -1457,6 +1485,8 @@ async function gravarBaixa(p,data,valor){
   const {error}=await sb.from('parcelas').update(patch).eq('id',p.id);
   if(error){toast('Erro: '+error.message,true);return false;}
   Object.assign(p,patch);
+  {const c=D.contratos.find(x=>x.id===p.contrato_id), m=c?D.mentorados.find(x=>x.id===c.mentorado_id):null;
+   registrar('baixa',`Baixa${parcial?' parcial':''}: ${m?.nome||'parcela'} · parcela ${p.numero} · ${rs(valor)} em ${dbr(data)}`,null,{tabela:'parcelas',id:p.id});}
   if(parcial){ // o que faltou vira uma parcela em aberto, com o mesmo número e vencimento
     const {data:novo,error:e2}=await sb.from('parcelas').insert({contrato_id:p.contrato_id,numero:p.numero,valor:+(cheio-valor).toFixed(2),vencimento:String(p.vencimento).slice(0,10),pago:false}).select().single();
     if(e2)toast('Baixa feita, mas o restante não foi criado: '+e2.message,true); else if(novo)D.parcelas.push(novo);
@@ -1479,7 +1509,9 @@ function baixar(id){abrirBaixa(id);}
 async function desfazer(id){
   const {error}=await sb.from('parcelas').update({pago:false,data_pagamento:null}).eq('id',id);
   if(error)return toast('Erro: '+error.message,true);
-  const p=D.parcelas.find(x=>x.id===id);if(p){p.pago=false;p.data_pagamento=null;}
+  const p=D.parcelas.find(x=>x.id===id);if(p){p.pago=false;p.data_pagamento=null;
+    const c=D.contratos.find(x=>x.id===p.contrato_id), m=c?D.mentorados.find(x=>x.id===c.mentorado_id):null;
+    registrar('baixa_desfeita',`Baixa desfeita: ${m?.nome||'parcela'} · parcela ${p.numero} · ${rs(p.valor)}`,null,{tabela:'parcelas',id});}
   toast('Parcela voltou para em aberto.');desenhar();
 }
 
@@ -1490,7 +1522,7 @@ function cardParcela(p){ // p vem de abertas(): parcela + contrato + mentorado +
   const editando=REC_EDIT===p.id, encerrado=p.contrato&&p.contrato.status!=='ativo';
   return `<div class="ctr small ${cls}">
     <div class="ctr-top"><div class="avatar sm ${avCls(nome)}">${iniciais(nome)}</div><div class="ctr-name"><b>${esc(nome)}</b><span>${esc(nomeProd(p.contrato?.produto_id))} · parcela ${p.numero}${encerrado?' · contrato encerrado':''}</span></div><div class="ctr-val"><b>${rsc(p.valor)}</b><span>vence ${dbr(p.vencimento)}</span></div></div>
-    <div class="ctr-line">${sit}${p.sug?tag('planilha mostra valor','inf'):''}<span class="sp"></span><button class="btn xs" onclick="abrirBaixa('${p.id}')">Dar baixa</button><button class="btnv xs" onclick="editarParcela('${p.id}')">${editando?'Fechar':'Editar'}</button></div>
+    <div class="ctr-line">${sit}${p.sug?tag('planilha mostra valor','inf'):''}${p.cobrado_em?tag(`cobrado ${dbr(p.cobrado_em)}`,'inf'):''}<span class="sp"></span><button class="btn xs" onclick="abrirBaixa('${p.id}')">Dar baixa</button>${p.d<=3?`<button class="btnv xs" onclick="cobrar('${p.id}')">Cobrar</button>`:''}<button class="btnv xs" onclick="editarParcela('${p.id}')">${editando?'Fechar':'Editar'}</button></div>
     ${editando?`<div class="ctr-edit">
       <div><label>Parcela nº</label><input type="number" value="${p.numero}" onchange="upNum('parcelas','${p.id}','numero',this.value)"></div>
       <div><label>Vencimento</label><input type="date" value="${String(p.vencimento).slice(0,10)}" onchange="up('parcelas','${p.id}','vencimento',this.value)"></div>
@@ -1522,10 +1554,12 @@ function verRecebiveis(){
   const recLanc=D.lancamentos.filter(l=>l.tipo==='entrada'&&l.pago&&noMes(l.data,ANO,MES)).map(l=>({...l,tipo:'lancamento'})).sort((a,b)=>+b.valor-+a.valor);
   const futuras={}; ab.filter(p=>p.d>=0).forEach(p=>{const k=String(p.vencimento).slice(0,7);(futuras[k]=futuras[k]||[]).push(p);});
   const meses=Object.keys(futuras).sort();
-  const chipsRec=[['atencao',`Vencidas · ${atr.length}`],['30',`Próximos 30 dias · ${f1.length}`],['todas',`Todas a vencer · ${ab.filter(p=>p.d>=0).length}`],['recebidas',`Recebidas no mês · ${recParc.length+recLanc.length}`]];
+  const nDevedores=new Set(atr.map(p=>p.mentorado?.id)).size;
+  const chipsRec=[['atencao',`Vencidas · ${atr.length}`],['pessoas',`Quem me deve · ${nDevedores}`],['30',`Próximos 30 dias · ${f1.length}`],['todas',`Todas a vencer · ${ab.filter(p=>p.d>=0).length}`],['recebidas',`Recebidas no mês · ${recParc.length+recLanc.length}`]];
   const grade=l=>l.length?`<div class="ctrs">${l.map(cardParcela).join('')}</div>`:'<div class="cartao vazio">Nada aqui. Cobrança em dia.</div>';
   let corpo='';
   if(FILTRO_REC==='atencao'){ corpo+=`<div class="sect">Vencidas <span>${atr.length} parcelas</span><span class="tot neg">${rsc(sm(atr))}</span></div>${grade(atr.filter(nomeOk))}`; }
+  if(FILTRO_REC==='pessoas'){ corpo+=`<div class="sect">Quem me deve <span>${nDevedores} ${plural(nDevedores,'pessoa','pessoas')} · ${atr.length} parcelas vencidas</span><span class="tot neg">${rsc(sm(atr))}</span></div>${blocoPorPessoa(atr,q)}`; }
   if(FILTRO_REC==='30'){ corpo+=`<div class="sect">Próximos 30 dias <span>${f1.length} parcelas</span><span class="tot">${rsc(sm(f1))}</span></div>${grade(f1.filter(nomeOk))}`; }
   if(FILTRO_REC==='todas'){
     if(!meses.length) corpo+='<div class="cartao vazio">Nenhuma parcela futura cadastrada.</div>';
@@ -1921,6 +1955,9 @@ function verCartoes(){
     ${kpi('Em 6 meses',rsc(faturaTotal(ANO,MES+6)),'sem parcelar mais nada')}
     ${kpi('Dívida restante',rsc(restante),'tudo que ainda falta',restante?'av':'')}
   </div>
+  <div class="cartao" style="margin-top:12px"><h2>Já comprometido por mês <span class="rotulo">parcelado + assinaturas, sem nenhuma compra nova</span></h2>
+    <div class="grafico"><canvas id="gComp" role="img" aria-label="Valor já comprometido nos cartões nos próximos oito meses"></canvas></div>
+    <p class="nota" id="compLivre"></p></div>
   <h2>Cada cartão <span class="rotulo">fatura do mês, o que está parcelado e quando fica livre</span></h2>
   ${D.cartoes.length?`<div class="ctrs">${D.cartoes.map(cardCartao).join('')}</div>`:'<div class="cartao vazio">Nenhum cartão cadastrado. Cadastre abaixo.</div>'}
   <p class="nota">“Ver compras” abre os parcelamentos (com a barra de quanto já foi pago) e as assinaturas do cartão. As linhas são só para leitura: para mudar valor, número de parcelas, mês da 1ª parcela ou trocar de cartão, clique em <b>Editar</b> na linha e depois em <b>Salvar</b> — nada muda por engano. A fatura projetada some sozinha quando a última parcela é paga.</p>
@@ -1964,6 +2001,7 @@ function verCartoes(){
     z.ondrop=e=>{e.preventDefault();z.classList.remove('ativo');carregarPrints(e.dataTransfer.files)};
   }
   desenhaMinis();
+  graficoComprometido();
 }
 function carregarPrints(files){
   const arr=[...files].filter(f=>f.type.startsWith('image/')).slice(0,8);
@@ -2153,7 +2191,14 @@ function verConfig(){
     <div class="campo"><label for="cBase">Base declarada</label><input id="cBase" type="number" step="0.01" value="${c.base_declarada||0}" inputmode="decimal"></div>
     <div class="campo" style="flex:2 1 300px"><label for="cAgente">URL do agente</label><input id="cAgente" value="${esc(c.agente_url||'')}" spellcheck="false"></div>
   </div>
+  <div class="formlinha" style="margin-top:14px">
+    <div class="campo" style="flex:1 1 220px"><label for="cPix">Chave PIX (vai na mensagem de cobrança)</label><input id="cPix" value="${esc(c.pix_chave||'')}" autocomplete="off" spellcheck="false"></div>
+    <div class="campo" style="flex:3 1 420px"><label for="cCobranca">Mensagem de cobrança</label><textarea id="cCobranca" rows="3" placeholder="${esc(MODELO_COBRANCA)}">${esc(c.cobranca_modelo||'')}</textarea></div>
+  </div>
+  <p class="nota">Deixe em branco para usar o texto padrão. Você pode usar: <code>{primeiro_nome}</code>, <code>{nome}</code>, <code>{itens}</code> (parcela, valor e vencimento já escritos), <code>{valor}</code>, <code>{vencimento}</code>, <code>{produto}</code> e <code>{pix}</code>.</p>
   <div style="margin-top:14px"><button class="btn" onclick="salvarConfig()">Salvar configurações</button></div></div>
+
+  ${blocoAssessor()}
 
   <h2>Planilha do Google <span class="rotulo">sincroniza sozinha toda vez que o painel abre</span></h2>
   <div class="cartao">
@@ -2257,7 +2302,9 @@ async function salvarConfig(){
     meta_mensal:+document.getElementById('cMeta').value||0,
     aliquota:+document.getElementById('cAliq').value||0,
     base_declarada:+document.getElementById('cBase').value||0,
-    agente_url:document.getElementById('cAgente').value.trim()||null};
+    agente_url:document.getElementById('cAgente').value.trim()||null,
+    pix_chave:document.getElementById('cPix').value.trim()||null,
+    cobranca_modelo:document.getElementById('cCobranca').value.trim()||null};
   const {error}=await sb.from('config').update(r).eq('id',1);
   if(error)return toast('Erro: '+error.message,true);
   D.config={...D.config,...r};marca();toast('Configurações salvas.');desenhar();
@@ -2279,6 +2326,171 @@ async function del(tabela,id){
   D[tabela]=D[tabela].filter(x=>x.id!==id);
   if(tabela==='mentorados')D.contratos=D.contratos.filter(c=>c.mentorado_id!==id);
   toast('Removido.');desenhar();
+}
+</script>
+<script>
+/* ================= PACK ASSESSOR · peças do painel =================
+   A1 pendências · A2 comparativo, projeção e fora do padrão · A5 saldo projetado · A6 cobrança com 1 toque · B3 linha do tempo */
+const plural=(n,um,varios)=>n===1?um:varios;
+function irHoje(){ANO=HOJE.getFullYear();MES=HOJE.getMonth();SEMANA=null;const s=document.getElementById('selMes');if(s)s.value=`${ANO}-${MES}`;}
+
+/* ---------- B3 · linha do tempo ---------- */
+async function registrar(tipo,titulo,detalhe,ref){
+  try{
+    const {data,error}=await sb.from('eventos').insert({origem:'painel',tipo,titulo,detalhe:detalhe||null,ref_tabela:ref?.tabela||null,ref_id:ref?.id||null}).select().single();
+    if(!error&&data){D.eventos.unshift(data);const el=document.getElementById('tempoLista');if(el)el.innerHTML=linhasTempo();}
+  }catch(e){}
+}
+const haQuanto=s=>{const min=Math.max(0,Math.round((Date.now()-new Date(s).getTime())/60000));
+  return min<1?'agora':min<60?`há ${min} min`:min<1440?`há ${Math.round(min/60)} h`:min<2880?'ontem':dbr(iso(new Date(s)));};
+const COR_EVENTO={baixa:'ok',renovacao:'ok',contrato:'ok',baixa_desfeita:'al',cancelamento:'mal',encerramento:'',reativacao:'inf',cobranca:'inf',planilha:'inf',fechamento:''};
+function linhasTempo(){
+  const ev=D.eventos.slice(0,14);
+  return ev.length?ev.map(e=>`<div class="lrow p3"><span class="st ${COR_EVENTO[e.tipo]||''}"></span><div class="ds"><b>${esc(e.titulo)}</b><span>${haQuanto(e.criado_em)} · ${e.origem==='painel'?'feito no painel':e.origem==='assessor'?'feito pelo assessor':e.origem==='planilha'?'veio da planilha':'automático'}${e.desfeito_em?' · desfeito':''}</span></div><span class="tg">${tag(esc(String(e.tipo).replace(/_/g,' ')))}</span></div>`).join('')
+    :'<div class="vazio">Nada registrado ainda. Baixas, renovações, cobranças e mudanças da planilha aparecem aqui.</div>';
+}
+function blocoLinhaTempo(){
+  if(FORMS.fTempo===undefined)FORMS.fTempo=false;
+  return `<details class="fdisc" id="fTempo"${FORMS.fTempo?' open':''} style="margin-top:22px"><summary><span class="mais">+</span>Linha do tempo <span class="rotulo">${D.eventos.length?`última: ${haQuanto(D.eventos[0].criado_em)}`:'o que aconteceu no painel, na planilha e pelo assessor'}</span></summary><div class="lsec" style="margin:0;border:0;border-radius:0;background:none" id="tempoLista">${linhasTempo()}</div></details>`;
+}
+
+/* ---------- A2 · comparativo, projeção e o que fugiu do padrão ---------- */
+function tagVariacao(atual,anterior,nomeAnterior,bomSeSobe){
+  if(!anterior||anterior<=0)return '';
+  const pct=(atual/anterior-1)*100, neutro=Math.abs(pct)<3;
+  return tag(`${pct>=0?'+':''}${pct.toFixed(0)}% vs ${nomeAnterior}`,neutro?'':((pct>=0)===bomSeSobe?'ok':'mal'));
+}
+/* Item da planilha muito acima da média dos 3 meses anteriores (mesmo item, mesmo id estável). */
+function anomalias(a,m){
+  const idx=new Map(D.lancamentos.filter(l=>l.origem_id).map(l=>[l.origem_id,l])), out=[];
+  D.lancamentos.filter(l=>l.origem==='planilha'&&l.tipo==='despesa'&&l.origem_id&&noMes(l.data,a,m)).forEach(l=>{
+    const slugItem=String(l.origem_id).split(':')[3]; if(!slugItem)return;
+    const ant=[1,2,3].map(k=>{const d=new Date(a,m-k,1);return idx.get(`pl:${d.getFullYear()}:d:${slugItem}:${String(d.getMonth()+1).padStart(2,'0')}`);}).filter(Boolean);
+    if(ant.length<2)return;
+    const media=ant.reduce((s,x)=>s+ +x.valor,0)/ant.length;
+    if(media>0&&+l.valor>=media*1.3&&+l.valor-media>=150)out.push({l,media,pct:(+l.valor/media-1)*100});
+  });
+  return out.sort((x,y)=>(+y.l.valor-y.media)-(+x.l.valor-x.media));
+}
+/* O que ainda deve entrar no mês: parcelas em aberto com vencimento nele, menos o que a aba de alunos já mostra como pago. */
+function aReceberNoMes(a,m){
+  const cobertas=new Map(); (typeof sugestoesPlanilha==='function'?sugestoesPlanilha():[]).forEach(s=>cobertas.set(s.p.id,s.livre));
+  return abertas().filter(p=>noMes(p.vencimento,a,m)).reduce((s,p)=>s+Math.max(0,+p.valor-(cobertas.get(p.id)||0)),0);
+}
+function projecaoMes(){ // só faz sentido no mês em andamento
+  const a=HOJE.getFullYear(), m=HOJE.getMonth(), cx=caixaMes(a,m), dp=despesasMes(a,m), falta=aReceberNoMes(a,m);
+  return {falta, recebido:cx.total+falta, saldo:cx.total+falta-dp.total};
+}
+
+/* ---------- A1 · central de pendências (sempre sobre hoje, não sobre o mês escolhido no topo) ---------- */
+function pendencias(){
+  const P=[], a=HOJE.getFullYear(), m=HOJE.getMonth(), hoje=iso(HOJE), em3=iso(new Date(a,m,HOJE.getDate()+3));
+  const ativos=D.contratos.filter(c=>c.status==='ativo'&&D.mentorados.some(x=>x.id===c.mentorado_id));
+  const venc=ativos.filter(c=>dias(c.data_fim)<0), prox=ativos.filter(c=>{const d=dias(c.data_fim);return d>=0&&d<=30;});
+  if(venc.length)P.push({n:'mal',t:`<b>${venc.length} ${plural(venc.length,'contrato venceu','contratos venceram')}</b> · renovou ou não?`,b:'Decidir',a:"setFiltroCtr('atencao')"});
+  if(prox.length)P.push({n:'al',t:`<b>${prox.length} ${plural(prox.length,'contrato vence','contratos vencem')} em até 30 dias</b> · ${prox.slice(0,3).map(c=>esc((D.mentorados.find(x=>x.id===c.mentorado_id)?.nome||'').split(' ')[0])).join(', ')}${prox.length>3?'…':''}`,b:'Ver',a:"setFiltroCtr('atencao')"});
+  const atr=abertas().filter(p=>p.d<0);
+  if(atr.length){const sug=(typeof sugestoesPlanilha==='function'?sugestoesPlanilha():[]).filter(s=>s.tipo==='cheia').length;
+    P.push({n:'mal',t:`<b>${atr.length} ${plural(atr.length,'parcela vencida','parcelas vencidas')}</b> · ${rsc(atr.reduce((s,p)=>s+ +p.valor,0))}${sug?` · ${sug} ${plural(sug,'bate','batem')} com a planilha`:''}`,b:sug?'Conferir':'Cobrar',a:sug?"setFiltroRec('atencao')":"setFiltroRec('pessoas')"});}
+  const desp=D.lancamentos.filter(l=>l.tipo==='despesa'&&!l.pago), atras=desp.filter(l=>String(l.data).slice(0,10)<hoje&&noMes(l.data,a,m)), breve=desp.filter(l=>{const d=String(l.data).slice(0,10);return d>=hoje&&d<=em3;});
+  if(atras.length)P.push({n:'mal',t:`<b>${atras.length} ${plural(atras.length,'conta atrasada','contas atrasadas')}</b> · ${rsc(atras.reduce((s,l)=>s+ +l.valor,0))} · ${esc(atras.slice(0,2).map(l=>l.descricao||l.categoria).join(', '))}${atras.length>2?'…':''}`,b:'Pagar',a:"irHoje();setFiltroDesp('apagar')"});
+  if(breve.length)P.push({n:'al',t:`<b>${breve.length} ${plural(breve.length,'conta vence','contas vencem')} até ${dbr(em3)}</b> · ${rsc(breve.reduce((s,l)=>s+ +l.valor,0))} · ${esc(breve.slice(0,2).map(l=>l.descricao||l.categoria).join(', '))}${breve.length>2?'…':''}`,b:'Ver',a:"irHoje();setFiltroDesp('apagar')"});
+  const jaGer=new Set(D.lancamentos.filter(l=>noMes(l.data,a,m)&&l.recorrencia_id).map(l=>l.recorrencia_id));
+  const fixos=D.recorrencias.filter(r=>r.ativo!==false&&!jaGer.has(r.id));
+  if(fixos.length)P.push({n:'al',t:`<b>${fixos.length} ${plural(fixos.length,'fixo ainda não lançado','fixos ainda não lançados')}</b> em ${MESES[m]} · ${rsc(fixos.reduce((s,r)=>s+ +r.valor,0))}`,b:'Lançar',a:"irHoje();irPara('desp')"});
+  const planilhaTemCartao=D.lancamentos.some(l=>l.origem==='planilha'&&l.tipo==='despesa'&&noMes(l.data,a,m)&&matrizDe(l.categoria)==='Cartões');
+  if(!planilhaTemCartao)D.cartoes.forEach(c=>{const dia=+c.dia_vencimento||10, venceEm=new Date(a,m+(dia<HOJE.getDate()?1:0),dia), d=dias(iso(venceEm)), f=faturaCartao(c.id,venceEm.getFullYear(),venceEm.getMonth());
+    if(f>0&&d>=0&&d<=5)P.push({n:'al',t:`<b>Fatura ${esc(c.nome)}</b> vence ${d===0?'hoje':`em ${d} ${plural(d,'dia','dias')}`} · ${rsc(f)}`,b:'Ver',a:"irPara('cart')"});});
+  anomalias(a,m).slice(0,2).forEach(x=>P.push({n:'inf',t:`<b>${esc(x.l.descricao||x.l.categoria)} ${x.pct.toFixed(0)}% acima</b> da média de 3 meses · ${rsc(x.l.valor)} contra ${rsc(x.media)}`,b:'Ver',a:`irHoje();BUSCA_DESP=${JSON.stringify(String(x.l.descricao||'')).replace(/"/g,'&quot;')};setFiltroDesp('todas')`}));
+  return P;
+}
+function blocoPendencias(){
+  const P=pendencias();
+  return `<div class="lsec" style="margin-top:22px"><div class="lsec-h" style="cursor:default"><span class="pt" style="background:${P.some(p=>p.n==='mal')?'var(--neg)':P.length?'var(--warn)':'var(--pos)'}"></span>
+    <span class="nm"><b>Pendências de hoje</b><span>${P.length?`${P.length} ${plural(P.length,'coisa pede','coisas pedem')} a sua ação`:'nada pendente — tudo em dia'}</span></span></div>
+    ${P.map(p=>{const i=p.t.indexOf('</b>'), tit=p.t.slice(0,i).replace('<b>',''), det=p.t.slice(i+4).replace(/^\s*·\s*/,'').trim();
+      return `<div class="lrow p3"><span class="st ${p.n}"></span><div class="ds"><b>${tit}</b>${det?`<span>${det}</span>`:''}</div><div class="ac"><button class="btn xs" onclick="${p.a}">${p.b}</button></div></div>`;}).join('')}</div>`;
+}
+
+/* ---------- A6 · quem me deve, por pessoa, e cobrança com 1 toque ---------- */
+const soDigitos=s=>String(s||'').replace(/\D/g,'');
+function foneWa(t){let d=soDigitos(t);if(!d)return '';if(d.length<=11)d='55'+d;return d;}
+const MODELO_COBRANCA='Oi {primeiro_nome}, tudo bem? Passando pra lembrar {itens}.{pix} Qualquer coisa me chama!';
+function mensagemCobranca(ps){
+  const p0=ps[0], c=D.contratos.find(x=>x.id===p0.contrato_id), m=c?D.mentorados.find(x=>x.id===c.mentorado_id):null, nome=m?.nome||'';
+  const total=ps.reduce((s,p)=>s+ +p.valor,0), prodNome=nomeProd(c?.produto_id);
+  const itens=ps.length===1?`da parcela ${p0.numero} da ${prodNome}, no valor de ${rs(p0.valor)}, que ${dias(p0.vencimento)<0?'venceu':'vence'} dia ${dbr(p0.vencimento)}`
+    :`das parcelas em aberto da ${prodNome}: ${ps.map(p=>`nº ${p.numero} (${rs(p.valor)}, ${dias(p.vencimento)<0?'venceu':'vence'} ${dbr(p.vencimento)})`).join(', ')}. Total: ${rs(total)}`;
+  const pix=D.config.pix_chave?` Segue o PIX: ${D.config.pix_chave}.`:'';
+  const v={nome,primeiro_nome:nome.split(' ')[0]||nome,itens,pix,produto:prodNome,valor:rs(total),parcela:ps.map(p=>p.numero).join(' e '),vencimento:dbr(p0.vencimento)};
+  return (D.config.cobranca_modelo||MODELO_COBRANCA).replace(/\{(\w+)\}/g,(x,k)=>v[k]??x);
+}
+async function cobrarParcelas(ids){
+  const ps=ids.map(id=>D.parcelas.find(x=>x.id===id)).filter(Boolean); if(!ps.length)return;
+  const c=D.contratos.find(x=>x.id===ps[0].contrato_id), m=c?D.mentorados.find(x=>x.id===c.mentorado_id):null; if(!m)return;
+  const fone=foneWa(m.whatsapp);
+  if(fone.length<12){pedirWhatsapp(m,ids);return;}
+  window.open(`https://wa.me/${fone}?text=${encodeURIComponent(mensagemCobranca(ps))}`,'_blank','noopener'); // antes de qualquer espera, senão o navegador bloqueia
+  const hoje=iso(HOJE), r=await sb.from('parcelas').update({cobrado_em:hoje}).in('id',ps.map(p=>p.id));
+  if(!r.error)ps.forEach(p=>p.cobrado_em=hoje);
+  registrar('cobranca',`Cobrança enviada a ${m.nome} · ${ps.length>1?ps.length+' parcelas':'parcela '+ps[0].numero} · ${rs(ps.reduce((s,p)=>s+ +p.valor,0))}`,null,{tabela:'mentorados',id:m.id});
+  desenhar();
+}
+function cobrar(id){cobrarParcelas([id]);}
+function pedirWhatsapp(m,ids){ // sem número no cadastro: pergunta uma vez, salva e segue para a cobrança
+  fecharModal(); const el=document.createElement('div'); el.className='modal-bg'; el.id='modal';
+  el.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="WhatsApp do mentorado"><div class="ctr-top"><div class="avatar sm ${avCls(m.nome)}">${iniciais(m.nome)}</div><div class="ctr-name"><b>${esc(m.nome)}</b><span>ainda sem WhatsApp no cadastro</span></div></div>
+    <label class="ml" for="waFone">WhatsApp com DDD</label><input id="waFone" inputmode="tel" placeholder="(11) 99999-9999" autocomplete="off">
+    <div class="modal-act"><button class="btnv" onclick="fecharModal()">Voltar</button><button class="btn" id="waOk">Salvar e cobrar</button></div></div>`;
+  el.onclick=e=>{if(e.target===el)fecharModal();}; document.body.appendChild(el);
+  document.getElementById('waOk').onclick=()=>{const t=document.getElementById('waFone').value;
+    if(foneWa(t).length<12)return toast('Número incompleto. Use DDD + número.',true);
+    m.whatsapp=soDigitos(t); sb.from('mentorados').update({whatsapp:m.whatsapp}).eq('id',m.id).then(r=>{if(r.error)toast('Não consegui salvar o número: '+r.error.message,true);});
+    fecharModal(); cobrarParcelas(ids);};
+  document.getElementById('waFone').focus();
+}
+function blocoPorPessoa(vencidas,q){
+  const g=new Map(); vencidas.forEach(p=>{const k=p.mentorado?.id||'?';(g.get(k)||g.set(k,[]).get(k)).push(p);});
+  const lista=[...g.values()].map(ps=>({ps,m:ps[0].mentorado,total:ps.reduce((s,p)=>s+ +p.valor,0),pior:Math.min(...ps.map(p=>p.d)),cob:ps.map(p=>p.cobrado_em).filter(Boolean).sort().pop()}))
+    .filter(x=>!q||norm(x.m?.nome).includes(q)).sort((x,y)=>y.total-x.total);
+  if(!lista.length)return '<div class="cartao vazio">Ninguém devendo. Cobrança em dia.</div>';
+  return `<div class="ctrs">${lista.map(x=>{const nome=x.m?.nome||'Sem nome';
+    return `<div class="ctr small vencido"><div class="ctr-top"><div class="avatar sm ${avCls(nome)}">${iniciais(nome)}</div><div class="ctr-name"><b>${esc(nome)}</b><span>${x.ps.length} ${plural(x.ps.length,'parcela vencida','parcelas vencidas')} · a mais antiga há ${-x.pior} dias</span></div><div class="ctr-val"><b>${rsc(x.total)}</b><span>${x.m?.whatsapp?'WhatsApp salvo':'sem WhatsApp'}</span></div></div>
+      <div class="ctr-line">${x.cob?tag(`cobrado em ${dbr(x.cob)}`,'inf'):tag('ainda não cobrado')}<span class="sp"></span><button class="btn xs" onclick='cobrarParcelas(${JSON.stringify(x.ps.map(p=>p.id))})'>Cobrar no WhatsApp</button><button class="btnv xs" onclick="BUSCA_REC=${JSON.stringify(nome).replace(/"/g,'&quot;')};setFiltroRec('atencao')">Ver parcelas</button></div></div>`;}).join('')}</div>
+    <p class="nota">“Cobrar no WhatsApp” abre a conversa com a mensagem pronta (texto e chave PIX em Configurações). Você revisa e envia; o painel só anota a data da cobrança.</p>`;
+}
+
+/* ---------- A3 · já comprometido por mês nos cartões ---------- */
+function graficoComprometido(){
+  const L=[],P=[],A=[]; let livre=null;
+  for(let i=0;i<8;i++){const d=new Date(ANO,MES+i,1), y=d.getFullYear(), m=d.getMonth();
+    const tot=faturaTotal(y,m), ass=D.assinaturas.filter(x=>x.ativo!==false&&D.cartoes.some(c=>c.id===x.cartao_id)).reduce((s,x)=>s+ +x.valor,0);
+    L.push(`${MESC[m]}/${String(y).slice(2)}`);A.push(ass);P.push(Math.max(0,tot-ass));}
+  for(let i=0;i<72;i++){const d=new Date(ANO,MES+i,1);const par=D.parcelamentos.some(p=>{const n=dif(dObj(p.primeira_competencia),d);return n>=0&&n<p.total_parcelas;});if(!par){livre=d;break;}}
+  const el=document.getElementById('compLivre'); if(el)el.innerHTML=livre?`Sem compra nova, o parcelado zera em <b>${MESES[livre.getMonth()]} de ${livre.getFullYear()}</b>. As assinaturas continuam até você pausar.`:'';
+  pinta('gComp','bar',{labels:L,datasets:[{label:'Parcelado',data:P,backgroundColor:CORES[0],borderRadius:6,maxBarThickness:38,stack:'s'},{label:'Assinaturas',data:A,backgroundColor:CORES[1],borderRadius:6,maxBarThickness:38,stack:'s'}]},
+    {plugins:{legend:{display:true,position:'bottom',labels:{color:'#9CA3AF',font:{size:12},boxWidth:10,padding:14,usePointStyle:true}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${rsc(c.parsed.y)}`}}},
+     scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#9CA3AF',font:{size:11}}},y:{stacked:true,beginAtZero:true,grid:{color:'rgba(255,255,255,.08)'},border:{display:false},ticks:{color:'#9CA3AF',font:{size:11},callback:v=>'R$ '+Math.round(v/1000)+'k'}}}});
+}
+
+/* ---------- C · quem o assessor atende (Configurações) ---------- */
+function blocoAssessor(){
+  const L=D.assessor_contatos||[];
+  return `<h2>Assessor no WhatsApp <span class="rotulo">só estes números são atendidos</span></h2>
+  <div class="cartao">${L.length?`<div class="sub-rows" style="margin:0;border:0;padding:0">${L.map(c=>`<div class="r"><div><b>${esc(c.nome)}</b><small>+${esc(c.telefone)} · ${esc(c.papel)}</small></div><div class="mid">${c.recebe_relatorios?tag('recebe relatórios','inf'):tag('sem relatórios')}</div><div class="v">${c.ativo?tag('ativo','ok'):tag('pausado','al')}</div><button class="btnv xs" onclick="alternarContato('${esc(c.telefone)}',${!c.ativo})">${c.ativo?'Pausar':'Ativar'}</button></div>`).join('')}</div>`:'<div class="vazio">Nenhum número autorizado ainda. Cadastre o seu para o assessor te reconhecer.</div>'}
+    <div class="formlinha" style="margin-top:14px"><div class="campo"><label for="acNome">Nome</label><input id="acNome" autocomplete="off"></div><div class="campo"><label for="acFone">WhatsApp com DDD</label><input id="acFone" inputmode="tel" placeholder="(11) 99999-9999" autocomplete="off"></div><div class="campo" style="flex:0 1 170px"><label for="acRel">Recebe relatórios</label><select id="acRel"><option value="1">Sim</option><option value="0">Não</option></select></div><button class="btn" onclick="novoContatoAssessor()">Autorizar número</button></div>
+    <p class="nota">O assessor ignora qualquer número fora desta lista. Ele nunca movimenta dinheiro e toda ação pede a sua confirmação antes de gravar.</p></div>`;
+}
+async function novoContatoAssessor(){
+  const nome=document.getElementById('acNome').value.trim(), telefone=foneWa(document.getElementById('acFone').value);
+  if(!nome)return toast('Informe o nome.',true); if(telefone.length<12)return toast('Número incompleto. Use DDD + número.',true);
+  const {data,error}=await sb.from('assessor_contatos').upsert({telefone,nome,recebe_relatorios:document.getElementById('acRel').value==='1',ativo:true},{onConflict:'telefone'}).select().single();
+  if(error)return toast('Erro: '+error.message,true);
+  D.assessor_contatos=(D.assessor_contatos||[]).filter(c=>c.telefone!==telefone).concat(data);toast('Número autorizado.');desenhar();
+}
+async function alternarContato(telefone,ativo){
+  const {error}=await sb.from('assessor_contatos').update({ativo}).eq('telefone',telefone); if(error)return toast('Erro: '+error.message,true);
+  const c=(D.assessor_contatos||[]).find(x=>x.telefone===telefone);if(c)c.ativo=ativo;desenhar();
 }
 </script>
 <script>
@@ -2440,6 +2652,13 @@ async function gravarPlanilha(dados){
   const novos=linhas.filter(l=>!mapa.has(l.origem_id));
   const mudados=linhas.filter(l=>mapa.has(l.origem_id)&&Math.abs(+mapa.get(l.origem_id).valor-l.valor)>0.005)
     .map(l=>({id:mapa.get(l.origem_id).id,valor:l.valor}));
+  // linha do tempo: o que a planilha mudou na receita (a primeira importação não conta)
+  const nomeMes=l=>MESES[+l.origem_id.slice(-2)-1];
+  const avisos=(ex||[]).length?[
+    ...linhas.filter(l=>l.tipo==='entrada'&&mapa.has(l.origem_id)&&Math.abs(+mapa.get(l.origem_id).valor-l.valor)>0.005).map(l=>{const de=+mapa.get(l.origem_id).valor, dif=l.valor-de;
+      return `Planilha: ${l.descricao.replace(' (planilha)','')} de ${nomeMes(l)} foi de ${rs(de)} para ${rs(l.valor)} (${dif>0?'+':'−'}${rs(Math.abs(dif))})`;}),
+    ...novos.filter(l=>l.tipo==='entrada').map(l=>`Planilha: ${l.descricao.replace(' (planilha)','')} de ${nomeMes(l)} entrou com ${rs(l.valor)}`)
+  ].slice(0,6):[];
   // célula apagada na planilha (ou item renomeado): remove o lançamento que veio dela
   const sobras=(ex||[]).filter(x=>x.origem_id&&x.origem_id.startsWith(`pl:${ano}:`)&&!idsTodas.has(x.origem_id)&&(+x.origem_id.slice(-2)-1)<=mesMax);
 
@@ -2455,6 +2674,7 @@ async function gravarPlanilha(dados){
       .filter(x=>{const r=D.metas_mes.find(y=>y.ano_mes===x.ano_mes);return !r||Math.abs(+r.total-x.total)>0.005;});
     if(metas.length){const {error}=await sb.from('metas_mes').upsert(metas,{onConflict:'ano_mes'}); if(error) throw new Error('metas: '+error.message);}
   }
+  if(avisos.length){ const {data:evs}=await sb.from('eventos').insert(avisos.map(t=>({origem:'planilha',tipo:'planilha',titulo:t}))).select(); if(evs)D.eventos.unshift(...evs.reverse()); }
   const p=[];
   if(novos.length)p.push(`${novos.length} novos`); if(mudados.length)p.push(`${mudados.length} atualizados`);
   if(sobras.length)p.push(`${sobras.length} removidos`); if(metas.length)p.push(`${metas.length} meta${metas.length>1?'s':''}`);
