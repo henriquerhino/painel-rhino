@@ -30,6 +30,7 @@ const GRAPH = `https://graph.facebook.com/${env("WHATSAPP_GRAPH_VERSION") || "v2
 const MODELO = env("ASSESSOR_MODELO") || "claude-sonnet-5";
 const MESES = ["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { "Content-Type": "application/json" } });
+const CORS = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const rs = (v: unknown) => "R$ " + (Number(v) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const rsc = (v: unknown) => "R$ " + Math.round(Number(v) || 0).toLocaleString("pt-BR");
 const dbr = (s: unknown) => { const [y, m, d] = String(s).slice(0, 10).split("-"); return `${d}/${m}/${y.slice(2)}`; };
@@ -503,8 +504,26 @@ Deno.serve(async (req) => {
     const ok = url.searchParams.get("hub.mode") === "subscribe" && !!cfg("WHATSAPP_VERIFY_TOKEN") && url.searchParams.get("hub.verify_token") === cfg("WHATSAPP_VERIFY_TOKEN");
     return ok ? new Response(url.searchParams.get("hub.challenge") || "", { status: 200 }) : new Response("token de verificação não confere", { status: 403 });
   }
+  if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (req.method !== "POST") return json({ erro: "Use POST." }, 405);
   const corpo = await req.text();
+
+  // chat dentro do painel: usuário logado no Supabase conversa com o mesmo assessor, sem WhatsApp
+  const bearer = (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  if (bearer && !req.headers.get("x-rhino-cron") && !req.headers.get("x-hub-signature-256")) {
+    const { data: u, error: eu } = await sb.auth.getUser(bearer);
+    if (eu || !u?.user) return new Response(JSON.stringify({ erro: "não autorizado" }), { status: 401, headers: { ...CORS, "Content-Type": "application/json" } });
+    try {
+      const b = JSON.parse(corpo || "{}"), texto = String(b.chat || "").slice(0, 2000);
+      const { data: dono } = await sb.from("assessor_contatos").select("nome,prefs").eq("papel", "dono").eq("ativo", true).limit(1);
+      const contato = { telefone: "painel:" + u.user.id, nome: dono?.[0]?.nome || String(u.user.email || "você").split("@")[0], papel: "dono", prefs: dono?.[0]?.prefs || {} };
+      if (!texto && !b.botao) return new Response(JSON.stringify({ erro: "mensagem vazia" }), { status: 400, headers: { ...CORS, "Content-Type": "application/json" } });
+      if (texto) await sb.from("assessor_mensagens").insert({ telefone: contato.telefone, direcao: "in", tipo: "painel", texto });
+      const r = await responder(contato, texto, b.botao || null);
+      await sb.from("assessor_mensagens").insert({ telefone: contato.telefone, direcao: "out", tipo: "painel", texto: r.texto });
+      return new Response(JSON.stringify(r), { headers: { ...CORS, "Content-Type": "application/json" } });
+    } catch (e) { return new Response(JSON.stringify({ erro: String((e as Error).message || e) }), { status: 500, headers: { ...CORS, "Content-Type": "application/json" } }); }
+  }
 
   const cron = req.headers.get("x-rhino-cron");
   if (cron) { // chamadas internas: agendador do banco e testes
