@@ -41,6 +41,9 @@ Em Recebíveis, **Quem me deve** agrupa as parcelas vencidas por pessoa. **Cobra
 - `gravar_fechamento()`: no dia 1 grava o fechamento do mês anterior em `fechamentos`.
 - Função `assessor`: WhatsApp oficial da Meta. Responde com os números do painel, propõe ações e só grava depois do **Confirmar** (com **Desfazer** por 24 h), lê foto de comprovante ou boleto e manda os relatórios automáticos. Só atende os números autorizados em Configurações. Passo a passo para ligar: [ASSESSOR-WHATSAPP.md](ASSESSOR-WHATSAPP.md).
 
+### Agenda — Google Agenda e calls dos mentorados
+A aba **Agenda** mostra a semana do Google Agenda, liga cada compromisso ao mentorado (pelo nome no título ou porque foi o assessor que marcou) e avisa quem está há mais de 30 dias sem call. De 3 em 3 horas o servidor confere as calls que já aconteceram e soma 1 em `calls_feitas` (tabela `calls`, uma linha por evento contado). A conexão é feita na própria aba, em 4 passos: copiar o código de `google-agenda-ponte.gs` para um projeto do Apps Script na conta do dono, adicionar o serviço Google Calendar API, implantar como App da Web e colar o endereço `/exec` no painel. A chave da ponte nasce no servidor (função `agenda`) nesse momento e ninguém a vê. Pelo WhatsApp o assessor responde "o que eu tenho hoje?", acha horário livre e marca, remarca ou cancela com confirmação, link do Meet e aviso de conflito.
+
 ### Lançamentos
 Resumo do período (entradas, saídas, resultado, quantidade), atalhos **Tudo · Entradas · Saídas · A pagar · Da planilha · Digitados aqui**, busca, e o filtro de período/grupo + relatório em PDF recolhido. Linhas da planilha têm valor travado e não têm ✕.
 

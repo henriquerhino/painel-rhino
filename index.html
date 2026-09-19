@@ -257,6 +257,13 @@ h2 .dir{margin-left:auto;font-weight:500;font-size:13px}
 .ledit .ctr-edit{margin-top:0}
 .lrow .st.inf{background:var(--info)}
 .lrow.p3{grid-template-columns:10px minmax(0,1fr) auto}
+a.btn,a.btnv{text-decoration:none}
+ol.passos{margin:0;padding:0;list-style:none;counter-reset:p;display:flex;flex-direction:column}
+ol.passos li{counter-increment:p;position:relative;padding:12px 0 12px 42px;border-top:1px solid var(--ln2);font-size:14px;color:var(--mut);line-height:1.55}
+ol.passos li:first-child{border-top:0}
+ol.passos li::before{content:counter(p);position:absolute;left:0;top:11px;width:28px;height:28px;border-radius:999px;border:1px solid #4B5563;display:grid;place-items:center;font-size:12.5px;font-weight:700;color:#fff}
+ol.passos b{color:#fff}
+code{background:rgba(255,255,255,.08);border-radius:6px;padding:1px 6px;font-size:12.5px}
 .lrow.p3 .tx{font-size:14px;color:var(--mut);line-height:1.45}
 .lrow.p3 .tx b{color:#fff;font-weight:600}
 .lrow .st.mal{background:var(--neg)}
@@ -475,6 +482,7 @@ td .sub{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:12px;co
   <button data-a="desp">Despesas</button>
   <button data-a="lanc">Lançamentos</button>
   <button data-a="cart">Cartões</button>
+  <button data-a="agenda">Agenda</button>
   <button data-a="inv">Investimentos</button>
   <button data-a="conf">Configurações</button>
 </div></nav>
@@ -482,6 +490,7 @@ td .sub{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:12px;co
   <section id="v-dash"></section><section id="v-contr" class="oculto"></section>
   <section id="v-receb" class="oculto"></section><section id="v-desp" class="oculto"></section>
   <section id="v-lanc" class="oculto"></section><section id="v-cart" class="oculto"></section>
+  <section id="v-agenda" class="oculto"></section>
   <section id="v-inv" class="oculto"></section><section id="v-conf" class="oculto"></section>
 </main>
 <footer><span id="rodape">Consulting Framework · RHINO</span></footer>
@@ -522,7 +531,7 @@ let SYNC={estado:'ocioso',quando:null,resumo:'',erro:''};
 let ALUNOS={estado:'ocioso',linhas:[],erro:''};   // aba de alunos da planilha (conferência de Recebíveis)
 let D={config:{},produtos:[],mentorados:[],contratos:[],parcelas:[],lancamentos:[],recorrencias:[],
   cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[],analises:[],
-  eventos:[],fechamentos:[],assessor_contatos:[]};
+  eventos:[],fechamentos:[],assessor_contatos:[],calls:[]};
 const G={};
 
 const rs=v=>'R$ '+(Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -559,9 +568,10 @@ const ICO={
   search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   ai:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg>',
   sync:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.5 4.5L20 16"/><path d="M20 20v-4h-4"/></svg>',
-  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'
+  plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  agenda:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'
 };
-const ABAS=[['dash','Dashboard','Início'],['contr','Contratos','Contratos'],['receb','Recebíveis','Receber'],['desp','Despesas','Gastos'],['lanc','Lançamentos','Lançar'],['cart','Cartões','Cartões'],['inv','Investimentos','Reserva'],['conf','Configurações','Ajustes']];
+const ABAS=[['dash','Dashboard','Início'],['contr','Contratos','Contratos'],['receb','Recebíveis','Receber'],['desp','Despesas','Gastos'],['lanc','Lançamentos','Lançar'],['cart','Cartões','Cartões'],['agenda','Agenda','Agenda'],['inv','Investimentos','Reserva'],['conf','Configurações','Ajustes']];
 
 function toast(m,e){const t=document.createElement('div');t.className='toast '+(e?'erro':'ok');t.textContent=m;t.setAttribute('role','status');
 document.body.appendChild(t);setTimeout(()=>t.remove(),3400);}
@@ -611,7 +621,7 @@ function montarNav(){
   marcarNav();
 }
 function marcarNav(){
-  const outras=['lanc','cart','inv','conf'];
+  const outras=['lanc','cart','agenda','inv','conf'];
   document.querySelectorAll('#abas button,#bnav button,#sheet button.it').forEach(b=>b.classList.toggle('on',b.dataset.a===ABA));
   const m=document.getElementById('btMais'); if(m)m.classList.toggle('on',outras.includes(ABA));
 }
@@ -623,7 +633,7 @@ function irPara(a){
 
 async function carregar(){
   const t=['config','produtos','mentorados','contratos','parcelas','lancamentos','recorrencias','cartoes',
-    'parcelamentos','assinaturas','metas_mes','investimentos','investimentos_hist','categorias','analises','eventos','fechamentos','assessor_contatos'];
+    'parcelamentos','assinaturas','metas_mes','investimentos','investimentos_hist','categorias','analises','eventos','fechamentos','assessor_contatos','calls'];
   const r=await Promise.all(t.map(x=>x==='eventos'?sb.from(x).select('*').order('criado_em',{ascending:false}).limit(80):sb.from(x).select('*')));
   let faltou=[];
   r.forEach((res,i)=>{if(res.error){faltou.push(t[i]);return;} D[t[i]]=res.data||[];});
@@ -900,7 +910,7 @@ async function rodarIA(){
 /* ================= RENDER ================= */
 function desenhar(){
   ({dash:verDash,contr:verContratos,receb:verRecebiveis,desp:verDespesas,
-    lanc:verLancamentos,cart:verCartoes,inv:verInvestimentos,conf:verConfig})[ABA]();
+    lanc:verLancamentos,cart:verCartoes,agenda:verAgenda,inv:verInvestimentos,conf:verConfig})[ABA]();
   rotularTabelas();
 }
 const hero=(t,v,s,c,extra)=>`<div class="hero ${c||''}"><div class="t">${t}</div><div class="v num">${v}</div><div class="s">${s||''}</div>${extra||''}</div>`;
@@ -2491,6 +2501,171 @@ async function novoContatoAssessor(){
 async function alternarContato(telefone,ativo){
   const {error}=await sb.from('assessor_contatos').update({ativo}).eq('telefone',telefone); if(error)return toast('Erro: '+error.message,true);
   const c=(D.assessor_contatos||[]).find(x=>x.telefone===telefone);if(c)c.ativo=ativo;desenhar();
+}
+</script>
+<script>
+/* Código da ponte do Google Agenda (o mesmo do arquivo google-agenda-ponte.gs), para o botão Copiar código. */
+const PONTE_GS=String.raw`/**
+ * PONTE GOOGLE AGENDA · Painel Rhino
+ * Roda na SUA conta do Google e deixa o painel e o assessor lerem e marcarem compromissos.
+ *
+ * Como publicar (5 minutos, uma vez só):
+ *  1. script.google.com  →  Novo projeto  →  apague o que estiver no editor e cole este arquivo inteiro.
+ *  2. Na coluna da esquerda, em "Serviços", clique no +  →  "Google Calendar API"  →  Adicionar.
+ *  3. Implantar  →  Nova implantação  →  tipo "App da Web"
+ *        Executar como: Eu        Quem pode acessar: Qualquer pessoa        →  Implantar
+ *  4. Autorizar acesso  →  escolha a sua conta  →  Avançado  →  Acessar o projeto  →  Permitir.
+ *  5. Copie o "URL do app da Web" (termina em /exec) e cole no painel: Agenda → Conectar.
+ *
+ * Segurança: a primeira conexão grava uma chave secreta criada pelo servidor do painel.
+ * Sem essa chave a ponte não responde a ninguém. Para desligar tudo: Implantar → Gerenciar
+ * implantações → Arquivar.
+ */
+var PROP = PropertiesService.getScriptProperties();
+var FUSO = 'America/Sao_Paulo';
+
+function doGet() { return saida({ ok: true, ponte: 'Painel Rhino' }); }
+
+function doPost(e) {
+  var out;
+  try {
+    var b = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    var atual = PROP.getProperty('CHAVE');
+    if (b.acao === 'configurar') {
+      if (atual && b.chave_antiga !== atual) throw new Error('esta ponte já está ligada a um painel');
+      if (!b.chave || String(b.chave).length < 32) throw new Error('chave inválida');
+      PROP.setProperty('CHAVE', String(b.chave));
+      out = { ok: true, agenda: CalendarApp.getDefaultCalendar().getName() };
+    } else {
+      if (!atual || b.chave !== atual) throw new Error('não autorizado');
+      out = executar(b);
+    }
+  } catch (err) { out = { erro: String((err && err.message) || err) }; }
+  return saida(out);
+}
+function saida(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+
+function executar(b) {
+  var cal = 'primary';
+  if (b.acao === 'listar') {
+    var r = Calendar.Events.list(cal, { timeMin: b.de, timeMax: b.ate, singleEvents: true, orderBy: 'startTime', maxResults: 150 });
+    return { eventos: (r.items || []).filter(function (ev) { return ev.status !== 'cancelled'; }).map(resumir) };
+  }
+  if (b.acao === 'criar') {
+    var convidados = (b.convidados || []).map(function (email) { return { email: email }; });
+    var ev = {
+      summary: b.titulo, description: b.descricao || '',
+      start: { dateTime: b.inicio, timeZone: FUSO }, end: { dateTime: b.fim, timeZone: FUSO },
+      attendees: convidados, reminders: { useDefault: true },
+      extendedProperties: { 'private': { rhino: '1', mentorado_id: b.mentorado_id || '' } }
+    };
+    if (b.meet !== false) ev.conferenceData = { createRequest: { requestId: Utilities.getUuid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } };
+    return { evento: resumir(Calendar.Events.insert(ev, cal, { conferenceDataVersion: 1, sendUpdates: convidados.length ? 'all' : 'none' })) };
+  }
+  if (b.acao === 'mover') {
+    var m = Calendar.Events.patch({ start: { dateTime: b.inicio, timeZone: FUSO }, end: { dateTime: b.fim, timeZone: FUSO } }, cal, b.id, { sendUpdates: 'all' });
+    return { evento: resumir(m) };
+  }
+  if (b.acao === 'cancelar') { Calendar.Events.remove(cal, b.id, { sendUpdates: 'all' }); return { ok: true }; }
+  throw new Error('ação desconhecida');
+}
+
+function resumir(ev) {
+  var priv = (ev.extendedProperties && ev.extendedProperties['private']) || {};
+  return {
+    id: ev.id, titulo: ev.summary || '(sem título)',
+    inicio: ev.start.dateTime || ev.start.date, fim: ev.end.dateTime || ev.end.date, dia_inteiro: !ev.start.dateTime,
+    meet: ev.hangoutLink || '', link: ev.htmlLink || '',
+    convidados: (ev.attendees || []).map(function (a) { return a.email; }),
+    mentorado_id: priv.mentorado_id || '', criado_pelo_assessor: !!priv.rhino
+  };
+}
+`;
+</script>
+<script>
+/* ================= AGENDA (Google Agenda pela função "agenda") =================
+   O painel nunca fala direto com o Google: pede para a função do Supabase, que conversa com a ponte
+   em Apps Script publicada na conta do dono. A chave da ponte nasce no servidor, na hora de conectar. */
+let AGENDA={estado:'ocioso',eventos:[],erro:'',nome:'',semana:null,chave:''};
+const segundaDe=d=>{const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()-((x.getDay()+6)%7));return x;};
+const DIAS_SEM=['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+const horaDe=s=>{const d=new Date(s);return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;};
+async function chamarAgenda(corpo){
+  const {data,error}=await sb.functions.invoke('agenda',{body:corpo});
+  if(error){let msg=error.message;try{const j=await error.context.json();if(j&&j.erro)msg=j.erro;}catch(e){} throw new Error(msg);}
+  if(data&&data.erro) throw new Error(data.erro);
+  return data||{};
+}
+async function carregarAgenda(forcar){
+  if(!AGENDA.semana)AGENDA.semana=segundaDe(HOJE);
+  const chaveSem=iso(AGENDA.semana);
+  if(!forcar&&AGENDA.estado==='ok'&&AGENDA.chave===chaveSem)return;
+  AGENDA.estado='carregando';AGENDA.erro='';if(ABA==='agenda')verAgenda();
+  try{
+    const st=await chamarAgenda({acao:'status'});
+    if(!st.conectada){AGENDA.estado='desconectada';}
+    else{const fim=new Date(AGENDA.semana);fim.setDate(fim.getDate()+6);
+      const r=await chamarAgenda({acao:'listar',de:`${chaveSem}T00:00:00`,ate:`${iso(fim)}T23:59:59`});
+      AGENDA.eventos=r.eventos||[];AGENDA.nome=st.agenda||'';AGENDA.chave=chaveSem;AGENDA.estado='ok';}
+  }catch(e){AGENDA.estado='erro';AGENDA.erro=String(e.message||e);}
+  if(ABA==='agenda')verAgenda();
+}
+function mudarSemanaAgenda(n){if(n===0)AGENDA.semana=segundaDe(HOJE);else{const d=new Date(AGENDA.semana);d.setDate(d.getDate()+7*n);AGENDA.semana=d;}carregarAgenda(true);}
+function assistenteConexao(){
+  return `<div class="cartao"><h2>Conectar o Google Agenda <span class="rotulo">uns 5 minutos, uma vez só</span></h2>
+    <p class="nota" style="margin:0 0 14px">O painel e o assessor passam a ver, marcar e remarcar compromissos na sua agenda, com link do Meet. Funciona por uma pequena ponte publicada na <b>sua</b> conta do Google; ninguém recebe a sua senha.</p>
+    <ol class="passos">
+      <li><b>Copie o código da ponte</b> e abra o Apps Script.<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"><button class="btn sm" onclick="copiarPonte()">Copiar código</button><a class="btnv sm" href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">Abrir o Apps Script</a></div></li>
+      <li><b>Cole no editor</b> (apague o que estiver lá) e salve. Na esquerda, em <b>Serviços</b>, clique no <b>+</b> → <b>Google Calendar API</b> → Adicionar.</li>
+      <li><b>Implantar → Nova implantação → App da Web.</b> Executar como: <b>Eu</b>. Quem pode acessar: <b>Qualquer pessoa</b>. Clique em Implantar, depois em <b>Autorizar acesso</b> → sua conta → Avançado → Acessar o projeto → Permitir.</li>
+      <li><b>Cole aqui o URL do app da Web</b> (termina em <code>/exec</code>).<div class="formlinha" style="margin-top:8px"><div class="campo" style="flex:3 1 320px;margin:0"><input id="agUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false"></div><button class="btn" id="agConectar" onclick="conectarAgenda()">Conectar</button></div></li>
+    </ol>
+    <p class="nota">“Qualquer pessoa” quer dizer só que o endereço responde sem login do Google; sem a chave secreta, que é criada pelo servidor do painel no momento da conexão, a ponte recusa tudo. Para desligar: no Apps Script, Implantar → Gerenciar implantações → Arquivar.</p></div>`;
+}
+async function copiarPonte(){
+  try{await navigator.clipboard.writeText(PONTE_GS);toast('Código copiado. Cole no editor do Apps Script.');}
+  catch(e){const t=document.createElement('textarea');t.value=PONTE_GS;document.body.appendChild(t);t.select();try{document.execCommand('copy');toast('Código copiado.');}catch(_){toast('Não consegui copiar. O código está no arquivo google-agenda-ponte.gs do repositório.',true);}t.remove();}
+}
+async function conectarAgenda(){
+  const url=document.getElementById('agUrl').value.trim(), b=document.getElementById('agConectar');
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(url))return toast('Cole o URL do app da Web, que termina em /exec.',true);
+  b.disabled=true;b.innerHTML='<span class="girando"></span>Conectando…';
+  try{const r=await chamarAgenda({acao:'conectar',url});toast(`Google Agenda conectado${r.agenda?': '+r.agenda:''}.`);AGENDA.estado='ocioso';carregarAgenda(true);}
+  catch(e){toast('Não conectou: '+String(e.message||e),true);b.disabled=false;b.textContent='Conectar';}
+}
+function semCallHaMuito(){ // só começa a avisar depois que existe histórico de calls contadas
+  if(!D.calls.length)return [];
+  const primeiro=D.calls.map(c=>String(c.inicio)).sort()[0].slice(0,10), hoje=iso(HOJE);
+  return D.contratos.filter(c=>c.status==='ativo'&&dias(c.data_fim)>=0).map(c=>{const m=D.mentorados.find(x=>x.id===c.mentorado_id);if(!m)return null;
+    const ult=D.calls.filter(x=>x.mentorado_id===m.id).map(x=>String(x.inicio).slice(0,10)).sort().pop();
+    const ref=[ult,String(c.data_inicio).slice(0,10),primeiro].filter(Boolean).sort().pop(), d=Math.round((dObj(hoje)-dObj(ref))/86400000);
+    return d>30?{m,d,ult}:null;}).filter(Boolean).sort((a,b)=>b.d-a.d);
+}
+function verAgenda(){
+  const el=document.getElementById('v-agenda');
+  if(AGENDA.estado==='ocioso'){carregarAgenda();}
+  if(AGENDA.estado==='ocioso'||AGENDA.estado==='carregando'){el.innerHTML='<div class="cartao vazio"><span class="girando"></span>Lendo a agenda…</div>';return;}
+  if(AGENDA.estado==='desconectada'){el.innerHTML=assistenteConexao();return;}
+  if(AGENDA.estado==='erro'){el.innerHTML=`<div class="alerta critico"><div><strong>Não consegui ler a agenda.</strong><br>${esc(AGENDA.erro)}<span class="acao"><button class="btnv xs" onclick="carregarAgenda(true)">Tentar de novo</button></span></div></div>${/conectad|ponte|publicad/i.test(AGENDA.erro)?assistenteConexao():''}`;return;}
+  const ini=AGENDA.semana, fim=new Date(ini);fim.setDate(fim.getDate()+6);
+  const evs=AGENDA.eventos, calls=evs.filter(e=>e.mentorado&&!e.dia_inteiro), hojeIso=iso(HOJE);
+  const ocupado=evs.filter(e=>!e.dia_inteiro).reduce((s,e)=>s+(new Date(e.fim)-new Date(e.inicio))/3600000,0);
+  let h=`<div class="grade g4">
+    ${kpi('Compromissos na semana',String(evs.length),`${dbr(iso(ini))} a ${dbr(iso(fim))}`)}
+    ${kpi('Calls com mentorados',String(calls.length),'ligadas a um contrato')}
+    ${kpi('Horas ocupadas',ocupado.toFixed(1).replace('.',',')+' h','sem contar dia inteiro')}
+    ${kpi('Calls contadas',String(D.calls.length),'desde que a agenda foi conectada')}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:18px"><button class="wk-nav" onclick="mudarSemanaAgenda(-1)" aria-label="Semana anterior">‹</button><button class="btnv sm" onclick="mudarSemanaAgenda(0)">Esta semana</button><button class="wk-nav" onclick="mudarSemanaAgenda(1)" aria-label="Próxima semana">›</button><span class="rotulo" style="margin-left:6px">${esc(AGENDA.nome||'Google Agenda')}</span><span style="flex:1"></span><button class="btnv sm" onclick="carregarAgenda(true)">${ICO.sync} Atualizar</button></div>`;
+  for(let i=0;i<7;i++){const d=new Date(ini);d.setDate(d.getDate()+i);const k=iso(d), doDia=evs.filter(e=>String(e.dia_inteiro?e.inicio:iso(new Date(e.inicio))).slice(0,10)===k);
+    if(!doDia.length&&k!==hojeIso)continue;
+    h+=`<div class="lsec" style="margin-top:12px${k===hojeIso?';border-color:rgba(255,255,255,.35)':''}"><div class="lsec-h" style="cursor:default"><span class="pt" style="background:${k===hojeIso?'#fff':'var(--faint)'}"></span><span class="nm"><b>${DIAS_SEM[d.getDay()]}, ${dbr(k)}${k===hojeIso?' · hoje':''}</b><span>${doDia.length?`${doDia.length} ${plural(doDia.length,'compromisso','compromissos')}`:'nada marcado'}</span></span></div>
+      ${doDia.map(e=>`<div class="lrow p3"><span class="st ${e.mentorado?'ok':'inf'}"></span><div class="ds"><b>${e.dia_inteiro?'dia inteiro':`${horaDe(e.inicio)} – ${horaDe(e.fim)}`} · ${esc(e.titulo)}</b><span>${e.mentorado?`${esc(e.mentorado.nome)} · calls ${esc(e.mentorado.calls)}`:'sem mentorado ligado'}${e.criado_pelo_assessor?' · marcado pelo assessor':''}</span></div><div class="ac">${e.meet?`<a class="btn xs" href="${esc(e.meet)}" target="_blank" rel="noopener">Meet</a>`:''}${e.link?`<a class="btnv xs" href="${esc(e.link)}" target="_blank" rel="noopener">Abrir</a>`:''}</div></div>`).join('')}</div>`;}
+  if(!evs.length)h+='<div class="cartao vazio" style="margin-top:12px">Nenhum compromisso nesta semana.</div>';
+  const sem=semCallHaMuito();
+  if(sem.length)h+=`<h2>Sem call há mais de 30 dias <span class="rotulo">${sem.length} ${plural(sem.length,'mentorado','mentorados')} com contrato ativo</span></h2><div class="lsec">${sem.slice(0,12).map(x=>`<div class="lrow p3"><span class="st al"></span><div class="ds"><b>${esc(x.m.nome)}</b><span>${x.ult?`última call em ${dbr(x.ult)}`:'nenhuma call contada ainda'} · calls ${x.m.calls_feitas||0}/${x.m.calls_contratadas||0}</span></div><span class="tg">${tag(`${x.d} dias`,'al')}</span></div>`).join('')}</div>`;
+  h+=`<p class="nota">Uma call entra na contagem do mentorado quando o compromisso já aconteceu e o título traz o nome dele (nome inteiro, ou primeiro e último nome), ou quando foi o assessor que marcou. A conferência roda de 3 em 3 horas. Para marcar, remarcar ou cancelar, peça ao assessor no WhatsApp ou use o Google Agenda.</p>`;
+  el.innerHTML=h;
 }
 </script>
 <script>
