@@ -535,6 +535,13 @@ Deno.serve(async (req) => {
   if (!(await assinaturaOk(req, corpo))) return new Response("assinatura inválida", { status: 401 });
   const payload = JSON.parse(corpo || "{}");
   const mensagens: Reg[] = (payload.entry || []).flatMap((e: Reg) => (e.changes || []).flatMap((c: Reg) => c.value?.messages || []));
+  // avisos de entrega da Meta (sent, delivered, read, failed): registra as falhas com o motivo, para diagnóstico
+  const situacoes: Reg[] = (payload.entry || []).flatMap((e: Reg) => (e.changes || []).flatMap((c: Reg) => c.value?.statuses || []));
+  for (const s of situacoes) {
+    if (s.status === "failed") { const er = (s.errors || [])[0] || {}; console.error("entrega falhou", { para_final: String(s.recipient_id || "").slice(-4), tamanho_do_numero: String(s.recipient_id || "").length, codigo: er.code, titulo: er.title, detalhe: er.error_data?.details || er.message });
+      await sb.from("eventos").insert({ origem: "sistema", tipo: "whatsapp", titulo: `WhatsApp não entregou uma mensagem: ${er.title || "falha"} (código ${er.code || "?"})`, detalhe: { detalhe: er.error_data?.details || er.message || null } }); }
+    else console.log("entrega:", s.status, "final", String(s.recipient_id || "").slice(-4), "tamanho", String(s.recipient_id || "").length);
+  }
   const trabalho = (async () => { for (const m of mensagens) await processarMensagem(m); })();
   // responde 200 já (a Meta reenvia se demorar) e continua trabalhando em segundo plano
   // deno-lint-ignore no-explicit-any
