@@ -405,7 +405,7 @@ async function processarMensagem(m: Reg) {
   let texto = m.text?.body || m.interactive?.button_reply?.title || m.button?.text || m.image?.caption || "";
   const { error: dup } = await sb.from("assessor_mensagens").insert({ telefone: contato.telefone, direcao: "in", tipo: m.type, texto: texto || null, wa_id: m.id });
   if (dup) return; // a Meta reenviou a mesma mensagem
-  await sb.from("assessor_contatos").update({ ultimo_contato: new Date().toISOString() }).eq("telefone", contato.telefone);
+  await sb.from("assessor_contatos").update({ ultimo_contato: new Date().toISOString(), wa_id: de }).eq("telefone", contato.telefone); // "de" é o identificador exato que a Meta usa (às vezes sem o nono dígito)
   await wa({ status: "read", message_id: m.id });
   let conteudo: unknown;
   try {
@@ -483,10 +483,11 @@ async function rotina(tipo: string, textoAviso?: string) {
   for (const c of contatos) {
     const texto = tipo === "aviso" ? String(textoAviso || "") : await montarRelatorio(tipo, D!, c); if (!texto) continue;
     const naJanela = c.ultimo_contato && Date.now() - Date.parse(c.ultimo_contato) < 23.5 * 3600 * 1000;
-    if (naJanela) { await enviar(c.telefone, { texto }); enviados.push("texto"); continue; }
+    const destino = c.wa_id || c.telefone;
+    if (naJanela) { await enviar(destino, { texto }); enviados.push("texto"); continue; }
     if (tipo === "aviso") continue; // aviso avulso fora da janela fica para o resumo da manhã
     await sb.from("assessor_contatos").update({ prefs: { ...(c.prefs || {}), relatorio_pendente: texto } }).eq("telefone", c.telefone);
-    const ok = await wa({ to: c.telefone, type: "template", template: { name: env("WHATSAPP_TEMPLATE_RESUMO") || "resumo_pronto", language: { code: "pt_BR" }, components: [{ type: "body", parameters: [{ type: "text", text: (c.prefs?.como_chamar || c.nome).split(" ")[0] }] }] } });
+    const ok = await wa({ to: destino, type: "template", template: { name: env("WHATSAPP_TEMPLATE_RESUMO") || "resumo_pronto", language: { code: "pt_BR" }, components: [{ type: "body", parameters: [{ type: "text", text: (c.prefs?.como_chamar || c.nome).split(" ")[0] }] }] } });
     enviados.push(ok ? "modelo" : "modelo recusado");
   }
   return { ok: true, tipo, enviados };
