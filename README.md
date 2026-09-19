@@ -2,7 +2,34 @@
 
 Painel financeiro do Team Rhino: um único `index.html` (sem build, sem servidor) que roda no GitHub Pages, guarda os dados no **Supabase** e lê a planilha **PLANILHA FINANCEIRA E RESULTADOS 2026** do Google sozinho, toda vez que abre.
 
-Abas: **Dashboard · Contratos · Recebíveis · Despesas · Lançamentos · Cartões · Investimentos · Configurações**. Visual escuro (fundo preto, cartões de vidro, botões-pílula). Contratos, Recebíveis, Despesas e Cartões são **cartões**: um por mentorado / parcela / despesa / cartão de crédito, com a ação principal direto nele (Baixar parcela, Marcar pago, Ver compras) e um botão **Editar** que abre os campos no próprio cartão (salva ao sair do campo). Filtros por situação e busca no topo de cada aba. No Dashboard a **meta semanal** é um widget que passa de semana em semana (4 semanas em mês de 28 dias, 5 nos outros). No celular a navegação fica na barra de baixo e o botão **Mais** abre o menu de tela cheia.
+Abas: **Dashboard · Contratos · Recebíveis · Despesas · Lançamentos · Cartões · Investimentos · Configurações**. Visual escuro (fundo preto, cartões de vidro, botões-pílula). No Dashboard a **meta semanal** é um widget que passa de semana em semana (4 semanas em mês de 28 dias, 5 nos outros). No celular a navegação fica na barra de baixo e o botão **Mais** abre o menu de tela cheia (onde também fica o **Sair**).
+
+### Contratos — ciclo de vida
+Um cartão por contrato. Quando o contrato vence (ou faltam 30 dias), o cartão pergunta o que aconteceu, com três botões grandes:
+
+| Botão | O que faz | O que acontece com o histórico |
+|---|---|---|
+| **Renovou** | abre o formulário de renovação (valor cheio, entrada, duração, parcelas) e cria um **contrato novo** do mesmo mentorado, ligado ao anterior (`renovacao_de`). O anterior vira *renovado*. | intacto — as parcelas pagas do contrato antigo continuam nele; o novo aparece com a faixa **Renovação** e um link para o anterior |
+| **Não renovou** | encerra o contrato (*concluido*, com `encerrado_em`) | intacto — parcelas em aberto, se houver, continuam em Recebíveis para cobrança |
+| **Cancelou** | cancela (*cancelado*, com `encerrado_em`) | o que foi pago fica; as parcelas em aberto deixam de ser cobradas e saem de Recebíveis |
+
+Nada é apagado, e o faturamento dos meses vem da planilha — então encerrar, cancelar ou renovar nunca muda o que já foi faturado. Fora do vencimento, o botão **Renovar / encerrar** abre a mesma decisão; **Reativar** desfaz. Filtros: Ativos · Precisam de ação · Quitados · Renovados · Não renovaram · Cancelados · Todos.
+
+### Recebíveis — baixa sem duplicidade
+- Nos meses que a planilha traz, **o faturamento é o da planilha**. Dar baixa numa parcela só a tira da cobrança e guarda a data em que o dinheiro entrou; não soma de novo (veja `caixaMes`). Se o mês ainda não está na planilha, a baixa conta como recebido até a planilha trazer o mês.
+- **Dar baixa** abre uma janela: data do recebimento (hoje / no vencimento / outra) e valor recebido. Valor menor que a parcela = **baixa parcial**: o restante vira uma parcela em aberto com o mesmo vencimento.
+- **Conferência com a planilha**: o painel lê a aba de alunos (`PLANILHA.gidAlunos`, um aluno por linha, meses nas colunas) só em memória. Para cada parcela vencida, se a planilha mostra no mês do vencimento um valor que as baixas ainda não explicam, ela aparece como sugestão: **Já recebi** (baixa na data do vencimento), **Recebi parte** ou **Ainda não** (esconde a sugestão neste navegador). Nunca dá baixa sozinho — no mês em andamento a planilha mistura o que entrou com o que está previsto.
+- No widget semanal, a soma das semanas nunca passa do total da planilha.
+- Em Lançamentos, digitar uma **entrada** num mês que já vem da planilha pede confirmação (para não contar o mesmo dinheiro duas vezes).
+
+### Despesas — lista segmentada
+As despesas do mês ficam em **grupos** (Cartões, Despesas fixas, Colaboradores, Impostos…), do maior para o menor: cada grupo mostra total, % do mês, quanto falta pagar e uma barra do que já foi pago; dentro dele, as linhas em ordem de vencimento com **Pagar / Desfazer** e **Editar** (abre os campos na própria linha). Clique no título para recolher; **Recolher tudo** fecha todos. Filtrando por um grupo, as seções passam a ser as categorias dele. Itens vindos da planilha têm o valor travado.
+
+### Cartões — edição segura
+“Ver compras” lista parcelamentos e assinaturas **só para leitura**. **Editar** na linha abre um bloco com todos os campos (descrição, valor, total de parcelas, mês da 1ª parcela, categoria, cartão, escopo; assinatura: valor, cartão, ativa/pausada) e só grava em **Salvar**. Compras quitadas/futuras e assinaturas pausadas ficam em “fora da fatura deste mês”.
+
+### Lançamentos
+Resumo do período (entradas, saídas, resultado, quantidade), atalhos **Tudo · Entradas · Saídas · A pagar · Da planilha · Digitados aqui**, busca, e o filtro de período/grupo + relatório em PDF recolhido. Linhas da planilha têm valor travado e não têm ✕.
 
 ---
 
@@ -11,7 +38,8 @@ Abas: **Dashboard · Contratos · Recebíveis · Despesas · Lançamentos · Car
 | De onde | O que | Como |
 |---|---|---|
 | **Planilha do Google** (aba financeira) | receitas por origem (Consultoria, Mentoria, Framework), despesas por grupo e item, meta do mês (linha *Objetivo*) | automático, ao abrir o painel (e no botão **Atualizar**) |
-| **Painel** | contratos, parcelas, cartões, parcelamentos, assinaturas, fixos, carteiras, repasses, análises da IA | digitado nas abas |
+| **Planilha do Google** (aba de alunos) | quanto cada aluno aparece pagando em cada mês | só leitura, em memória, para a conferência de Recebíveis |
+| **Painel** | contratos, parcelas, cartões, parcelamentos, assinaturas, fixos, carteiras, análises da IA | digitado nas abas |
 | **Edge Function** (opcional) | análise com IA e leitura de fatura por print | URL em *Configurações → URL do agente* |
 
 ### Sincronização com a planilha
@@ -25,21 +53,23 @@ Abas: **Dashboard · Contratos · Recebíveis · Despesas · Lançamentos · Car
 - Célula apagada na planilha: o lançamento é removido. Lançamentos digitados no painel nunca são tocados.
 - Receitas entram no dia 1 do mês (a planilha só tem o total mensal).
 - Categorias seguem o esquema que já existe no painel (*Despesas fixas · Pessoal*, *Cartões · empresa*, *Colaboradores*, *Impostos*, *Provisões financeiras*…); o item da planilha vai na descrição. Só cria categoria se faltar.
-- Para trocar a planilha, a aba ou quais receitas entram, edite a constante `PLANILHA` no topo do `index.html` (`id`, `gid`, `ano`, `receitas`).
+- Para trocar a planilha, as abas ou quais receitas entram, edite a constante `PLANILHA` no topo do `index.html` (`id`, `gid`, `gidAlunos`, `ano`, `receitas`).
 
 ---
 
 ## Instalação e atualizações
 
-1. **Supabase**: rode, no SQL Editor, os arquivos de migração que ainda não rodou. Para esta versão: `supabase-migracao-v5-planilha.sql` (cria `origem` e `origem_id` em `lancamentos`).
+1. **Supabase**: rode, no SQL Editor, os arquivos de migração que ainda não rodou:
+   - `supabase-migracao-v5-planilha.sql` — `origem` e `origem_id` em `lancamentos` (sincronização com a planilha);
+   - `supabase-migracao-v6-renovacao.sql` — `renovacao_de` e `encerrado_em` em `contratos` (renovação e encerramento). *Já aplicada no projeto em 18/09/2026.*
 2. **GitHub Pages**: suba o `index.html` (Add file → Upload files → Commit). O site atualiza em ~1 minuto.
-3. Abra o painel, entre, e confira no Dashboard o status **“Planilha sincronizada às …”**. Em *Configurações → Planilha do Google* estão o ID, a aba e a última sincronização.
+3. Abra o painel, entre, e confira no Dashboard o status **“Planilha sincronizada às …”**. Em *Configurações → Planilha do Google* estão o ID, as abas e a última sincronização.
 
 ---
 
 ## Privacidade
 
-O site no GitHub Pages é público, mas os dados só aparecem depois do login (Supabase Auth). A planilha, para ser lida pelo painel, fica **legível por link** — quem tiver o link dela consegue abrir. Se isso incomodar, a alternativa é publicar só a aba financeira (*Arquivo → Compartilhar → Publicar na web*) e manter a planilha principal privada.
+O site no GitHub Pages é público, mas os dados só aparecem depois do login (Supabase Auth). A planilha, para ser lida pelo painel, fica **legível por link** — quem tiver o link dela consegue abrir. Se isso incomodar, a alternativa é publicar só as abas usadas (*Arquivo → Compartilhar → Publicar na web*) e manter a planilha principal privada.
 
 ---
 
@@ -48,8 +78,11 @@ O site no GitHub Pages é público, mas os dados só aparecem depois do login (S
 - `<style>`: visual escuro, tokens em `:root`, regras de celular em `@media(max-width:720px)`.
 - `PLANILHA`, `SUPABASE_*`: configurações.
 - Cálculos (`caixaMes`, `despesasMes`, `semanas`…), agente local e chamada da IA.
-- Uma função `ver…()` por aba (Contratos, Recebíveis, Despesas e Cartões montam cartões com `card…()`); `desenhar()` redesenha a aba ativa e rotula as tabelas restantes para o celular.
-- Bloco **PLANILHA**: `csvParse`, `lerFinanceira`, `gravarPlanilha`, `sincronizarPlanilha`.
+- Uma função `ver…()` por aba; `desenhar()` redesenha a aba ativa e rotula as tabelas restantes para o celular.
+  - Contratos: `dadosContrato`, `cardContrato`, `barraDecisao`, `formRenovacao`, `criarRenovacao`, `encerrarContrato`, `reativarContrato`.
+  - Recebíveis: `abrirBaixa` / `confirmarBaixa` / `gravarBaixa` (janela de baixa), `sugestoesPlanilha` / `blocoConferencia` (conferência com a aba de alunos).
+  - Despesas: `secaoDespesas` / `linhaDespesa` (lista segmentada). Cartões: `linhaCompra` / `linhaAssinatura` / `salvarCompra` / `salvarAssinatura`.
+- Bloco **PLANILHA**: `csvParse`, `lerFinanceira`, `gravarPlanilha`, `sincronizarPlanilha`, e `lerAlunos` / `lerAbaAlunos` (aba de alunos, só leitura).
 
 Tabelas no Supabase: `config, produtos, mentorados, contratos, parcelas, lancamentos, recorrencias, cartoes, parcelamentos, assinaturas, metas_mes, investimentos, investimentos_hist, categorias, analises`. A tabela `repasses` (sociedade encerrada) não é mais usada pelo painel.
 

@@ -59,7 +59,8 @@ header{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,rgba(0
 .marca{display:flex;align-items:center;gap:10px;margin-right:auto;min-width:0}
 .marca img{height:32px;max-width:140px;object-fit:contain}
 .mark{width:36px;height:36px;border-radius:999px;background:#fff;color:#000;display:grid;place-items:center;font-weight:800;font-size:16px;flex:none}
-.marca .nome{font-weight:800;font-size:17px;line-height:1.1;white-space:nowrap;color:#fff}
+.marca>div{min-width:0}
+.marca .nome{font-weight:800;font-size:17px;line-height:1.1;white-space:nowrap;color:#fff;overflow:hidden;text-overflow:ellipsis}
 .marca .sub{font-size:12px;color:var(--faint);white-space:nowrap}
 .mes{display:flex;align-items:center;gap:6px;background:var(--sf);border:1px solid var(--ln);border-radius:999px;padding:4px 6px 4px 12px;font-weight:500;font-size:13px;color:var(--faint)}
 .mes select{border:0;background:transparent;font-weight:700;color:#fff;padding:4px 2px;width:auto;min-height:0;cursor:pointer}
@@ -191,10 +192,12 @@ h2 .dir{margin-left:auto;font-weight:500;font-size:13px}
 .ctr-prog .lin{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:var(--mut)}
 .ctr-prog .lin b{color:#fff}
 .ctr-prog .barra{margin-top:6px}
-.ctr-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:14px}
+.ctr-grid{display:grid;grid-template-columns:minmax(0,1.5fr) repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
 .ctr-grid div{background:rgba(255,255,255,.04);border-radius:10px;padding:8px 10px;min-width:0}
 .ctr-grid small{display:block;font-size:11px;color:var(--faint)}
 .ctr-grid b{display:block;font-size:13.5px;color:#fff;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.ctr-grid.flex{grid-template-columns:repeat(auto-fit,minmax(118px,1fr))}
+.ctr-grid b.pos{color:var(--pos)}.ctr-grid b.neg{color:var(--neg)}.ctr-grid b.warn{color:var(--warn)}.ctr-grid b.faint{color:var(--faint)}
 .ctr-act{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
 .ctr-line{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;color:var(--mut);flex-wrap:wrap}
 .ctr-line .sp{flex:1}
@@ -206,6 +209,68 @@ h2 .dir{margin-left:auto;font-weight:500;font-size:13px}
 .ctr-edit label{display:block;font-size:11.5px;color:var(--faint);margin-bottom:4px}
 .ctr-edit input,.ctr-edit select{min-height:36px;font-size:13.5px;padding:0 10px;border-radius:10px}
 .ctr-edit .full{grid-column:1/-1}
+/* decisão de contrato (renovou / não renovou / cancelou) e faixas de situação */
+.decisao{margin-top:14px;border:1px solid rgba(251,191,36,.45);background:rgba(251,191,36,.08);border-radius:14px;padding:12px 14px}
+.decisao.neutra{border-color:var(--ln);background:rgba(255,255,255,.04)}
+.decisao .q{display:block;font-size:13.5px;color:#fff;font-weight:600;margin-bottom:10px}
+.decisao .q small{display:block;font-weight:400;color:var(--faint);font-size:12px;margin-top:2px}
+.decisao .ops{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.op{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 8px;border-radius:12px;border:1px solid var(--ln);background:var(--sf);color:#fff;font-weight:700;font-size:14px;text-align:center}
+.op small{font-weight:400;font-size:11.5px;color:var(--faint);line-height:1.3}
+.op .ic{font-size:20px;line-height:1}
+.op.sim{background:#fff;color:#000;border-color:#fff}.op.sim small{color:#4B5563}
+.op.sim:hover{background:rgba(255,255,255,.9)}
+.op.nao:hover{background:var(--sf2)}
+.op.can{border-color:rgba(248,113,113,.45);color:var(--neg)}.op.can:hover{background:var(--neg-soft)}
+.ctr-banner{display:flex;align-items:center;gap:10px;margin:-16px -16px 14px;padding:10px 16px;border-radius:16px 16px 0 0;font-size:13px;font-weight:600;flex-wrap:wrap}
+.ctr-banner small{font-weight:400;opacity:.85}
+.ctr-banner .sp{flex:1}
+.ctr-banner.renovado{background:var(--pos-soft);color:var(--pos)}
+.ctr-banner.encerrado{background:rgba(255,255,255,.07);color:var(--mut)}
+.ctr-banner.cancelado{background:var(--neg-soft);color:var(--neg)}
+.ctr-banner.renovacao{background:var(--info-soft);color:var(--info)}
+.ctr-banner button{background:none;border:0;color:inherit;text-decoration:underline;font-size:12.5px;font-weight:600;padding:0}
+/* listas segmentadas (despesas) */
+.lsec{background:var(--sf);border:1px solid var(--ln);border-radius:var(--r);margin-bottom:10px;overflow:hidden;backdrop-filter:blur(12px)}
+.lsec-h{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;background:none;border:0;color:#fff;text-align:left}
+.lsec-h:hover{background:var(--sf2)}
+.lsec-h .pt{width:12px;height:12px;border-radius:999px;flex:none}
+.lsec-h .nm{flex:1;min-width:0}
+.lsec-h .nm b{display:block;font-size:15px}
+.lsec-h .nm span{display:block;font-size:12px;color:var(--faint);font-weight:400}
+.lsec-h .mb{width:120px;flex:none}
+.lsec-h .mb .barra{margin:0;height:6px}
+.lsec-h .tt{font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.lsec-h .tt small{display:block;font-weight:400;font-size:11.5px;color:var(--faint)}
+.lrow{display:grid;grid-template-columns:10px minmax(0,1fr) 128px 112px 172px;gap:12px;align-items:center;padding:10px 16px;border-top:1px solid var(--ln2);font-size:14px}
+.lrow .tg{justify-self:end}
+.lsec.conc .lrow{grid-template-columns:10px minmax(0,1fr) 172px 112px 196px}
+.lrow .st{width:8px;height:8px;border-radius:999px;background:var(--faint)}
+.lrow .st.ok{background:var(--pos)}.lrow .st.al{background:var(--warn)}.lrow .st.mal{background:var(--neg)}
+.lrow .ds{min-width:0}
+.lrow .ds b{display:block;color:#fff;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .ds span{display:block;font-size:12px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .vl{font-weight:700;color:#fff;font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.lrow .ac{display:flex;gap:6px;justify-content:flex-end}
+.lrow.pago .ds b,.lrow.pago .vl{color:var(--mut);font-weight:500}
+.ledit{padding:0 16px 14px}
+.ledit .ctr-edit{margin-top:0}
+.lrow .st.inf{background:var(--info)}
+.lfoot{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 16px;border-top:1px solid var(--ln2)}
+.lfoot .nota{flex:1;min-width:220px}
+.lfoot .ac{display:flex;gap:6px;flex-wrap:wrap}
+.sect .btnv{margin-left:4px}
+/* garantia de não duplicar receita + janela de baixa de parcela */
+.garantia{display:flex;gap:12px;align-items:flex-start;background:var(--pos-soft);border:1px solid rgba(74,222,128,.28);border-radius:var(--r2);padding:12px 14px;font-size:13.5px;color:var(--mut);line-height:1.55}
+.garantia b{color:#fff}
+.garantia .ic{width:24px;height:24px;border-radius:999px;background:var(--pos);color:#000;display:grid;place-items:center;font-weight:800;font-size:13px;flex:none}
+.garantia.neutra{background:var(--info-soft);border-color:rgba(56,189,248,.28)}.garantia.neutra .ic{background:var(--info)}
+.garantia.aviso{background:var(--warn-soft);border-color:rgba(251,191,36,.3)}.garantia.aviso .ic{background:var(--warn)}
+.modal-bg{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.66);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px}
+.modal{width:100%;max-width:440px;background:#0B0B0F;border:1px solid var(--ln);border-radius:20px;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,.6);max-height:92vh;overflow:auto}
+.modal .ml{display:block;font-size:12px;color:var(--faint);margin:14px 0 6px}
+.modal .garantia{margin-top:12px}
+.modal-act{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
 .mini{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--faint)}
 .mini .barra{flex:1;height:6px;min-width:60px;margin:0}
 .sub-rows{margin-top:12px;border-top:1px solid var(--ln2);padding-top:6px}
@@ -302,7 +367,10 @@ td .sub{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:12px;co
   input,select,textarea{font-size:16px}
   .topo{padding:8px 14px;gap:8px;min-height:58px}
   .marca .sub,.quem,.mes>span{display:none}
-  .mes{padding:2px 4px 2px 8px}
+  .mes{padding:2px 4px 2px 8px;flex:none}
+  .mes select{max-width:150px}
+  #btSair{display:none}
+  .lrow .ds span{white-space:normal}
   nav.abas-wrap{display:none}
   .menu-btn{display:grid;place-items:center;width:40px;height:40px;border-radius:999px;border:1px solid var(--ln);background:var(--sf);color:#fff}
   .menu-btn svg{width:20px;height:20px}
@@ -318,6 +386,21 @@ td .sub{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:12px;co
   .wk-num{font-size:34px}
   .ctr-grid{grid-template-columns:1fr 1fr}
   .ctr-edit{grid-template-columns:1fr 1fr}
+  .decisao .ops{grid-template-columns:1fr}
+  .op{flex-direction:row;justify-content:flex-start;text-align:left;gap:10px;padding:12px 14px}
+  .op small{margin-left:auto;text-align:right}
+  .ctr-banner{margin:-14px -14px 12px}
+  .lrow,.lsec.conc .lrow{grid-template-columns:10px minmax(0,1fr) auto;row-gap:6px;padding:10px 12px}
+  .lrow .tg{grid-column:2;grid-row:2;justify-self:start;align-self:center}
+  .lrow .ac{grid-column:2/-1;grid-row:2;justify-content:flex-end}
+  .lsec.conc .lrow .tg{grid-row:auto}
+  .lsec.conc .lrow .ac{grid-row:auto;justify-content:flex-start}
+  .lsec-h{padding:12px}
+  .lsec-h .mb{display:none}
+  .lfoot{padding:10px 12px}
+  .modal-bg{align-items:flex-end;padding:0}
+  .modal{max-width:none;border-radius:20px 20px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))}
+  .modal-act .btn,.modal-act .btnv{flex:1}
   .grp-bars .g{grid-template-columns:110px 1fr auto auto;font-size:12.5px}
   .sub-rows .r{grid-template-columns:minmax(0,1fr) auto auto}
   .sub-rows .r .mid{display:none}
@@ -410,6 +493,7 @@ const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 /* Planilha do Google que alimenta o painel (aba financeira). O painel lê o CSV público
    e grava no Supabase toda vez que abre; veja o bloco PLANILHA no fim do arquivo. */
 const PLANILHA={id:'1WsgpupBx_CXdEf_zI1vUXjAemtuUQdGNJ2eje2Er4Sc',gid:1973263952,ano:2026,segundos:60, // gid = aba "Planilha financeira - RESULTADO"
+  gidAlunos:579426017, // aba com um aluno por linha e os meses nas colunas: só leitura, serve para conferir as parcelas
   receitas:['consultoria','mentoria','framework']}; // quais linhas "Recebimento …" entram como receita
 
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -417,7 +501,7 @@ const MESC=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','d
 const CORES=['#A855F7','#0EA5E9','#EC4899','#FACC15','#4ADE80','#FB923C','#94A3B8','#F472B6','#60A5FA','#34D399'];
 const HOJE=new Date();
 let MES=HOJE.getMonth(), ANO=HOJE.getFullYear(), ABA='dash';
-let FILTRO={ini:'',fim:'',cat:'',tipo:''};
+let FILTRO={ini:'',fim:'',cat:'',visao:'tudo',q:''};
 let IA={estado:'ocioso',itens:[],erro:''};
 let PRINTS=[];
 let SEMANA=null;                       // semana mostrada no widget (null = a atual)
@@ -429,6 +513,7 @@ let CAT_ABERTO=null;
 let HIST_ABERTO=null;
 let FORMS={};            // id do formulário -> aberto?
 let SYNC={estado:'ocioso',quando:null,resumo:'',erro:''};
+let ALUNOS={estado:'ocioso',linhas:[],erro:''};   // aba de alunos da planilha (conferência de Recebíveis)
 let D={config:{},produtos:[],mentorados:[],contratos:[],parcelas:[],lancamentos:[],recorrencias:[],
   cartoes:[],parcelamentos:[],assinaturas:[],metas_mes:[],investimentos:[],investimentos_hist:[],categorias:[],analises:[]};
 const G={};
@@ -498,7 +583,7 @@ async function iniciar(session){
   const s=document.getElementById('selMes'); s.innerHTML='';
   for(let i=-13;i<=4;i++){const d=new Date(HOJE.getFullYear(),HOJE.getMonth()+i,1);
     const o=document.createElement('option');o.value=`${d.getFullYear()}-${d.getMonth()}`;
-    o.textContent=`${MESES[d.getMonth()]} ${d.getFullYear()}`;if(i===0)o.selected=true;s.appendChild(o);}
+    o.textContent=celular()?`${MESC[d.getMonth()]} ${d.getFullYear()}`:`${MESES[d.getMonth()]} ${d.getFullYear()}`;if(i===0)o.selected=true;s.appendChild(o);}
   s.onchange=()=>{const[a,m]=s.value.split('-').map(Number);ANO=a;MES=m;SEMANA=null;IA={estado:'ocioso',itens:[],erro:''};HIST_ABERTO=null;REC_MES_ABERTO=null;desenhar()};
   montarNav();
   await carregar();
@@ -510,10 +595,11 @@ function montarNav(){
   document.getElementById('bnav').innerHTML=principais.map(id=>bt(id)).join('')+`<button type="button" id="btMais">${ICO.more}<span>Mais</span></button>`;
   document.getElementById('sheet').innerHTML=`<div class="top"><div class="marca"><span class="mark">⚡</span><div class="nome" id="nomeMenu">Painel RHINO</div></div><button class="fechar" id="btFecharMenu" aria-label="Fechar menu">${ICO.x}</button></div>`
     +ABAS.map(([id,l])=>`<button type="button" class="it" data-a="${id}"><span>${l}</span>${ICO.arrow}</button>`).join('')
-    +`<div class="cta"><button class="btnv" data-a="lanc">Novo lançamento</button><button class="btn" data-a="dash">Ver o mês</button></div>`;
+    +`<div class="cta"><button class="btnv" data-a="lanc">Novo lançamento</button><button class="btn" data-a="dash">Ver o mês</button><button class="btnv" id="btSairMenu" style="border-color:transparent;color:var(--faint)">Sair da conta</button></div>`;
   document.getElementById('btMais').onclick=()=>document.body.classList.toggle('mais');
   document.getElementById('btMenu').onclick=()=>document.body.classList.toggle('mais');
   document.getElementById('btFecharMenu').onclick=()=>document.body.classList.remove('mais');
+  document.getElementById('btSairMenu').onclick=()=>document.getElementById('btSair').click();
   ['abas','bnav','sheet'].forEach(id=>document.getElementById(id).addEventListener('click',e=>{const b=e.target.closest('button[data-a]');if(b)irPara(b.dataset.a);}));
   marcarNav();
 }
@@ -691,7 +777,10 @@ function semanas(a,m){
     D.lancamentos.filter(l=>l.tipo==='entrada'&&l.pago&&l.origem!=='planilha'&&noMes(l.data,a,m)).forEach(l=>{
       const dd=dObj(l.data).getDate();if(dd>=i&&dd<=f)v+=+l.valor;});
     return v;});
-  const resto=cx.planilha?Math.max(0,cx.total-datados.reduce((s,x)=>s+x,0)):0;
+  const somaDat=datados.reduce((s,x)=>s+x,0);
+  const resto=cx.planilha?Math.max(0,cx.total-somaDat):0;
+  // o total do mês nunca passa do da planilha: se as baixas datadas somam mais, entram na proporção
+  if(cx.planilha&&somaDat>cx.total&&somaDat>0) datados.forEach((v,k)=>datados[k]=v*cx.total/somaDat);
   return faixas.map(([i,f],k)=>{
     const dias=f-i+1;
     // meta da semana: o que você digitou, ou o proporcional aos dias do bloco
@@ -724,7 +813,7 @@ function agenteLocal(){
   const mrrDe=l=>l.reduce((s,c)=>s+ +c.valor_total/Math.max(1,c.meses),0);
   const venc=D.contratos.filter(c=>c.status==='ativo'&&dias(c.data_fim)<0);
   const prox=D.contratos.filter(c=>c.status==='ativo'&&dias(c.data_fim)>=0&&dias(c.data_fim)<=30);
-  if(venc.length) A.push(['critico',`<strong>${venc.length} contratos venceram e seguem como ativos</strong>, ${rsc(mrrDe(venc))} de MRR que pode já ter saído.`]);
+  if(venc.length) A.push(['critico',`<strong>${venc.length} contratos venceram e ainda estão como ativos</strong>, ${rsc(mrrDe(venc))} de MRR que pode já ter saído. <button class="tag al" onclick="setFiltroCtr('atencao')">dizer se renovou ou não →</button>`]);
   if(prox.length) A.push(['atencao',`<strong>${prox.length} contratos vencem em 30 dias</strong>, ${rsc(mrrDe(prox))} de MRR em risco.`]);
   const g=agrupaPorMatriz(dp.pc);
   if(g.length) A.push(['info',`<strong>Maior bloco de despesa: ${esc(g[0][0])}, ${rs(g[0][1].total)}</strong>, ${(g[0][1].total/dp.total*100).toFixed(0)}% do mês.`]);
@@ -758,6 +847,8 @@ function dadosParaIA(){
     historico_6_meses:hist,
     contratos:{ativos:D.contratos.filter(c=>c.status==='ativo').length,
       cancelados:D.contratos.filter(c=>c.status==='cancelado').length,
+      renovados:D.contratos.filter(c=>c.status==='renovado').length,
+      nao_renovaram:D.contratos.filter(c=>c.status==='concluido').length,
       mrr:Math.round(D.contratos.filter(c=>c.status==='ativo').reduce((s,c)=>s+ +c.valor_total/Math.max(1,c.meses),0)),
       vencidos_ainda_ativos:D.contratos.filter(c=>c.status==='ativo'&&dias(c.data_fim)<0).length,
       vencem_30_dias:D.contratos.filter(c=>c.status==='ativo'&&dias(c.data_fim)>=0&&dias(c.data_fim)<=30).length},
@@ -1001,7 +1092,10 @@ function pinta(id,tipo,data,extra){
 }
 </script>
 <script>
-/* ================= CONTRATOS (cartões) ================= */
+/* ================= CONTRATOS (cartões) =================
+   Ciclo de vida: ativo -> renovou (cria contrato novo ligado ao antigo) | não renovou (concluido) | cancelou.
+   Nada é apagado: as parcelas pagas do contrato antigo continuam lá, e o faturamento dos meses vem da planilha. */
+let CTR_SIT=null, CTR_RENOVA=null;
 const recebidoDe=id=>D.parcelas.filter(p=>p.contrato_id===id&&p.pago).reduce((s,p)=>s+ +p.valor,0);
 const saldoDe=c=>Math.max(0,+c.valor_total-recebidoDe(c.id));
 function dadosContrato(c){
@@ -1010,24 +1104,58 @@ function dadosContrato(c){
   const rec=ps.filter(p=>p.pago).reduce((s,p)=>s+ +p.valor,0), sal=Math.max(0,+c.valor_total-rec);
   const abertas=ps.filter(p=>!p.pago).sort((a,b)=>String(a.vencimento).localeCompare(String(b.vencimento)));
   const prox=abertas[0]||null, atras=abertas.filter(p=>dias(p.vencimento)<0).length, d=dias(c.data_fim);
-  const atencao=c.status==='ativo'&&(atras>0||d<=30||(sal>0&&!prox));
-  return {c,m,ps,rec,sal,prox,atras,d,atencao};
+  const ativo=c.status==='ativo', decidir=ativo&&d<=30;          // venceu ou vence em 30 dias: renovou ou não?
+  const atencao=ativo&&(atras>0||decidir||(sal>0&&!prox));
+  const novo=D.contratos.find(x=>x.renovacao_de===c.id)||null;   // contrato que renovou este
+  return {c,m,ps,rec,sal,abertas,prox,atras,d,ativo,decidir,atencao,novo};
+}
+function barraDecisao(x,forcada){
+  const {c,d,abertas}=x, ab=abertas.length, vab=abertas.reduce((s,p)=>s+ +p.valor,0);
+  const titulo=d<0?`Este contrato venceu há ${-d} dias — o que aconteceu?`:d<=30?`Este contrato vence em ${d} dias — já tem decisão?`:'Mudar a situação deste contrato';
+  return `<div class="decisao ${forcada&&d>30?'neutra':''}"><span class="q">${titulo}<small>O que já foi faturado fica guardado em qualquer opção.${ab?` Há ${ab} parcela${ab>1?'s':''} em aberto (${rsc(vab)}).`:''}</small></span>
+    <div class="ops">
+      <button class="op sim" onclick="abrirRenovacao('${c.id}')"><span class="ic">↻</span>Renovou<small>cria o novo contrato</small></button>
+      <button class="op nao" onclick="encerrarContrato('${c.id}','concluido')"><span class="ic">✓</span>Não renovou<small>encerra e guarda o histórico</small></button>
+      <button class="op can" onclick="encerrarContrato('${c.id}','cancelado')"><span class="ic">✕</span>Cancelou<small>saiu antes do fim</small></button>
+    </div></div>`;
+}
+function formRenovacao(x){
+  const {c,m}=x, ini=iso(HOJE);
+  return `<div class="ctr-edit" id="ren_${c.id}">
+    <div class="full" style="color:#fff;font-weight:700;font-size:14px">Renovação de ${esc(m.nome)} <span class="faint" style="font-weight:400;font-size:12.5px">· o contrato atual (${rsc(x.rec)} recebidos) fica guardado como “renovado”</span></div>
+    <div><label>Produto</label><select id="rnProd_${c.id}">${D.produtos.filter(p=>p.ativo!==false).map(p=>`<option value="${p.id}"${p.id===c.produto_id?' selected':''}>${esc(p.nome)}</option>`).join('')}</select></div>
+    <div><label>Valor cheio da renovação</label><input id="rnValor_${c.id}" type="number" step="0.01" inputmode="decimal" value="${c.valor_total}"></div>
+    <div><label>Entrada (já recebida)</label><input id="rnEnt_${c.id}" type="number" step="0.01" inputmode="decimal" value="0"></div>
+    <div><label>Data da entrada / início</label><input id="rnIni_${c.id}" type="date" value="${ini}"></div>
+    <div><label>Duração (meses)</label><input id="rnMeses_${c.id}" type="number" inputmode="numeric" value="${c.meses||6}"></div>
+    <div><label>Parcelas do saldo</label><input id="rnParc_${c.id}" type="number" inputmode="numeric" value="${c.parcelas_saldo||5}"></div>
+    <div><label>Calls a adicionar</label><input id="rnCalls_${c.id}" type="number" inputmode="numeric" value="0"></div>
+    <div class="full" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btnv sm" onclick="abrirRenovacao('${c.id}')">Voltar</button><button class="btn sm" onclick="criarRenovacao('${c.id}')">Criar renovação</button></div>
+    <p class="nota full" style="margin:0">A entrada entra como parcela paga na data acima; o saldo vira parcelas mensais a partir do mês seguinte. Como o faturamento do mês vem da planilha, isso não soma em dobro.</p>
+  </div>`;
 }
 function cardContrato(x){
-  const {c,m,ps,rec,sal,prox,atras,d,atencao}=x, p=c.valor_total?Math.min(100,rec/c.valor_total*100):0;
-  const sit=c.status==='cancelado'?tag('cancelado','mal'):c.status==='concluido'?tag('concluído'):c.status==='renovado'?tag('renovado','ok')
-    :atras?tag(`${atras} parcela${atras>1?'s':''} vencida${atras>1?'s':''}`,'mal'):d<0?tag(`venceu há ${-d} d`,'mal'):d<=30?tag(`vence em ${d} d`,'al'):tag('em dia','ok');
-  const cls=c.status!=='ativo'?'pago':atras||d<0?'vencido':d<=30||(sal>0&&!prox)?'aviso':'';
+  const {c,m,ps,rec,sal,prox,atras,d,ativo,decidir,novo}=x, p=c.valor_total?Math.min(100,rec/c.valor_total*100):0;
+  const sit=!ativo?'':atras?tag(`${atras} parcela${atras>1?'s':''} vencida${atras>1?'s':''}`,'mal'):d<0?tag(`venceu há ${-d} d`,'mal'):d<=30?tag(`vence em ${d} d`,'al'):tag('em dia','ok');
+  const cls=!ativo?'':atras||d<0?'vencido':d<=30||(sal>0&&!prox)?'aviso':'';
   const proxTxt=prox?`${dbr(prox.vencimento)} · ${rsc(prox.valor)}${dias(prox.vencimento)<0?` <span class="neg">(${-dias(prox.vencimento)} d atrás)</span>`:''}`:(sal>0?'sem parcelas geradas':'quitado ✓');
-  const aberto=CTR_ABERTO===c.id, editando=CTR_EDIT===c.id;
-  let h=`<div class="ctr ${cls}">
-    <div class="ctr-top"><div class="avatar ${avCls(m.nome)}">${iniciais(m.nome)}</div><div class="ctr-name"><b>${esc(m.nome)}</b><span>${esc(nomeProd(c.produto_id))} · ${dbr(c.data_inicio)} → ${dbr(c.data_fim)}</span></div>${sit}</div>
-    <div class="ctr-prog"><div class="lin"><span>recebido <b>${rsc(rec)}</b> de ${rsc(c.valor_total)}</span><b>${p.toFixed(0)}%</b></div><div class="barra ${p>=100?'v':''}"><i style="width:${p}%"></i></div></div>
-    <div class="ctr-grid"><div><small>Próxima parcela</small><b>${proxTxt}</b></div><div><small>Saldo</small><b class="${sal>0?'warn':'pos'}">${rsc(sal)}</b></div><div><small>Calls</small><b>${m.calls_feitas||0}/${m.calls_contratadas||0}</b></div><div><small>Contrato</small><b>${d>=0?`${d} dias`:c.status==='ativo'?`venceu há ${-d} d`:'encerrado'}</b></div></div>
-    <div class="ctr-act">${c.status==='ativo'&&prox?`<button class="btn sm" onclick="baixar('${prox.id}')">Baixar parcela ${rsc(prox.valor)}</button>`:''}<button class="btnv sm" onclick="abrirContrato('${c.id}')">${aberto?'Fechar':'Parcelas'}</button><button class="btnv sm" onclick="editarContrato('${c.id}')">${editando?'Fechar edição':'Editar'}</button></div>`;
+  const aberto=CTR_ABERTO===c.id, editando=CTR_EDIT===c.id, renovando=CTR_RENOVA===c.id, situacao=CTR_SIT===c.id;
+  const quando=c.encerrado_em?` em ${dbr(c.encerrado_em)}`:'';
+  const faixa=c.status==='renovado'?`<div class="ctr-banner renovado">↻ Renovado${quando} <small>· histórico guardado</small><span class="sp"></span>${novo?`<button onclick="verContrato('${novo.id}')">ver contrato novo</button>`:''}</div>`
+    :c.status==='concluido'?`<div class="ctr-banner encerrado">✓ Não renovou${quando} <small>· contrato encerrado, faturamento guardado</small></div>`
+    :c.status==='cancelado'?`<div class="ctr-banner cancelado">✕ Cancelado${quando} <small>· o que foi pago continua no histórico</small></div>`
+    :c.renovacao_de?`<div class="ctr-banner renovacao">↻ Renovação <small>· continua um contrato anterior</small><span class="sp"></span><button onclick="verContrato('${c.renovacao_de}')">ver contrato anterior</button></div>`:'';
+  let h=`<div class="ctr ${cls} ${ativo?'':'pago'}" id="ctr_${c.id}" style="${ativo?'':'opacity:1'}">${faixa}
+    <div class="ctr-top"><div class="avatar ${ativo?avCls(m.nome):'k5'}">${iniciais(m.nome)}</div><div class="ctr-name"><b>${esc(m.nome)}</b><span>${esc(nomeProd(c.produto_id))} · ${dbr(c.data_inicio)} → ${dbr(c.data_fim)}</span></div>${sit}</div>
+    <div class="ctr-prog"><div class="lin"><span>${ativo?'recebido':'faturado neste contrato'} <b>${rsc(rec)}</b> de ${rsc(c.valor_total)}</span><b>${p.toFixed(0)}%</b></div><div class="barra ${p>=100?'v':''}"><i style="width:${p}%"></i></div></div>
+    <div class="ctr-grid"><div><small>${ativo?'Próxima parcela':'Parcelas pagas'}</small><b>${ativo?proxTxt:ps.filter(q=>q.pago).length+' de '+ps.length}</b></div><div><small>Saldo</small><b class="${sal>0?(c.status==='cancelado'?'faint':'warn'):'pos'}">${c.status==='cancelado'&&sal>0?'não cobrado':rsc(sal)}</b></div><div><small>Calls</small><b>${m.calls_feitas||0}/${m.calls_contratadas||0}</b></div><div><small>${ativo?(d>=0?'Termina em':'Venceu há'):'Contrato'}</small><b class="${ativo&&d<0?'neg':''}">${ativo?`${Math.abs(d)} dias`:'encerrado'}</b></div></div>
+    ${ativo&&decidir&&!renovando?barraDecisao(x):''}
+    ${ativo&&situacao&&!decidir&&!renovando?barraDecisao(x,true):''}
+    ${renovando?formRenovacao(x):''}
+    <div class="ctr-act">${ativo&&prox?`<button class="btn sm" onclick="baixar('${prox.id}')">Baixar parcela ${rsc(prox.valor)}</button>`:''}<button class="btnv sm" onclick="abrirContrato('${c.id}')">${aberto?'Fechar':ativo?'Parcelas':'Ver histórico'}</button>${ativo&&!decidir?`<button class="btnv sm" onclick="abrirSituacao('${c.id}')">${situacao?'Fechar':'Renovar / encerrar'}</button>`:''}<button class="btnv sm" onclick="editarContrato('${c.id}')">${editando?'Fechar edição':'Editar'}</button>${!ativo?`<button class="btnv sm" onclick="reativarContrato('${c.id}')">Reativar</button>`:''}</div>`;
   if(aberto){
-    h+=`<div class="ctr-parc">${ps.length?ps.map(q=>{const dd=dias(q.vencimento);return `<div class="li"><span class="faint">#${q.numero}</span><span>${dbr(q.vencimento)}</span>${q.pago?tag('paga'+(q.data_pagamento?' '+dbr(q.data_pagamento):''),'ok'):dd<0?tag(`${-dd} d atrasada`,'mal'):tag('em aberto')}<span class="sp"></span><b>${rsc(q.valor)}</b>${q.pago?`<button class="btnv xs" onclick="desfazer('${q.id}')">Desfazer</button>`:`<button class="btn xs" onclick="baixar('${q.id}')">Baixar</button><button class="x" onclick="del('parcelas','${q.id}')" aria-label="Remover parcela">✕</button>`}</div>`}).join(''):'<div class="vazio">Sem parcelas. Gere as parcelas do saldo abaixo.</div>'}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btnv xs" onclick="regerar('${c.id}')">Gerar parcelas do saldo</button>${c.status==='ativo'?`<button class="btnv xs" onclick="mudaStatus('${c.id}','renovado')">Marcar renovado</button><button class="btnv xs" onclick="mudaStatus('${c.id}','concluido')">Concluir</button><button class="btnv xs perigo" onclick="cancelarContrato('${c.id}')">Cancelar contrato</button>`:`<button class="btnv xs" onclick="mudaStatus('${c.id}','ativo')">Reativar</button>`}</div></div>`;
+    h+=`<div class="ctr-parc">${ps.length?ps.map(q=>{const dd=dias(q.vencimento);return `<div class="li"><span class="faint">#${q.numero}</span><span>${dbr(q.vencimento)}</span>${q.pago?tag('paga'+(q.data_pagamento?' '+dbr(q.data_pagamento):''),'ok'):c.status==='cancelado'?tag('não cobrada'):dd<0?tag(`${-dd} d atrasada`,'mal'):tag('em aberto')}<span class="sp"></span><b>${rsc(q.valor)}</b>${q.pago?`<button class="btnv xs" onclick="desfazer('${q.id}')">Desfazer</button>`:`<button class="btn xs" onclick="baixar('${q.id}')">Baixar</button><button class="x" onclick="del('parcelas','${q.id}')" aria-label="Remover parcela">✕</button>`}</div>`}).join(''):'<div class="vazio">Sem parcelas.</div>'}
+      ${ativo?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btnv xs" onclick="regerar('${c.id}')">Gerar parcelas do saldo</button></div>`:''}</div>`;
   }
   if(editando){
     h+=`<div class="ctr-edit">
@@ -1040,20 +1168,22 @@ function cardContrato(x){
       <div><label>Vence em</label><input type="date" value="${String(c.data_fim||'').slice(0,10)}" onchange="up('contratos','${c.id}','data_fim',this.value)"></div>
       <div><label>Calls feitas</label><input type="number" value="${m.calls_feitas||0}" onchange="upNum('mentorados','${m.id}','calls_feitas',this.value)"></div>
       <div><label>Calls contratadas</label><input type="number" value="${m.calls_contratadas||0}" onchange="upNum('mentorados','${m.id}','calls_contratadas',this.value)"></div>
-      <div><label>Situação</label><select onchange="mudaStatus('${c.id}',this.value)">${['ativo','renovado','concluido','cancelado'].map(s=>`<option value="${s}"${s===c.status?' selected':''}>${s}</option>`).join('')}</select></div>
-      <div class="full" style="display:flex;justify-content:flex-end"><button class="btnv xs perigo" onclick="del('mentorados','${m.id}')">Remover mentorado e contrato</button></div>
+      <div class="full" style="display:flex;justify-content:flex-end"><button class="btnv xs perigo" onclick="del('mentorados','${m.id}')">Apagar mentorado e contratos (remove o histórico)</button></div>
     </div>`;
   }
   return h+'</div>';
 }
 function abrirContrato(id){CTR_ABERTO=(CTR_ABERTO===id?null:id);renderCtrLista();}
 function editarContrato(id){CTR_EDIT=(CTR_EDIT===id?null:id);renderCtrLista();}
+function abrirSituacao(id){CTR_SIT=(CTR_SIT===id?null:id);CTR_RENOVA=null;renderCtrLista();}
+function abrirRenovacao(id){CTR_RENOVA=(CTR_RENOVA===id?null:id);renderCtrLista();const el=document.getElementById('ren_'+id);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});}
+function verContrato(id){FILTRO_CTR='todos';BUSCA_CTR='';CTR_ABERTO=id;CTR_EDIT=null;if(ABA!=='contr')irPara('contr');else verContratos();setTimeout(()=>{const el=document.getElementById('ctr_'+id);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},80);}
 function listaContratos(){
   const lst=D.contratos.map(dadosContrato).filter(x=>x.m);
   const f=FILTRO_CTR, q=norm(BUSCA_CTR);
-  return lst.filter(x=>f==='todos'?true:f==='ativos'?x.c.status==='ativo':f==='atencao'?x.atencao:f==='quitados'?(x.c.status==='ativo'&&x.sal<=0):x.c.status!=='ativo')
+  return lst.filter(x=>f==='todos'?true:f==='ativos'?x.ativo:f==='atencao'?x.atencao:f==='quitados'?(x.ativo&&x.sal<=0):f==='renovados'?x.c.status==='renovado':f==='encerrados'?x.c.status==='concluido':f==='cancelados'?x.c.status==='cancelado':true)
     .filter(x=>!q||norm(x.m.nome).includes(q))
-    .sort((a,b)=>(b.atencao-a.atencao)||(a.d-b.d));
+    .sort((a,b)=>(b.ativo-a.ativo)||(b.atencao-a.atencao)||(a.d-b.d));
 }
 function renderCtrLista(){
   const el=document.getElementById('ctrLista'); if(!el)return;
@@ -1062,12 +1192,13 @@ function renderCtrLista(){
 }
 function verContratos(){
   const todos=D.contratos.map(dadosContrato).filter(x=>x.m);
-  const at=todos.filter(x=>x.c.status==='ativo');
+  const at=todos.filter(x=>x.ativo);
   const mrrDe=l=>l.reduce((s,x)=>s+ +x.c.valor_total/Math.max(1,x.c.meses),0);
   const recebidoTotal=D.parcelas.filter(p=>p.pago).reduce((s,p)=>s+ +p.valor,0);
-  const aReceber=D.parcelas.filter(p=>!p.pago).reduce((s,p)=>s+ +p.valor,0);
-  const atencao=todos.filter(x=>x.atencao), venc30=at.filter(x=>x.d>=0&&x.d<=30).length, comAtraso=at.filter(x=>x.atras>0).length;
-  const chipsCtr=[['ativos',`Ativos · ${at.length}`],['atencao',`Precisam de ação · ${atencao.length}`],['quitados','Quitados'],['encerrados','Encerrados'],['todos',`Todos · ${todos.length}`]];
+  const aReceber=abertas().reduce((s,p)=>s+ +p.valor,0);
+  const atencao=todos.filter(x=>x.atencao), decidir=at.filter(x=>x.decidir).length, comAtraso=at.filter(x=>x.atras>0).length;
+  const n=s=>todos.filter(x=>x.c.status===s).length;
+  const chipsCtr=[['ativos',`Ativos · ${at.length}`],['atencao',`Precisam de ação · ${atencao.length}`],['quitados','Quitados'],['renovados',`Renovados · ${n('renovado')}`],['encerrados',`Não renovaram · ${n('concluido')}`],['cancelados',`Cancelados · ${n('cancelado')}`],['todos',`Todos · ${todos.length}`]];
   const form=`<div class="formlinha">
     <div class="campo"><label for="cnNome">Nome</label><input id="cnNome" autocomplete="off"></div>
     <div class="campo"><label for="cnProd">Produto</label><select id="cnProd">${D.produtos.filter(p=>p.ativo!==false).map(p=>`<option value="${p.id}">${esc(p.nome)}</option>`).join('')}</select></div>
@@ -1078,23 +1209,84 @@ function verContratos(){
     <div class="campo"><label for="cnIni">Início</label><input id="cnIni" type="date" value="${iso(HOJE)}"></div>
     <div class="campo"><label for="cnCalls">Calls</label><input id="cnCalls" type="number" value="0" inputmode="numeric"></div>
     <button class="btn" onclick="novoContrato()">Criar contrato</button>
-  </div><p class="nota">A entrada já entra como paga; o saldo é dividido nas parcelas a partir do mês seguinte.</p>`;
+  </div><p class="nota">Para mentorado novo. Se for alguém que já tem contrato e renovou, use o botão <b>Renovou</b> no cartão dele — assim o histórico fica ligado.</p>`;
   document.getElementById('v-contr').innerHTML=`<div class="grade g4">
-    ${kpi('Já recebido',rsc(recebidoTotal),'tudo que foi baixado')}
-    ${kpi('A receber',rsc(aReceber),'parcelas em aberto')}
+    ${kpi('Já recebido',rsc(recebidoTotal),'tudo que foi baixado, de todos os contratos')}
+    ${kpi('A receber',rsc(aReceber),'parcelas em aberto (sem cancelados)')}
     ${kpi('MRR ativo',rsc(mrrDe(at)),`${at.length} contratos ativos`)}
-    ${kpi('Precisam de ação',`${atencao.length}`,`${venc30} vencendo · ${comAtraso} com parcela atrasada`,atencao.length?'av':'',"setFiltroCtr('atencao')")}
+    ${kpi('Precisam de ação',`${atencao.length}`,`${decidir} para decidir renovação · ${comAtraso} com parcela atrasada`,atencao.length?'av':'',"setFiltroCtr('atencao')")}
   </div>
-  <div style="margin-top:12px">${caixaForm('fContr','Novo contrato','nome, valor e parcelas — o resto é automático',form)}</div>
-  <h2>Contratos <span class="rotulo">um cartão por mentorado</span></h2>
+  <div style="margin-top:12px">${caixaForm('fContr','Novo contrato','para mentorado novo',form)}</div>
+  <h2>Contratos <span class="rotulo">um cartão por contrato</span></h2>
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">${chips(chipsCtr,FILTRO_CTR,'data-fc')}<span style="flex:1"></span>${busca('buscaCtr','Buscar mentorado…',BUSCA_CTR)}</div>
   <div class="ctrs" id="ctrLista"></div>
-  <p class="nota">Cada cartão é um contrato: quanto já entrou, a próxima parcela e o que falta. “Baixar parcela” marca a próxima como paga; “Parcelas” abre a lista completa; “Editar” abre os campos do contrato (salva sozinho ao sair do campo).</p>`;
+  <p class="nota">Quando um contrato vence (ou faltam 30 dias), o cartão pergunta o que aconteceu: <b>Renovou</b> cria o contrato novo ligado ao anterior; <b>Não renovou</b> encerra; <b>Cancelou</b> tira as parcelas em aberto da cobrança. Em todos os casos o que já foi faturado continua no histórico — nada é apagado, e o faturamento dos meses vem da planilha.</p>`;
   renderCtrLista();
   document.querySelectorAll('#v-contr [data-fc]').forEach(b=>b.onclick=()=>setFiltroCtr(b.dataset.fc));
   document.getElementById('buscaCtr').oninput=e=>{BUSCA_CTR=e.target.value;renderCtrLista();};
 }
 function setFiltroCtr(f){FILTRO_CTR=f;if(ABA!=='contr')irPara('contr');else verContratos();}
+
+/* ---------- ciclo de vida ---------- */
+async function gravarSituacao(id,st,extra){
+  const patch={status:st,...(extra||{})};
+  let {error}=await sb.from('contratos').update(patch).eq('id',id);
+  if(error&&/encerrado_em|renovacao_de/.test(error.message)){ // banco ainda sem a migração v6
+    delete patch.encerrado_em; ({error}=await sb.from('contratos').update(patch).eq('id',id)); }
+  if(error){toast('Erro: '+error.message,true);return false;}
+  const c=D.contratos.find(x=>x.id===id); if(c)Object.assign(c,patch);
+  if(c){ // o mentorado segue ativo se ainda tiver outro contrato ativo
+    const m=D.mentorados.find(x=>x.id===c.mentorado_id);
+    if(m){const temAtivo=D.contratos.some(k=>k.mentorado_id===m.id&&k.status==='ativo');
+      const ms=temAtivo?'ativo':st==='cancelado'?'cancelado':st==='ativo'?'ativo':'concluido';
+      if(m.status!==ms){await sb.from('mentorados').update({status:ms}).eq('id',m.id);m.status=ms;}}}
+  return true;
+}
+async function encerrarContrato(id,st){
+  const x=dadosContrato(D.contratos.find(k=>k.id===id)), ab=x.abertas.length, vab=x.abertas.reduce((s,p)=>s+ +p.valor,0);
+  const msg= st==='concluido'
+    ? `${x.m.nome} não renovou.\n\nO contrato é encerrado e os ${rs(x.rec)} já faturados ficam guardados no histórico.${ab?`\n\nAinda há ${ab} parcela(s) em aberto (${rs(vab)}): elas continuam em Recebíveis para cobrança.`:''}\n\nConfirma?`
+    : `${x.m.nome} cancelou.\n\nOs ${rs(x.rec)} já pagos continuam no histórico.${ab?`\n\nAs ${ab} parcela(s) em aberto (${rs(vab)}) deixam de ser cobradas e saem de Recebíveis.`:''}\n\nConfirma o cancelamento?`;
+  if(!confirm(msg))return;
+  if(await gravarSituacao(id,st,{encerrado_em:iso(HOJE)})){CTR_SIT=null;CTR_RENOVA=null;toast(st==='concluido'?'Contrato encerrado. Histórico guardado.':'Contrato cancelado. Histórico guardado.');desenhar();}
+}
+async function reativarContrato(id){
+  if(!confirm('Reativar este contrato? Ele volta para a lista de ativos.'))return;
+  if(await gravarSituacao(id,'ativo',{encerrado_em:null})){toast('Contrato reativado.');desenhar();}
+}
+async function mudaStatus(id,st){ if(await gravarSituacao(id,st,st==='ativo'?{encerrado_em:null}:{encerrado_em:iso(HOJE)})){toast('Situação atualizada.');desenhar();} }
+/* Renovou: cria o contrato novo do mesmo mentorado, ligado ao anterior, e marca o anterior como renovado. */
+async function criarRenovacao(oldId){
+  const old=D.contratos.find(x=>x.id===oldId); if(!old)return;
+  const m=D.mentorados.find(x=>x.id===old.mentorado_id);
+  const g=k=>document.getElementById(k+'_'+oldId);
+  const produto_id=g('rnProd').value, valor=+g('rnValor').value||0, entrada=+g('rnEnt').value||0;
+  const meses=Math.max(1,+g('rnMeses').value||1), nParc=Math.max(0,+g('rnParc').value||0), ini=g('rnIni').value, calls=+g('rnCalls').value||0;
+  if(!valor)return toast('Informe o valor cheio da renovação.',true);
+  if(entrada>valor)return toast('A entrada não pode ser maior que o valor cheio.',true);
+  if(!ini)return toast('Informe a data de início.',true);
+  if(valor-entrada>0&&!nParc)return toast('Informe em quantas parcelas fica o saldo.',true);
+  const di=dObj(ini), df=new Date(di.getFullYear(),di.getMonth()+meses,di.getDate());
+  const novo={mentorado_id:old.mentorado_id,produto_id,valor_total:valor,entrada,meses,parcelas_saldo:nParc,revisado:true,data_inicio:ini,data_fim:iso(df),status:'ativo',renovacao_de:oldId};
+  let {data:c,error}=await sb.from('contratos').insert(novo).select().single();
+  if(error&&/renovacao_de/.test(error.message)){delete novo.renovacao_de;novo.observacao='Renovação do contrato anterior';({data:c,error}=await sb.from('contratos').insert(novo).select().single());}
+  if(error)return toast('Erro ao criar a renovação: '+error.message,true);
+  const ps=[]; let nn=0;
+  if(entrada>0) ps.push({contrato_id:c.id,numero:++nn,valor:entrada,vencimento:ini,pago:true,data_pagamento:ini});
+  const saldo=valor-entrada;
+  if(saldo>0&&nParc>0){const base=Math.floor(saldo/nParc*100)/100;
+    for(let i=0;i<nParc;i++){const v=new Date(di.getFullYear(),di.getMonth()+i+1,di.getDate());
+      ps.push({contrato_id:c.id,numero:++nn,valor:i===nParc-1?+(saldo-base*(nParc-1)).toFixed(2):base,vencimento:iso(v),pago:false});}}
+  if(ps.length){const {data:pp,error:e2}=await sb.from('parcelas').insert(ps).select(); if(e2)toast('Contrato criado, mas as parcelas falharam: '+e2.message,true); else D.parcelas.push(...(pp||[]));}
+  D.contratos.push(c);
+  await gravarSituacao(oldId,'renovado',{encerrado_em:iso(HOJE)});
+  if(m){const patch={status:'ativo'}; if(calls>0)patch.calls_contratadas=(+m.calls_contratadas||0)+calls;
+    await sb.from('mentorados').update(patch).eq('id',m.id);Object.assign(m,patch);}
+  CTR_RENOVA=null;CTR_SIT=null;CTR_ABERTO=c.id;FILTRO_CTR='ativos';BUSCA_CTR='';
+  setTimeout(()=>{const el=document.getElementById('ctr_'+c.id);if(el)el.scrollIntoView({behavior:'smooth',block:'center'});},120);
+  toast(`Renovação de ${m?m.nome:'mentorado'} criada: entrada ${rs(entrada)} e ${nParc} parcelas de ${rs(nParc?(valor-entrada)/nParc:0)}.`);
+  desenhar();
+}
 
 /* Regera as parcelas em aberto a partir do valor cheio e do numero de parcelas. O que ja foi pago fica intacto. */
 async function regerar(id){
@@ -1139,6 +1331,8 @@ async function novoContrato(){
   if(!nome)return toast('Informe o nome.',true);
   if(!valor)return toast('Informe o valor cheio.',true);
   if(entrada>valor)return toast('A entrada não pode ser maior que o valor cheio.',true);
+  const ja=D.mentorados.find(x=>norm(x.nome)===norm(nome));
+  if(ja&&!confirm(`Já existe um mentorado chamado ${ja.nome}.\n\nSe ele renovou, cancele aqui e use o botão “Renovou” no cartão dele (o histórico fica ligado).\n\nCriar mesmo assim um cadastro novo?`))return;
   const {data:m,error:e1}=await sb.from('mentorados').insert({nome,produto_id,calls_contratadas:+document.getElementById('cnCalls').value||0}).select().single();
   if(e1)return toast('Erro: '+e1.message,true);
   const di=dObj(ini), df=new Date(di.getFullYear(),di.getMonth()+meses,di.getDate());
@@ -1159,32 +1353,149 @@ async function novoContrato(){
   toast(`${nome} adicionado. Entrada ${rs(entrada)} e ${nParc} parcelas de ${rs(nParc?(valor-entrada)/nParc:0)}.`);
   FILTRO_CTR='ativos'; desenhar();
 }
-async function mudaStatus(id,st){
-  const {error}=await sb.from('contratos').update({status:st}).eq('id',id);
-  if(error)return toast('Erro: '+error.message,true);
-  const c=D.contratos.find(x=>x.id===id);if(c)c.status=st;
-  if(c){const m=D.mentorados.find(x=>x.id===c.mentorado_id);
-    if(m){const ms=st==='cancelado'?'cancelado':st==='concluido'?'concluido':'ativo';await sb.from('mentorados').update({status:ms}).eq('id',m.id);m.status=ms;}}
-  toast('Situação atualizada.');desenhar();
-}
-function cancelarContrato(id){ const c=D.contratos.find(x=>x.id===id), m=c&&D.mentorados.find(x=>x.id===c.mentorado_id);
-  if(!confirm(`Cancelar o contrato de ${m?m.nome:'este mentorado'}? As parcelas em aberto deixam de contar nos recebíveis.`))return; mudaStatus(id,'cancelado'); }
 </script>
 <script>
-/* ================= RECEBÍVEIS (cartões) ================= */
+/* ================= RECEBÍVEIS (cartões) =================
+   Sem duplicidade: nos meses que a planilha traz, o faturamento é o da planilha (veja caixaMes).
+   Dar baixa numa parcela só tira ela da cobrança e guarda a data em que o dinheiro entrou. */
+let CONC_ABERTA=true, REC_IGNORADAS=null;
+const ignoradas=()=>{ if(!REC_IGNORADAS){try{REC_IGNORADAS=new Set(JSON.parse(localStorage.getItem('rhino-conc-ignorar')||'[]'));}catch(e){REC_IGNORADAS=new Set();}} return REC_IGNORADAS; };
+const salvarIgnoradas=()=>{try{localStorage.setItem('rhino-conc-ignorar',JSON.stringify([...ignoradas()]));}catch(e){}};
+
+/* Cruza as parcelas vencidas com a aba de alunos da planilha: se no mês do vencimento a planilha mostra
+   um valor que as baixas do painel ainda não explicam, vira sugestão. Nunca dá baixa sozinho. */
+function linhaDoAluno(nome){
+  const k=limparAluno(nome), L=ALUNOS.linhas; if(!k||!L.length)return null;
+  let c=L.filter(l=>l.chave===k);
+  if(!c.length){ const tk=k.split(' ');
+    c=L.filter(l=>{const tl=l.chave.split(' ');const [a,b]=tk.length<=tl.length?[tk,tl]:[tl,tk];return a.length>=2&&a.every(t=>b.includes(t));});
+    if(c.length!==1) return null; }            // parecido com mais de um aluno: não arrisca
+  if(c.length===1) return c[0];
+  return {...c[0],vals:Array.from({length:12},(_,i)=>c.reduce((s,l)=>s+(+l.vals[i]||0),0))}; // mesmo aluno em duas linhas
+}
+function sugestoesPlanilha(){
+  if(!ALUNOS.linhas.length) return [];
+  const hoje=iso(HOJE), out=[], usado={};
+  abertas().filter(p=>String(p.vencimento).slice(0,10)<=hoje&&+String(p.vencimento).slice(0,4)===PLANILHA.ano).forEach(p=>{
+    const m=p.mentorado; if(!m)return;
+    const linha=linhaDoAluno(m.nome); if(!linha)return;
+    const mes=+String(p.vencimento).slice(5,7)-1, naPlanilha=+linha.vals[mes]||0; if(naPlanilha<=0)return;
+    const meus=new Set(D.contratos.filter(c=>c.mentorado_id===m.id).map(c=>c.id)), k=m.id+'|'+mes;
+    const jaBaixado=D.parcelas.filter(q=>q.pago&&meus.has(q.contrato_id)&&noMes(q.data_pagamento||q.vencimento,PLANILHA.ano,mes)).reduce((s,q)=>s+ +q.valor,0);
+    const livre=naPlanilha-jaBaixado-(usado[k]||0);
+    if(livre>=+p.valor-0.01){usado[k]=(usado[k]||0)+ +p.valor;out.push({p,mes,naPlanilha,livre:+p.valor,tipo:'cheia'});}
+    else if(livre>0.01){usado[k]=(usado[k]||0)+livre;out.push({p,mes,naPlanilha,livre,tipo:'parcial'});}
+  });
+  return out;
+}
+function blocoConferencia(){
+  if(ALUNOS.estado==='erro') return `<div class="linhafina" style="margin-top:12px"><span>Não consegui ler a aba de alunos da planilha para conferir as parcelas (${esc(ALUNOS.erro)}).</span></div>`;
+  const todas=sugestoesPlanilha(), ig=ignoradas(), sug=todas.filter(s=>!ig.has(s.p.id)), ocultas=todas.length-sug.length;
+  if(!todas.length) return '';
+  const cheias=sug.filter(s=>s.tipo==='cheia'), total=sug.reduce((s,x)=>s+x.livre,0);
+  const emAndamento=sug.some(s=>s.mes===HOJE.getMonth()&&PLANILHA.ano===HOJE.getFullYear());
+  const linhas=sug.map(s=>{const p=s.p, nome=p.mentorado?.nome||'Sem nome', venc=String(p.vencimento).slice(0,10);
+    return `<div class="lrow"><span class="st inf"></span>
+      <div class="ds"><b>${esc(nome)}</b><span>parcela ${p.numero} · venceu ${dbr(venc)} · a planilha mostra ${rs(s.naPlanilha)} em ${MESES[s.mes]}</span></div>
+      <span class="tg">${s.tipo==='cheia'?tag('bate com a planilha','inf'):tag(`planilha cobre ${rsc(s.livre)}`,'al')}</span>
+      <span class="vl">${rs(p.valor)}</span>
+      <div class="ac">${s.tipo==='cheia'?`<button class="btn xs" onclick="baixaDireta('${p.id}','${venc}')">Já recebi</button>`:`<button class="btn xs" onclick="abrirBaixa('${p.id}',{valor:${s.livre.toFixed(2)},data:'${venc}'})">Recebi parte</button>`}<button class="btnv xs" onclick="ignorarSugestao('${p.id}')">Ainda não</button></div></div>`;}).join('');
+  return `<div class="lsec conc" style="margin-top:12px;border-color:rgba(56,189,248,.35)">
+    <button class="lsec-h" onclick="CONC_ABERTA=!CONC_ABERTA;verRecebiveis()"><span class="pt" style="background:var(--info)"></span>
+      <span class="nm"><b>Conferência com a planilha</b><span>${sug.length?`${sug.length} parcela${sug.length>1?'s':''} vencida${sug.length>1?'s':''} que a aba de alunos mostra com valor no mês`:'tudo conferido'}${ocultas?` · ${ocultas} marcada${ocultas>1?'s':''} como “ainda não”`:''}</span></span>
+      <span class="tt">${rsc(total)}<small>${CONC_ABERTA?'recolher ▴':'conferir ▾'}</small></span></button>
+    ${CONC_ABERTA?`${linhas}
+      <div class="lfoot"><span class="nota" style="margin:0">“Já recebi” dá baixa na data do vencimento. Não muda o faturamento: ele já está na planilha.${emAndamento?` Em ${MESES[HOJE.getMonth()]} a planilha mistura o que entrou com o que está previsto — confirme um a um.`:''}</span>
+      <div class="ac">${ocultas?`<button class="btnv xs" onclick="mostrarIgnoradas()">Mostrar as ${ocultas} ocultas</button>`:''}${cheias.length>1?`<button class="btnv xs" onclick="baixarSugeridas()">Baixar as ${cheias.length} que batem</button>`:''}</div></div>`:''}
+  </div>`;
+}
+function ignorarSugestao(id){ignoradas().add(id);salvarIgnoradas();verRecebiveis();}
+function mostrarIgnoradas(){ignoradas().clear();salvarIgnoradas();verRecebiveis();}
+async function baixarSugeridas(){
+  const sug=sugestoesPlanilha().filter(s=>s.tipo==='cheia'&&!ignoradas().has(s.p.id)); if(!sug.length)return;
+  if(!confirm(`Dar baixa em ${sug.length} parcelas (${rs(sug.reduce((s,x)=>s+ +x.p.valor,0))}) na data do vencimento de cada uma?\n\nO faturamento não muda: ele já está na planilha. Isso só tira as parcelas da cobrança.`))return;
+  const rsp=await Promise.all(sug.map(s=>sb.from('parcelas').update({pago:true,data_pagamento:String(s.p.vencimento).slice(0,10)}).eq('id',s.p.id)));
+  const falha=rsp.find(r=>r.error); if(falha)toast('Erro: '+falha.error.message,true);
+  sug.forEach((s,i)=>{if(!rsp[i].error){const p=D.parcelas.find(x=>x.id===s.p.id);if(p){p.pago=true;p.data_pagamento=String(s.p.vencimento).slice(0,10);}}});
+  toast(`${rsp.filter(r=>!r.error).length} parcelas baixadas. Faturamento inalterado.`);desenhar();
+}
+
+/* ---------- baixa de parcela (janela única, usada em Contratos e Recebíveis) ---------- */
+function fecharModal(){const m=document.getElementById('modal');if(m)m.remove();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharModal();});
+function abrirBaixa(id,pre){
+  const p=D.parcelas.find(x=>x.id===id); if(!p)return;
+  const c=D.contratos.find(x=>x.id===p.contrato_id), m=c?D.mentorados.find(x=>x.id===c.mentorado_id):null;
+  const venc=String(p.vencimento).slice(0,10), hoje=iso(HOJE), vencida=venc<=hoje;
+  const data=(pre&&pre.data)||(vencida?venc:hoje), valor=(pre&&pre.valor)||+p.valor;
+  fecharModal();
+  const el=document.createElement('div'); el.className='modal-bg'; el.id='modal';
+  el.innerHTML=`<div class="modal" role="dialog" aria-modal="true" aria-label="Dar baixa na parcela">
+    <div class="ctr-top"><div class="avatar sm ${avCls(m?.nome)}">${iniciais(m?.nome)}</div><div class="ctr-name"><b>${esc(m?.nome||'Parcela')}</b><span>parcela ${p.numero} · vence ${dbr(venc)}</span></div><div class="ctr-val"><b>${rs(p.valor)}</b></div></div>
+    <label class="ml" for="bxData">Quando o dinheiro entrou?</label>
+    <div class="chips" style="margin-bottom:8px"><button type="button" class="chip" onclick="dataBaixa('${hoje}')">Hoje · ${dbr(hoje)}</button>${vencida&&venc!==hoje?`<button type="button" class="chip" onclick="dataBaixa('${venc}')">No vencimento · ${dbr(venc)}</button>`:''}</div>
+    <input type="date" id="bxData" value="${data}" max="${hoje}" onchange="notaBaixa('${id}')">
+    <label class="ml" for="bxValor">Valor recebido</label>
+    <input type="number" id="bxValor" step="0.01" inputmode="decimal" value="${(+valor).toFixed(2)}" oninput="notaBaixa('${id}')">
+    <div id="bxNota"></div>
+    <div class="modal-act"><button class="btnv" onclick="fecharModal()">Voltar</button><button class="btn" onclick="confirmarBaixa('${id}')">Confirmar baixa</button></div>
+  </div>`;
+  el.onclick=e=>{if(e.target===el)fecharModal();};
+  document.body.appendChild(el); notaBaixa(id);
+}
+function dataBaixa(d){const i=document.getElementById('bxData');if(i){i.value=d;i.onchange();}}
+function notaBaixa(id){
+  const p=D.parcelas.find(x=>x.id===id), el=document.getElementById('bxNota'); if(!p||!el)return;
+  const d=document.getElementById('bxData').value||iso(HOJE), v=+document.getElementById('bxValor').value||0, [y,mm]=d.split('-').map(Number);
+  const daPlanilha=mesDaPlanilha(y,mm-1), resto=+p.valor-v;
+  el.innerHTML=(resto>0.005&&v>0?`<div class="garantia aviso"><span class="ic">½</span><div><b>Baixa parcial.</b> Os ${rs(resto)} restantes continuam em aberto, com o mesmo vencimento.</div></div>`:'')
+    +(daPlanilha?`<div class="garantia"><span class="ic">✓</span><div><b>Sem duplicidade.</b> O faturamento de ${MESES[mm-1]} vem da planilha; esta baixa só tira a parcela da cobrança.</div></div>`
+      :`<div class="garantia neutra"><span class="ic">i</span><div><b>${MESES[mm-1]} ainda não tem receita na planilha.</b> A baixa conta como recebido do mês até a planilha trazer o número — aí passa a valer o dela, sem somar duas vezes.</div></div>`);
+}
+async function gravarBaixa(p,data,valor){
+  const cheio=+p.valor, parcial=valor<cheio-0.005, patch={pago:true,data_pagamento:data,...(parcial?{valor:+valor.toFixed(2)}:{})};
+  const {error}=await sb.from('parcelas').update(patch).eq('id',p.id);
+  if(error){toast('Erro: '+error.message,true);return false;}
+  Object.assign(p,patch);
+  if(parcial){ // o que faltou vira uma parcela em aberto, com o mesmo número e vencimento
+    const {data:novo,error:e2}=await sb.from('parcelas').insert({contrato_id:p.contrato_id,numero:p.numero,valor:+(cheio-valor).toFixed(2),vencimento:String(p.vencimento).slice(0,10),pago:false}).select().single();
+    if(e2)toast('Baixa feita, mas o restante não foi criado: '+e2.message,true); else if(novo)D.parcelas.push(novo);
+  }
+  return true;
+}
+async function confirmarBaixa(id){
+  const p=D.parcelas.find(x=>x.id===id); if(!p)return;
+  const data=document.getElementById('bxData').value||iso(HOJE), v=+document.getElementById('bxValor').value||0;
+  if(v<=0)return toast('Informe o valor recebido.',true);
+  if(v>+p.valor+0.005)return toast(`O valor é maior que a parcela (${rs(p.valor)}). Se a parcela mudou, ajuste em Editar.`,true);
+  if(data>iso(HOJE))return toast('A data do recebimento não pode ser no futuro.',true);
+  const parcial=v<+p.valor-0.005;
+  if(!await gravarBaixa(p,data,v))return;
+  fecharModal();
+  toast(parcial?`Baixa parcial de ${rs(v)} em ${dbr(data)}. O restante segue em aberto.`:`Parcela baixada em ${dbr(data)}.`);desenhar();
+}
+async function baixaDireta(id,data){const p=D.parcelas.find(x=>x.id===id);if(!p)return;if(await gravarBaixa(p,data,+p.valor)){toast(`Parcela baixada em ${dbr(data)}. Faturamento inalterado.`);desenhar();}}
+function baixar(id){abrirBaixa(id);}
+async function desfazer(id){
+  const {error}=await sb.from('parcelas').update({pago:false,data_pagamento:null}).eq('id',id);
+  if(error)return toast('Erro: '+error.message,true);
+  const p=D.parcelas.find(x=>x.id===id);if(p){p.pago=false;p.data_pagamento=null;}
+  toast('Parcela voltou para em aberto.');desenhar();
+}
+
 function cardParcela(p){ // p vem de abertas(): parcela + contrato + mentorado + d (dias até vencer)
   const nome=p.mentorado?.nome||'Sem nome', at=-p.d;
   const cls=p.d<0?'vencido':p.d<=7?'aviso':'';
   const sit=p.d<0?tag(`${at} dias atrasada`,'mal'):p.d<=7?tag(`vence em ${p.d} d`,'al'):tag('em aberto');
-  const editando=REC_EDIT===p.id;
+  const editando=REC_EDIT===p.id, encerrado=p.contrato&&p.contrato.status!=='ativo';
   return `<div class="ctr small ${cls}">
-    <div class="ctr-top"><div class="avatar sm ${avCls(nome)}">${iniciais(nome)}</div><div class="ctr-name"><b>${esc(nome)}</b><span>${esc(nomeProd(p.contrato?.produto_id))} · parcela ${p.numero}</span></div><div class="ctr-val"><b>${rsc(p.valor)}</b><span>vence ${dbr(p.vencimento)}</span></div></div>
-    <div class="ctr-line">${sit}<span class="sp"></span><button class="btn xs" onclick="baixar('${p.id}')">Baixar</button><button class="btnv xs" onclick="editarParcela('${p.id}')">${editando?'Fechar':'Editar'}</button></div>
+    <div class="ctr-top"><div class="avatar sm ${avCls(nome)}">${iniciais(nome)}</div><div class="ctr-name"><b>${esc(nome)}</b><span>${esc(nomeProd(p.contrato?.produto_id))} · parcela ${p.numero}${encerrado?' · contrato encerrado':''}</span></div><div class="ctr-val"><b>${rsc(p.valor)}</b><span>vence ${dbr(p.vencimento)}</span></div></div>
+    <div class="ctr-line">${sit}${p.sug?tag('planilha mostra valor','inf'):''}<span class="sp"></span><button class="btn xs" onclick="abrirBaixa('${p.id}')">Dar baixa</button><button class="btnv xs" onclick="editarParcela('${p.id}')">${editando?'Fechar':'Editar'}</button></div>
     ${editando?`<div class="ctr-edit">
       <div><label>Parcela nº</label><input type="number" value="${p.numero}" onchange="upNum('parcelas','${p.id}','numero',this.value)"></div>
       <div><label>Vencimento</label><input type="date" value="${String(p.vencimento).slice(0,10)}" onchange="up('parcelas','${p.id}','vencimento',this.value)"></div>
       <div><label>Valor</label><input type="number" step="0.01" value="${p.valor}" onchange="upNum('parcelas','${p.id}','valor',this.value)"></div>
-      <div class="full" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><button class="btnv xs" onclick="irPara('contr');CTR_ABERTO='${p.contrato_id}';CTR_EDIT=null;renderCtrLista()">Ver contrato</button><button class="btnv xs perigo" onclick="del('parcelas','${p.id}')">Remover parcela</button></div></div>`:''}
+      <div class="full" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><button class="btnv xs" onclick="verContrato('${p.contrato_id}')">Ver contrato</button><button class="btnv xs perigo" onclick="del('parcelas','${p.id}')">Remover parcela</button></div></div>`:''}
   </div>`;
 }
 function cardRecebida(x){ // parcela paga ou entrada avulsa do mês
@@ -1199,11 +1510,12 @@ function cardRecebida(x){ // parcela paga ou entrada avulsa do mês
 }
 function editarParcela(id){REC_EDIT=(REC_EDIT===id?null:id);verRecebiveis();}
 function verRecebiveis(){
-  const ab=abertas(), q=norm(BUSCA_REC);
+  const sugIds=new Set(sugestoesPlanilha().map(s=>s.p.id));
+  const ab=abertas().map(p=>({...p,sug:sugIds.has(p.id)})), q=norm(BUSCA_REC);
   const nomeOk=p=>!q||norm(p.mentorado?.nome).includes(q);
   const atr=ab.filter(p=>p.d<0), f1=ab.filter(p=>p.d>=0&&p.d<=30), f2=ab.filter(p=>p.d>30&&p.d<=60), f3=ab.filter(p=>p.d>60);
   const sm=a=>a.reduce((s,p)=>s+ +p.valor,0);
-  const cx=caixaMes(ANO,MES);
+  const cx=caixaMes(ANO,MES), hojePlanilha=mesDaPlanilha(HOJE.getFullYear(),HOJE.getMonth());
   const recParc=D.parcelas.filter(p=>p.pago&&noMes(p.data_pagamento||p.vencimento,ANO,MES)).map(p=>{
     const c=D.contratos.find(x=>x.id===p.contrato_id);
     return {...p,tipo:'parcela',contrato:c,mentorado:c?D.mentorados.find(x=>x.id===c.mentorado_id):null};}).sort((a,b)=>+b.valor-+a.valor);
@@ -1221,10 +1533,10 @@ function verRecebiveis(){
       corpo+=`<div class="sect"><button class="btnv xs" onclick="REC_MES_ABERTO='${k}';verRecebiveis()">${aberto?'▾':'▸'}</button>${MESES[m-1]} ${a} <span>${futuras[k].length} parcelas</span><span class="tot">${rsc(sm(futuras[k]))}</span></div>${aberto?grade(lista):''}`;});
   }
   if(FILTRO_REC==='recebidas'){
-    corpo+=`<div class="sect">Recebido em ${MESES[MES]} <span>${cx.planilha?'planilha + parcelas baixadas':'parcelas baixadas + entradas'}</span><span class="tot pos">${rs(cx.total)}</span></div>`;
+    corpo+=`<div class="sect">Recebido em ${MESES[MES]} <span>${cx.planilha?'total da planilha':'parcelas baixadas + entradas'}</span><span class="tot pos">${rs(cx.total)}</span></div>`;
     const lista=[...recLanc,...recParc].filter(x=>x.tipo==='lancamento'?(!q||norm(x.descricao).includes(q)):nomeOk(x));
     corpo+=lista.length?`<div class="ctrs">${lista.map(cardRecebida).join('')}</div>`:'<div class="cartao vazio">Nada recebido neste mês ainda.</div>';
-    if(cx.planilha) corpo+='<p class="nota">O total do mês é o da planilha; as parcelas baixadas aqui servem para a cobrança e já estão dentro desse total.</p>';
+    if(cx.planilha) corpo+='<p class="nota">O total do mês é o da planilha. As parcelas baixadas aparecem aqui para você saber quem pagou, mas já estão dentro desse total — não somam de novo.</p>';
   }
   document.getElementById('v-receb').innerHTML=`<div class="grade g4">
     ${kpi('Vencido',rsc(sm(atr)),`${atr.length} parcelas`,atr.length?'neg':'',"setFiltroRec('atencao')")}
@@ -1232,44 +1544,48 @@ function verRecebiveis(){
     ${kpi('31 a 60 dias',rsc(sm(f2)),`${f2.length} parcelas`,'',"setFiltroRec('todas')")}
     ${kpi('Mais de 60 dias',rsc(sm(f3)),`${f3.length} parcelas`,'',"setFiltroRec('todas')")}
   </div>
+  ${hojePlanilha?`<div class="garantia" style="margin-top:12px"><span class="ic">✓</span><div><b>Pode dar baixa sem medo de duplicar.</b> O faturamento de cada mês vem da planilha. A baixa aqui só tira a parcela da cobrança e guarda a data em que o dinheiro entrou — não entra de novo no faturamento.</div></div>`
+    :`<div class="garantia neutra" style="margin-top:12px"><span class="ic">i</span><div><b>${MESES[HOJE.getMonth()]} ainda não tem receita na planilha.</b> Até ela chegar, as baixas contam como recebido do mês. Quando a planilha trouxer o mês, vale o número dela — sem somar duas vezes.</div></div>`}
+  ${blocoConferencia()}
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px">${chips(chipsRec,FILTRO_REC,'data-fr')}<span style="flex:1"></span>${busca('buscaRec','Buscar mentorado…',BUSCA_REC)}</div>
   ${corpo}
-  <p class="nota">Cada cartão é uma parcela: quem deve, quanto e quando. “Baixar” marca como paga na hora; “Editar” abre data, valor e número. Vencidas ficam com borda vermelha; as que vencem em 7 dias, amarela.</p>`;
+  <p class="nota">Cada cartão é uma parcela: quem deve, quanto e quando. “Dar baixa” pergunta a data em que o dinheiro entrou (e aceita valor parcial); “Editar” abre data, valor e número. Vencidas ficam com borda vermelha; as que vencem em 7 dias, amarela.</p>`;
   document.querySelectorAll('#v-receb [data-fr]').forEach(b=>b.onclick=()=>setFiltroRec(b.dataset.fr));
   const bi=document.getElementById('buscaRec'); bi.oninput=e=>{BUSCA_REC=e.target.value;const pos=e.target.selectionStart;verRecebiveis();const n=document.getElementById('buscaRec');n.focus();n.setSelectionRange(pos,pos);};
 }
 function setFiltroRec(f){FILTRO_REC=f;REC_MES_ABERTO=null;if(ABA!=='receb')irPara('receb');else verRecebiveis();}
-async function desfazer(id){
-  const {error}=await sb.from('parcelas').update({pago:false,data_pagamento:null}).eq('id',id);
-  if(error)return toast('Erro: '+error.message,true);
-  const p=D.parcelas.find(x=>x.id===id);if(p){p.pago=false;p.data_pagamento=null;}
-  toast('Parcela voltou para em aberto.');desenhar();
-}
-async function baixar(id){
-  const {error}=await sb.from('parcelas').update({pago:true,data_pagamento:iso(HOJE)}).eq('id',id);
-  if(error)return toast('Erro: '+error.message,true);
-  const p=D.parcelas.find(x=>x.id===id);if(p){p.pago=true;p.data_pagamento=iso(HOJE);}
-  toast('Parcela baixada.');desenhar();
-}
 
-/* ================= DESPESAS (cartões) ================= */
-function cardDespesa(l,cor){
+/* ================= DESPESAS (lista segmentada por matriz) ================= */
+let DESP_FECHADAS=new Set(), DESP_SECOES=[];
+function linhaDespesa(l){
   const d=dias(l.data), atras=!l.pago&&d<0, breve=!l.pago&&d>=0&&d<=3;
   const sit=l.pago?tag('pago','ok'):atras?tag(`atrasada ${-d} d`,'mal'):breve?tag(d===0?'vence hoje':`vence em ${d} d`,'al'):tag('a pagar');
   const titulo=l.descricao||l.categoria, orfa=!catPorNome(l.categoria), editando=DESP_EDIT===l.id;
-  return `<div class="ctr small ${l.pago?'pago':atras?'vencido':breve?'aviso':''}">
-    <div class="ctr-top"><div class="avatar sm" style="background:${cor}">${iniciais(titulo)}</div><div class="ctr-name"><b>${esc(titulo)}</b><span>${esc(l.categoria)}${orfa?' · '+tag('arrumar','al'):''} · vence ${dbr(l.data)}</span></div><div class="ctr-val"><b>${rs(l.valor)}</b><span>${l.origem==='planilha'?'planilha':l.recorrencia_id?'fixo':'avulsa'}</span></div></div>
-    <div class="ctr-line">${sit}<span class="sp"></span>${l.pago?`<button class="btnv xs" onclick="up('lancamentos','${l.id}','pago',false)">Desfazer</button>`:`<button class="btn xs" onclick="up('lancamentos','${l.id}','pago',true)">Marcar pago</button>`}<button class="btnv xs" onclick="editarDespesa('${l.id}')">${editando?'Fechar':'Editar'}</button></div>
-    ${editando?`<div class="ctr-edit">
+  const origem=l.origem==='planilha'?'planilha':l.recorrencia_id?'fixo':'avulsa';
+  return `<div class="lrow ${l.pago?'pago':''}"><span class="st ${l.pago?'ok':atras?'mal':breve?'al':''}"></span>
+    <div class="ds"><b>${esc(titulo)}</b><span>${esc(l.categoria)}${orfa?' · sem matriz':''} · vence ${dbr(l.data)} · ${origem}</span></div>
+    <span class="tg">${sit}</span><span class="vl">${rs(l.valor)}</span>
+    <div class="ac">${l.pago?`<button class="btnv xs" onclick="up('lancamentos','${l.id}','pago',false)">Desfazer</button>`:`<button class="btn xs" onclick="up('lancamentos','${l.id}','pago',true)">Pagar</button>`}<button class="btnv xs" onclick="editarDespesa('${l.id}')">${editando?'Fechar':'Editar'}</button></div></div>
+    ${editando?`<div class="ledit"><div class="ctr-edit">
       <div class="full"><label>Descrição</label><input value="${esc(l.descricao||'')}" onchange="up('lancamentos','${l.id}','descricao',this.value)"></div>
       <div class="full"><label>Categoria</label><select onchange="up('lancamentos','${l.id}','categoria',this.value)">${selCatAgrupado(l.categoria,'despesa')}</select></div>
       ${orfa?`<div class="full"><label>“${esc(l.categoria)}” não está em nenhuma matriz · mover para</label><select onchange="adotarCategoria('${esc(l.categoria)}',this.value)"><option value="">escolher…</option>${matrizes('despesa').map(x=>`<option value="${x.id}">${esc(x.nome)}</option>`).join('')}</select></div>`:''}
       <div><label>Vencimento</label><input type="date" value="${String(l.data).slice(0,10)}" onchange="up('lancamentos','${l.id}','data',this.value)"></div>
-      <div><label>Valor</label><input type="number" step="0.01" value="${l.valor}" onchange="upNum('lancamentos','${l.id}','valor',this.value)"></div>
+      <div><label>Valor${l.origem==='planilha'?' (a planilha manda)':''}</label><input type="number" step="0.01" value="${l.valor}" ${l.origem==='planilha'?'disabled':''} onchange="upNum('lancamentos','${l.id}','valor',this.value)"></div>
       <div><label>Escopo</label><select onchange="up('lancamentos','${l.id}','escopo',this.value)"><option value="empresa"${l.escopo==='empresa'?' selected':''}>empresa</option><option value="pessoal"${l.escopo==='pessoal'?' selected':''}>pessoal</option></select></div>
-      <div class="full" style="display:flex;justify-content:flex-end"><button class="btnv xs perigo" onclick="del('lancamentos','${l.id}')">Remover despesa</button></div></div>`:''}
-  </div>`;
+      <div class="full" style="display:flex;justify-content:flex-end">${l.origem==='planilha'?'<span class="nota" style="margin:0">Veio da planilha: para tirar, apague a célula lá.</span>':`<button class="btnv xs perigo" onclick="del('lancamentos','${l.id}')">Remover despesa</button>`}</div></div></div>`:''}`;
 }
+function secaoDespesas(nome,itens,cor,totalMes){
+  const tot=itens.reduce((s,l)=>s+ +l.valor,0), pago=itens.filter(l=>l.pago).reduce((s,l)=>s+ +l.valor,0), falta=tot-pago;
+  const fechada=DESP_FECHADAS.has(nome);
+  const ord=[...itens].sort((a,b)=>String(a.data).localeCompare(String(b.data))||String(a.descricao||'').localeCompare(String(b.descricao||'')));
+  return `<div class="lsec"><button class="lsec-h" data-sec="${esc(nome)}"><span class="pt" style="background:${cor}"></span>
+    <span class="nm"><b>${esc(nome)}${nome==='Sem categoria'?' '+tag('arrumar','al'):''}</b><span>${itens.length} lançamento${itens.length>1?'s':''} · ${falta>0.005?`${rsc(falta)} a pagar`:'tudo pago'}</span></span>
+    <span class="mb"><span class="barra ${falta<=0.005?'v':''}" style="display:block"><i style="width:${tot?(pago/tot*100).toFixed(0):0}%"></i></span></span>
+    <span class="tt">${rsc(tot)}<small>${totalMes?(tot/totalMes*100).toFixed(0):0}% do mês ${fechada?'▾':'▴'}</small></span></button>
+    ${fechada?'':ord.map(linhaDespesa).join('')}</div>`;
+}
+function alternaSecao(n){DESP_FECHADAS.has(n)?DESP_FECHADAS.delete(n):DESP_FECHADAS.add(n);verDespesas();}
 function editarDespesa(id){DESP_EDIT=(DESP_EDIT===id?null:id);verDespesas();}
 function cardFixo(r,jaGer){
   const editando=FIXO_EDIT===r.id;
@@ -1292,9 +1608,16 @@ function verDespesas(){
   const ap=aPagar(ANO,MES), q=norm(BUSCA_DESP);
   const desp=D.lancamentos.filter(l=>l.tipo==='despesa'&&noMes(l.data,ANO,MES));
   const corDe={}; g.forEach(([m],i)=>corDe[m]=CORES[i%CORES.length]);
+  const porMatriz=!['todas','apagar','pagas'].includes(FILTRO_DESP);
   const lista=desp.filter(l=>FILTRO_DESP==='todas'?true:FILTRO_DESP==='apagar'?!l.pago:FILTRO_DESP==='pagas'?l.pago:matrizDe(l.categoria)===FILTRO_DESP)
-    .filter(l=>!q||norm(l.descricao+' '+l.categoria).includes(q))
-    .sort((a,b)=>(a.pago-b.pago)||String(a.data).localeCompare(String(b.data)));
+    .filter(l=>!q||norm(l.descricao+' '+l.categoria).includes(q));
+  // segmentos: por matriz (na ordem do maior para o menor gasto) ou, dentro de uma matriz, por categoria
+  const grupos=new Map();
+  lista.forEach(l=>{const k=porMatriz?l.categoria:matrizDe(l.categoria);(grupos.get(k)||grupos.set(k,[]).get(k)).push(l);});
+  const ordem=porMatriz?[...grupos.keys()].sort((a,b)=>grupos.get(b).reduce((s,l)=>s+ +l.valor,0)-grupos.get(a).reduce((s,l)=>s+ +l.valor,0))
+    :[...g.map(([m])=>m).filter(m=>grupos.has(m)),...[...grupos.keys()].filter(m=>!g.some(([x])=>x===m))];
+  const secoes=ordem.map((k,i)=>secaoDespesas(k,grupos.get(k),porMatriz?(corDe[FILTRO_DESP]||CORES[i%CORES.length]):(corDe[k]||CORES[6]),dp.total)).join('');
+  const todasFechadas=ordem.length&&ordem.every(k=>DESP_FECHADAS.has(k));
   const chipsDesp=[['todas',`Todas · ${desp.length}`],['apagar',`A pagar · ${desp.filter(l=>!l.pago).length}`],['pagas','Pagas'],...g.map(([m])=>[m,m])];
   const barras=g.length?`<div class="grp-bars">${g.map(([m,o],i)=>`<div class="g" style="cursor:pointer" onclick="setFiltroDesp('${esc(m).replace(/'/g,"&#39;")}')"><span>${esc(m)}${m==='Sem categoria'?' '+tag('arrumar','al'):''}</span><div class="barra"><i style="width:${(o.total/g[0][1].total*100).toFixed(0)}%;background:${CORES[i%CORES.length]}"></i></div><b>${rsc(o.total)}</b><span class="pc">${(o.total/dp.total*100).toFixed(0)}%</span></div>`).join('')}</div>`:'<div class="vazio">Nenhuma despesa lançada neste mês.</div>';
   document.getElementById('v-desp').innerHTML=`<div class="grade g4">
@@ -1306,8 +1629,9 @@ function verDespesas(){
   <div class="cartao" style="margin-top:12px"><h2>Por categoria <span class="rotulo">${MESES[MES]} · clique para filtrar</span></h2>${barras}</div>
   ${pend.length?`<div class="linhafina" style="margin-top:12px"><span><strong>${pend.length} fixos ainda não lançados</strong> em ${MESES[MES]}, somando ${rsc(pend.reduce((s,r)=>s+ +r.valor,0))}: ${pend.map(r=>esc(r.descricao)).join(', ')}.</span><button class="btn sm" onclick="gerarFixos()">Lançar todos</button></div>`:''}
   <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px">${chips(chipsDesp,FILTRO_DESP,'data-fd')}<span style="flex:1"></span>${busca('buscaDesp','Buscar despesa…',BUSCA_DESP)}</div>
-  <div class="ctrs tres" style="margin-top:12px">${lista.length?lista.map(l=>cardDespesa(l,corDe[matrizDe(l.categoria)]||CORES[6])).join(''):'<div class="cartao vazio">Nada neste filtro.</div>'}</div>
-  <p class="nota">Cada cartão é uma despesa do mês. “Marcar pago” troca a situação na hora e o “Ainda a pagar” do Dashboard acompanha. Atrasadas ficam com borda vermelha; as que vencem em 3 dias, amarela. O que veio da planilha tem a etiqueta <b>planilha</b>: o valor acompanha a planilha, o resto fica como você deixar.</p>
+  <div class="sect" style="margin-top:14px">${porMatriz?esc(FILTRO_DESP):FILTRO_DESP==='apagar'?'A pagar':FILTRO_DESP==='pagas'?'Pagas':'Todas as despesas'} <span>${lista.length} lançamentos · por ${porMatriz?'categoria':'grupo'}, em ordem de vencimento</span><span class="tot">${rsc(lista.reduce((s,l)=>s+ +l.valor,0))}</span>${ordem.length>1?`<button class="btnv xs" onclick="recolherTudo(${todasFechadas?'false':'true'})">${todasFechadas?'Expandir tudo':'Recolher tudo'}</button>`:''}</div>
+  ${secoes||'<div class="cartao vazio">Nada neste filtro.</div>'}
+  <p class="nota">As despesas ficam separadas por grupo (Cartões, Fixas, Colaboradores…), cada grupo com o total, o que falta pagar e as linhas em ordem de vencimento. Clique no título do grupo para recolher. “Pagar” troca a situação na hora. O que veio da planilha tem o valor travado: ele acompanha a planilha.</p>
   <h2>Pagamentos fixos <span class="rotulo">repetem todo mês · lançados com um clique</span></h2>
   ${D.recorrencias.length?`<div class="ctrs tres">${[...D.recorrencias].sort((a,b)=>(a.dia||0)-(b.dia||0)).map(r=>cardFixo(r,jaGer.has(r.id))).join('')}</div>`:'<div class="cartao vazio">Nenhum fixo cadastrado. Cadastre abaixo e lance todos de uma vez a cada mês.</div>'}
   <div style="margin-top:12px">${caixaForm('fFixo','Novo fixo','cadastre uma vez, repete todo mês',`<div class="formlinha">
@@ -1317,9 +1641,12 @@ function verDespesas(){
     <div class="campo"><label for="fDia">Dia</label><input id="fDia" type="number" value="5" min="1" max="28" inputmode="numeric"></div>
     <button class="btn" onclick="novoFixo()">Adicionar fixo</button>
   </div>`)}</div>`;
+  DESP_SECOES=ordem;
+  document.querySelectorAll('#v-desp [data-sec]').forEach(b=>b.onclick=()=>alternaSecao(b.dataset.sec));
   document.querySelectorAll('#v-desp [data-fd]').forEach(b=>b.onclick=()=>setFiltroDesp(b.dataset.fd));
   const bi=document.getElementById('buscaDesp'); bi.oninput=e=>{BUSCA_DESP=e.target.value;const pos=e.target.selectionStart;verDespesas();const n=document.getElementById('buscaDesp');n.focus();n.setSelectionRange(pos,pos);};
 }
+function recolherTudo(sim){DESP_SECOES.forEach(k=>sim?DESP_FECHADAS.add(k):DESP_FECHADAS.delete(k));verDespesas();}
 function setFiltroDesp(f){FILTRO_DESP=f;if(ABA!=='desp')irPara('desp');else verDespesas();}
 /* Cria ou reaponta uma categoria orfa para dentro de uma matriz. */
 async function adotarCategoria(nome,parent_id){
@@ -1370,14 +1697,20 @@ async function gerarFixos(){
 <script>
 /* ================= LANÇAMENTOS ================= */
 function filtrados(){
+  const v=FILTRO.visao||'tudo', q=norm(FILTRO.q);
   return D.lancamentos.filter(l=>{
     const d=String(l.data).slice(0,10);
     if(FILTRO.ini||FILTRO.fim){
       if(FILTRO.ini&&d<FILTRO.ini)return false;
       if(FILTRO.fim&&d>FILTRO.fim)return false;
     } else if(!noMes(l.data,ANO,MES)) return false;
-    if(FILTRO.tipo&&l.tipo!==FILTRO.tipo)return false;
+    if(v==='entradas'&&l.tipo!=='entrada')return false;
+    if(v==='saidas'&&l.tipo!=='despesa')return false;
+    if(v==='apagar'&&(l.tipo!=='despesa'||l.pago))return false;
+    if(v==='planilha'&&l.origem!=='planilha')return false;
+    if(v==='manuais'&&l.origem==='planilha')return false;
     if(FILTRO.cat&&matrizDe(l.categoria)!==FILTRO.cat&&l.categoria!==FILTRO.cat)return false;
+    if(q&&!norm((l.descricao||'')+' '+l.categoria).includes(q))return false;
     return true;
   }).sort((a,b)=>String(b.data).localeCompare(String(a.data)));
 }
@@ -1385,8 +1718,19 @@ function verLancamentos(){
   const lst=filtrados();
   const ent=lst.filter(l=>l.tipo==='entrada').reduce((s,l)=>s+ +l.valor,0);
   const des=lst.filter(l=>l.tipo==='despesa').reduce((s,l)=>s+ +l.valor,0);
+  const abertoV=lst.filter(l=>l.tipo==='despesa'&&!l.pago).reduce((s,l)=>s+ +l.valor,0);
+  const nPl=lst.filter(l=>l.origem==='planilha').length;
   const todasM=[...new Set(D.categorias.filter(c=>c.matriz).map(c=>c.nome))];
-  let h=`${caixaForm('fLanc','Novo lançamento','entrada ou despesa avulsa — o que já está na planilha entra sozinho',`<div class="formlinha">
+  const periodo=FILTRO.ini||FILTRO.fim?`${FILTRO.ini?dbr(FILTRO.ini):'início'} a ${FILTRO.fim?dbr(FILTRO.fim):'hoje'}`:`${MESES[MES]} ${ANO}`;
+  const visoes=[['tudo','Tudo'],['entradas','Entradas'],['saidas','Saídas'],['apagar','A pagar'],['planilha','Da planilha'],['manuais','Digitados aqui']];
+  const filtroAtivo=!!(FILTRO.ini||FILTRO.fim||FILTRO.cat);
+  let h=`<div class="grade g4">
+    ${kpi('Entradas',rsc(ent),periodo,'pos',"setFiltro('visao','entradas')")}
+    ${kpi('Saídas',rsc(des),abertoV?`${rsc(abertoV)} ainda a pagar`:'tudo pago',abertoV?'av':'',"setFiltro('visao','saidas')")}
+    ${kpi('Resultado',rsc(ent-des),ent?`margem de ${((ent-des)/ent*100).toFixed(0)}%`:'entradas menos saídas',ent-des<0?'neg':'pos')}
+    ${kpi('Lançamentos',String(lst.length),`${nPl} da planilha · ${lst.length-nPl} digitados aqui`)}
+  </div>
+  <div style="margin-top:12px">${caixaForm('fLanc','Novo lançamento','entrada ou despesa avulsa — o que já está na planilha entra sozinho',`<div class="formlinha">
     <div class="campo"><label for="lData">Data</label><input id="lData" type="date" value="${iso(HOJE)}"></div>
     <div class="campo"><label for="lTipo">Tipo</label><select id="lTipo" onchange="trocaCat()"><option value="despesa">Despesa</option><option value="entrada">Entrada</option></select></div>
     <div class="campo"><label for="lCat">Categoria</label><select id="lCat">${selCatAgrupado('','despesa')}</select></div>
@@ -1395,47 +1739,48 @@ function verLancamentos(){
     <div class="campo"><label for="lValor">Valor</label><input id="lValor" type="number" step="0.01" inputmode="decimal"></div>
     <div class="campo"><label for="lPago">Pago</label><select id="lPago"><option value="true">Sim</option><option value="false">Não</option></select></div>
     <button class="btn" onclick="novoLanc()">Adicionar lançamento</button>
-  </div>`)}
+  </div>`)}</div>
 
-  <h2>Filtros e relatório</h2>
-  <div class="cartao" id="filtros"><div class="formlinha">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:18px">${chips(visoes,FILTRO.visao||'tudo','data-fv')}<span style="flex:1"></span>${busca('buscaLanc','Buscar lançamento…',FILTRO.q||'')}</div>
+  <details class="fdisc" id="fFiltros" style="margin-top:10px"${FORMS.fFiltros||filtroAtivo?' open':''}><summary><span class="mais">+</span>Período, grupo e relatório <span class="rotulo">${filtroAtivo?'filtro ativo':'opcional'}</span></summary><div class="fbody" id="filtros"><div class="formlinha">
     <div class="campo"><label>De</label><input type="date" value="${FILTRO.ini}" onchange="setFiltro('ini',this.value)"></div>
     <div class="campo"><label>Até</label><input type="date" value="${FILTRO.fim}" onchange="setFiltro('fim',this.value)"></div>
-    <div class="campo"><label>Tipo</label><select onchange="setFiltro('tipo',this.value)">
-      <option value="">Todos</option><option value="entrada"${FILTRO.tipo==='entrada'?' selected':''}>Entradas</option>
-      <option value="despesa"${FILTRO.tipo==='despesa'?' selected':''}>Saídas</option></select></div>
-    <div class="campo"><label>Categoria matriz</label><select onchange="setFiltro('cat',this.value)">
-      <option value="">Todas</option>${todasM.map(m=>`<option value="${esc(m)}"${FILTRO.cat===m?' selected':''}>${esc(m)}</option>`).join('')}</select></div>
+    <div class="campo"><label>Grupo</label><select onchange="setFiltro('cat',this.value)">
+      <option value="">Todos</option>${todasM.map(m=>`<option value="${esc(m)}"${FILTRO.cat===m?' selected':''}>${esc(m)}</option>`).join('')}</select></div>
     <button class="btnv" onclick="limparFiltro()">Limpar</button>
     <button class="btn" onclick="window.print()">Gerar relatório PDF</button>
   </div>
-  <p class="nota">Sem datas preenchidas o filtro usa o mês selecionado no topo. O relatório abre a janela de impressão; escolha “Salvar como PDF”.</p></div>
+  <p class="nota">Sem datas preenchidas vale o mês escolhido no topo. O relatório abre a janela de impressão; escolha “Salvar como PDF”.</p></div></details>
 
-  <h2>${FILTRO.ini||FILTRO.fim?'Período filtrado':MESES[MES]+' '+ANO} <span class="rotulo">entradas ${rsc(ent)} · saídas ${rsc(des)} · resultado ${rsc(ent-des)}</span></h2>`;
-  if(!lst.length){h+='<div class="cartao vazio">Nenhum lançamento com esses filtros.</div>';document.getElementById('v-lanc').innerHTML=h;return;}
-  const porCat={};lst.forEach(l=>{porCat[l.categoria]=(porCat[l.categoria]||0)+ +l.valor});
-  const g=agrupaPorMatriz(porCat);
-  h+=`<div class="cartao p0 rolagem"><table><thead><tr>
-    <th>Data</th><th>Categoria</th><th>Descrição</th><th>Tipo</th><th>Situação</th><th class="d">Valor</th><th class="acoes"></th>
-  </tr></thead><tbody>`;
-  g.forEach(([m,o])=>{
-    h+=`<tr class="matriz"><td colspan="5">${esc(m)}</td><td class="d">${rs(o.total)}</td><td></td></tr>`;
-    Object.keys(o.filhos).forEach(cat=>{
-      lst.filter(l=>l.categoria===cat).forEach(l=>{h+=`<tr class="filho">
-        <td><input class="ed dt" type="date" value="${String(l.data).slice(0,10)}" onchange="up('lancamentos','${l.id}','data',this.value)"></td>
-        <td class="nome"><select class="ed" onchange="up('lancamentos','${l.id}','categoria',this.value)">${selCatAgrupado(l.categoria,l.tipo)}</select></td>
-        <td><input class="ed" value="${esc(l.descricao||'')}" onchange="up('lancamentos','${l.id}','descricao',this.value)"></td>
-        <td>${l.tipo==='entrada'?tag('entrada','ok'):tag('saída')}${l.origem==='planilha'?' '+tag('planilha','inf'):''}</td>
-        <td><button class="tag ${l.pago?'ok':'al'}" onclick="up('lancamentos','${l.id}','pago',${!l.pago})">${l.pago?'pago':'a pagar'}</button></td>
-        <td class="d"><input class="ed n" style="width:104px" type="number" step="0.01" value="${l.valor}" onchange="upNum('lancamentos','${l.id}','valor',this.value)"></td>
-        <td class="acoes"><button class="x" onclick="del('lancamentos','${l.id}')" aria-label="Remover">✕</button></td></tr>`;});
+  <h2>${FILTRO.ini||FILTRO.fim?'Período filtrado':MESES[MES]+' '+ANO} <span class="rotulo">${lst.length} lançamentos · por grupo</span></h2>`;
+  if(!lst.length) h+='<div class="cartao vazio">Nenhum lançamento com esses filtros.</div>';
+  else{
+    const porCat={};lst.forEach(l=>{porCat[l.categoria]=(porCat[l.categoria]||0)+ +l.valor});
+    const g=agrupaPorMatriz(porCat);
+    h+=`<div class="cartao p0 rolagem"><table><thead><tr>
+      <th>Data</th><th>Categoria</th><th>Descrição</th><th>Tipo</th><th>Situação</th><th class="d">Valor</th><th class="acoes"></th>
+    </tr></thead><tbody>`;
+    g.forEach(([m,o])=>{
+      h+=`<tr class="matriz"><td colspan="5">${esc(m)}</td><td class="d">${rs(o.total)}</td><td></td></tr>`;
+      Object.keys(o.filhos).forEach(cat=>{
+        lst.filter(l=>l.categoria===cat).forEach(l=>{const pl=l.origem==='planilha';h+=`<tr class="filho">
+          <td><input class="ed dt" type="date" value="${String(l.data).slice(0,10)}" onchange="up('lancamentos','${l.id}','data',this.value)"></td>
+          <td class="nome"><select class="ed" onchange="up('lancamentos','${l.id}','categoria',this.value)">${selCatAgrupado(l.categoria,l.tipo)}</select></td>
+          <td><input class="ed" value="${esc(l.descricao||'')}" onchange="up('lancamentos','${l.id}','descricao',this.value)"></td>
+          <td>${l.tipo==='entrada'?tag('entrada','ok'):tag('saída')}${pl?' '+tag('planilha','inf'):''}</td>
+          <td>${l.tipo==='entrada'&&pl?tag('recebido','ok'):`<button class="tag ${l.pago?'ok':'al'}" onclick="up('lancamentos','${l.id}','pago',${!l.pago})">${l.pago?'pago':'a pagar'}</button>`}</td>
+          <td class="d">${pl?`<b style="color:#fff" title="O valor acompanha a planilha">${rs(l.valor)}</b>`:`<input class="ed n" style="width:104px" type="number" step="0.01" value="${l.valor}" onchange="upNum('lancamentos','${l.id}','valor',this.value)">`}</td>
+          <td class="acoes">${pl?'':`<button class="x" onclick="del('lancamentos','${l.id}')" aria-label="Remover">✕</button>`}</td></tr>`;});
+      });
     });
-  });
-  h+='</tbody></table></div>';
+    h+='</tbody></table></div><p class="nota">Linhas com a etiqueta <b>planilha</b> têm o valor travado e não têm ✕: quem manda nelas é a planilha (mude lá e o painel acompanha). Data, categoria, descrição e situação você ajusta aqui.</p>';
+  }
   document.getElementById('v-lanc').innerHTML=h;
+  document.querySelectorAll('#v-lanc [data-fv]').forEach(b=>b.onclick=()=>setFiltro('visao',b.dataset.fv));
+  const bi=document.getElementById('buscaLanc'); bi.oninput=e=>{FILTRO.q=e.target.value;const pos=e.target.selectionStart;verLancamentos();rotularTabelas();const n=document.getElementById('buscaLanc');n.focus();n.setSelectionRange(pos,pos);};
 }
-function setFiltro(k,v){FILTRO[k]=v;verLancamentos();rotularTabelas()}
-function limparFiltro(){FILTRO={ini:'',fim:'',cat:'',tipo:''};verLancamentos();rotularTabelas()}
+function setFiltro(k,v){FILTRO[k]=v;if(ABA!=='lanc')irPara('lanc');else{verLancamentos();rotularTabelas();}}
+function limparFiltro(){FILTRO={ini:'',fim:'',cat:'',visao:'tudo',q:''};verLancamentos();rotularTabelas()}
 function trocaCat(){document.getElementById('lCat').innerHTML=selCatAgrupado('',document.getElementById('lTipo').value)}
 async function novoLanc(){
   const cat=document.getElementById('lCat').value;
@@ -1448,48 +1793,113 @@ async function novoLanc(){
     pago:document.getElementById('lPago').value==='true'};
   if(!r.data)return toast('Informe a data.',true);
   if(!r.valor)return toast('Informe o valor.',true);
+  // trava contra receita em dobro: nos meses que a planilha traz, o faturamento já é o dela
+  const [y,mm]=r.data.split('-').map(Number);
+  if(r.tipo==='entrada'&&mesDaPlanilha(y,mm-1)&&!confirm(`O faturamento de ${MESES[mm-1]} já vem da planilha.\n\nSe esses ${rs(r.valor)} estão (ou vão estar) em alguma linha “Recebimento” da planilha, lançar aqui conta o mesmo dinheiro duas vezes.\n\nLançar mesmo assim, como receita por fora da planilha?`))return;
   const {data,error}=await sb.from('lancamentos').insert(r).select().single();
   if(error)return toast('Erro: '+error.message,true);
   D.lancamentos.push(data);['lDesc','lValor'].forEach(i=>document.getElementById(i).value='');
   toast('Lançamento adicionado.');desenhar();
 }
 
-/* ================= CARTÕES (cartões) ================= */
+/* ================= CARTÕES (cartões) =================
+   As compras ficam só para leitura; “Editar” abre um bloco com Salvar/Cancelar. Nada muda por engano. */
+let CART_LINHA=null, CART_INATIVAS=null;
+function linhaCompra(p,viva){
+  const editando=CART_LINHA===p.id, fimTxt=`${MESC[p.fim.getMonth()]}/${String(p.fim.getFullYear()).slice(2)}`;
+  const situ=viva?`quita em ${fimTxt}`:p.atual<1?`começa em ${MESC[dObj(p.primeira_competencia).getMonth()]}/${String(dObj(p.primeira_competencia).getFullYear()).slice(2)}`:`quitada em ${fimTxt}`;
+  const pagasN=Math.max(0,Math.min(p.total_parcelas,p.atual-1));
+  return `<div class="r" style="${viva?'':'opacity:.6'}"><div><b>${esc(p.descricao)}</b><small>${esc(p.categoria||'Outros')} · ${situ}</small></div>
+    <div class="mid mini"><span>${viva?`${p.atual}/${p.total_parcelas}`:`${p.total_parcelas}x`}</span><div class="barra ${!viva&&p.atual>p.total_parcelas?'v':''}"><i style="width:${pagasN/p.total_parcelas*100}%"></i></div></div>
+    <div class="v">${rs(p.valor_parcela)}<small>${viva?`falta ${rsc(+p.valor_parcela*(p.total_parcelas-p.atual+1))}`:`total ${rsc(+p.valor_parcela*p.total_parcelas)}`}</small></div>
+    <button class="btnv xs" onclick="editarLinhaCartao('${p.id}')">${editando?'Fechar':'Editar'}</button></div>
+    ${editando?`<div class="ctr-edit" style="margin:0 0 10px;border-top:0;padding:12px;background:rgba(255,255,255,.04);border-radius:12px">
+      <div class="full"><label>Descrição</label><input id="cpDesc" value="${esc(p.descricao)}"></div>
+      <div><label>Valor da parcela</label><input id="cpValor" type="number" step="0.01" inputmode="decimal" value="${p.valor_parcela}"></div>
+      <div><label>Total de parcelas</label><input id="cpTot" type="number" min="1" inputmode="numeric" value="${p.total_parcelas}"></div>
+      <div><label>1ª parcela em</label><input id="cpIni" type="month" value="${String(p.primeira_competencia).slice(0,7)}"></div>
+      <div><label>Categoria</label><input id="cpCat" value="${esc(p.categoria||'')}"></div>
+      <div><label>Cartão</label><select id="cpCart">${D.cartoes.map(k=>`<option value="${k.id}"${k.id===p.cartao_id?' selected':''}>${esc(k.nome)}</option>`).join('')}</select></div>
+      <div><label>Escopo</label><select id="cpEsc"><option value="pessoal"${p.escopo==='pessoal'?' selected':''}>pessoal</option><option value="empresa"${p.escopo==='empresa'?' selected':''}>empresa</option></select></div>
+      <div class="full" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btnv xs perigo" onclick="del('parcelamentos','${p.id}')">Remover compra</button><span style="flex:1"></span><button class="btnv sm" onclick="editarLinhaCartao('${p.id}')">Cancelar</button><button class="btn sm" onclick="salvarCompra('${p.id}')">Salvar</button></div></div>`:''}`;
+}
+function linhaAssinatura(a){
+  const editando=CART_LINHA===a.id, ativa=a.ativo!==false;
+  return `<div class="r" style="${ativa?'':'opacity:.6'}"><div><b>${esc(a.descricao)}</b><small>assinatura · todo mês${ativa?'':' · pausada, fora da fatura'}</small></div>
+    <div class="mid">${ativa?tag('assinatura'):tag('pausada','al')}</div><div class="v">${rs(a.valor)}<small>por mês</small></div>
+    <button class="btnv xs" onclick="editarLinhaCartao('${a.id}')">${editando?'Fechar':'Editar'}</button></div>
+    ${editando?`<div class="ctr-edit" style="margin:0 0 10px;border-top:0;padding:12px;background:rgba(255,255,255,.04);border-radius:12px">
+      <div class="full"><label>Descrição</label><input id="asDescE" value="${esc(a.descricao)}"></div>
+      <div><label>Valor por mês</label><input id="asValE" type="number" step="0.01" inputmode="decimal" value="${a.valor}"></div>
+      <div><label>Cartão</label><select id="asCartE">${D.cartoes.map(k=>`<option value="${k.id}"${k.id===a.cartao_id?' selected':''}>${esc(k.nome)}</option>`).join('')}</select></div>
+      <div><label>Situação</label><select id="asAtivoE"><option value="1"${ativa?' selected':''}>ativa</option><option value="0"${ativa?'':' selected'}>pausada</option></select></div>
+      <div class="full" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btnv xs perigo" onclick="del('assinaturas','${a.id}')">Remover assinatura</button><span style="flex:1"></span><button class="btnv sm" onclick="editarLinhaCartao('${a.id}')">Cancelar</button><button class="btn sm" onclick="salvarAssinatura('${a.id}')">Salvar</button></div></div>`:''}`;
+}
 function cardCartao(c){
   const ref=new Date(ANO,MES,1);
-  const ps=D.parcelamentos.filter(p=>p.cartao_id===c.id).map(p=>{
+  const todas=D.parcelamentos.filter(p=>p.cartao_id===c.id).map(p=>{
     const ini=dObj(p.primeira_competencia), n=dif(ini,ref)+1;
     return {...p,atual:n,fim:new Date(ini.getFullYear(),ini.getMonth()+p.total_parcelas-1,1),viva:n>=1&&n<=p.total_parcelas};
-  }).filter(p=>p.viva).sort((a,b)=>+b.valor_parcela-+a.valor_parcela);
-  const asn=D.assinaturas.filter(a=>a.cartao_id===c.id&&a.ativo!==false);
+  }).sort((a,b)=>+b.valor_parcela-+a.valor_parcela);
+  const ps=todas.filter(p=>p.viva), fora=todas.filter(p=>!p.viva);
+  const asnTodas=D.assinaturas.filter(a=>a.cartao_id===c.id), asn=asnTodas.filter(a=>a.ativo!==false), pausadas=asnTodas.filter(a=>a.ativo===false);
   const fat=faturaCartao(c.id,ANO,MES), ass=asn.reduce((s,a)=>s+ +a.valor,0);
   const falta=ps.reduce((s,p)=>s+ +p.valor_parcela*(p.total_parcelas-p.atual+1),0);
   const livre=ps.length?ps.reduce((a,b)=>a.fim>b.fim?a:b).fim:null;
   const pagas=ps.reduce((s,p)=>s+(p.atual-1),0), total=ps.reduce((s,p)=>s+p.total_parcelas,0);
-  const aberto=CART_ABERTO===c.id, editando=CART_EDIT===c.id;
+  const aberto=CART_ABERTO===c.id, editando=CART_EDIT===c.id, verFora=CART_INATIVAS===c.id;
   let h=`<div class="ctr">
     <div class="ctr-top"><div class="avatar ${c.escopo==='empresa'?'k3':'k1'}">${iniciais(c.nome)}</div><div class="ctr-name"><b>${esc(c.nome)}</b><span>${esc(c.bandeira||'')}${c.bandeira?' · ':''}vence dia ${c.dia_vencimento} · ${c.escopo}</span></div><div class="ctr-val"><b>${rsc(fat)}</b><span>fatura de ${MESES[MES]}</span></div></div>
-    <div class="ctr-grid"><div><small>Parcelamentos</small><b>${ps.length} · ${rsc(fat-ass)}/mês</b></div><div><small>Assinaturas</small><b>${asn.length} · ${rsc(ass)}/mês</b></div><div><small>Falta pagar</small><b class="${falta?'warn':'pos'}">${rsc(falta)}</b></div><div><small>Fica livre em</small><b>${livre?`${MESC[livre.getMonth()]}/${String(livre.getFullYear()).slice(2)}`:'—'}</b></div></div>
+    <div class="ctr-grid flex"><div><small>Parcelamentos</small><b>${ps.length} · ${rsc(fat-ass)}/mês</b></div><div><small>Assinaturas</small><b>${asn.length} · ${rsc(ass)}/mês</b></div><div><small>Falta pagar</small><b class="${falta?'warn':'pos'}">${rsc(falta)}</b></div><div><small>Fica livre em</small><b>${livre?`${MESC[livre.getMonth()]}/${String(livre.getFullYear()).slice(2)}`:'—'}</b></div></div>
     ${ps.length?`<div class="mini" style="margin-top:12px"><span>${pagas} de ${total} parcelas pagas</span><div class="barra"><i style="width:${total?pagas/total*100:0}%"></i></div><span>${total?(pagas/total*100).toFixed(0):0}%</span></div>`:''}
     <div class="ctr-act"><button class="btnv sm" onclick="abrirCartao('${c.id}')">${aberto?'Fechar':'Ver compras'}</button><button class="btnv sm" onclick="lerFaturaDe('${c.id}')">Ler fatura pelo print</button><button class="btnv sm" onclick="editarCartao('${c.id}')">${editando?'Fechar edição':'Editar cartão'}</button></div>`;
   if(aberto){
-    h+=`<div class="sub-rows">${ps.map(p=>`<div class="r"><div><b>${esc(p.descricao)}</b><small>${esc(p.categoria||'')} · quita em ${MESC[p.fim.getMonth()]}/${String(p.fim.getFullYear()).slice(2)}</small></div><div class="mid mini"><span>${p.atual}/<input class="ed n" style="width:40px;display:inline-block" type="number" value="${p.total_parcelas}" onchange="upNum('parcelamentos','${p.id}','total_parcelas',this.value)"></span><div class="barra"><i style="width:${(p.atual-1)/p.total_parcelas*100}%"></i></div></div><div class="v"><input class="ed n" style="width:96px;display:inline-block" type="number" step="0.01" value="${p.valor_parcela}" onchange="upNum('parcelamentos','${p.id}','valor_parcela',this.value)"><small style="display:block">falta ${rsc(+p.valor_parcela*(p.total_parcelas-p.atual+1))}</small></div><button class="x" onclick="del('parcelamentos','${p.id}')" aria-label="Remover">✕</button></div>`).join('')}
-      ${asn.map(a=>`<div class="r"><div><b>${esc(a.descricao)}</b><small>assinatura · todo mês</small></div><div class="mid">${tag('assinatura')}</div><div class="v"><input class="ed n" style="width:96px;display:inline-block" type="number" step="0.01" value="${a.valor}" onchange="upNum('assinaturas','${a.id}','valor',this.value)"></div><button class="x" onclick="del('assinaturas','${a.id}')" aria-label="Remover">✕</button></div>`).join('')}
+    h+=`<div class="sub-rows">${ps.map(p=>linhaCompra(p,true)).join('')}${asn.map(linhaAssinatura).join('')}
       ${!ps.length&&!asn.length?'<div class="vazio">Nenhum parcelamento ou assinatura ativos neste mês.</div>':''}
+      ${fora.length||pausadas.length?`<div style="padding:8px 0"><button class="btnv xs" onclick="CART_INATIVAS=${verFora?'null':`'${c.id}'`};verCartoes()">${verFora?'Esconder':'Mostrar'} ${fora.length+pausadas.length} fora da fatura deste mês</button></div>${verFora?fora.map(p=>linhaCompra(p,false)).join('')+pausadas.map(linhaAssinatura).join(''):''}`:''}
       <div class="formlinha" style="margin-top:12px"><div class="campo"><label>Nova assinatura</label><input id="asDesc_${c.id}" placeholder="ex.: Netflix" autocomplete="off"></div><div class="campo" style="flex:0 1 140px"><label>Valor/mês</label><input id="asVal_${c.id}" type="number" step="0.01" inputmode="decimal"></div><button class="btnv sm" onclick="novaAssinatura('${c.id}')">+ Assinatura</button><button class="btnv sm" onclick="novoParcelamentoEm('${c.id}')">+ Parcelamento</button></div></div>`;
   }
   if(editando){
     h+=`<div class="ctr-edit">
-      <div><label>Nome</label><input value="${esc(c.nome)}" onchange="up('cartoes','${c.id}','nome',this.value)"></div>
-      <div><label>Bandeira</label><input value="${esc(c.bandeira||'')}" onchange="up('cartoes','${c.id}','bandeira',this.value)"></div>
-      <div><label>Dia de vencimento</label><input type="number" min="1" max="28" value="${c.dia_vencimento||10}" onchange="upNum('cartoes','${c.id}','dia_vencimento',this.value)"></div>
-      <div><label>Escopo</label><select onchange="up('cartoes','${c.id}','escopo',this.value)"><option value="pessoal"${c.escopo==='pessoal'?' selected':''}>pessoal</option><option value="empresa"${c.escopo==='empresa'?' selected':''}>empresa</option></select></div>
-      <div class="full" style="display:flex;justify-content:flex-end"><button class="btnv xs perigo" onclick="del('cartoes','${c.id}')">Remover cartão</button></div></div>`;
+      <div><label>Nome</label><input id="kcNome_${c.id}" value="${esc(c.nome)}"></div>
+      <div><label>Bandeira</label><input id="kcBand_${c.id}" value="${esc(c.bandeira||'')}"></div>
+      <div><label>Dia de vencimento</label><input id="kcDia_${c.id}" type="number" min="1" max="28" value="${c.dia_vencimento||10}"></div>
+      <div><label>Escopo</label><select id="kcEsc_${c.id}"><option value="pessoal"${c.escopo==='pessoal'?' selected':''}>pessoal</option><option value="empresa"${c.escopo==='empresa'?' selected':''}>empresa</option></select></div>
+      <div class="full" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btnv xs perigo" onclick="del('cartoes','${c.id}')">Remover cartão</button><span style="flex:1"></span><button class="btnv sm" onclick="editarCartao('${c.id}')">Cancelar</button><button class="btn sm" onclick="salvarCartao('${c.id}')">Salvar</button></div></div>`;
   }
   return h+'</div>';
 }
-function abrirCartao(id){CART_ABERTO=(CART_ABERTO===id?null:id);verCartoes();}
+function abrirCartao(id){CART_ABERTO=(CART_ABERTO===id?null:id);CART_LINHA=null;verCartoes();}
 function editarCartao(id){CART_EDIT=(CART_EDIT===id?null:id);verCartoes();}
+function editarLinhaCartao(id){CART_LINHA=(CART_LINHA===id?null:id);verCartoes();}
+async function salvarTudo(tabela,id,patch,msg){
+  const {error}=await sb.from(tabela).update(patch).eq('id',id);
+  if(error){toast('Erro ao salvar: '+error.message,true);return false;}
+  const it=D[tabela].find(x=>x.id===id); if(it)Object.assign(it,patch);
+  toast(msg||'Salvo.'); return true;
+}
+async function salvarCompra(id){
+  const g=k=>document.getElementById(k), mes=g('cpIni').value;
+  const patch={descricao:g('cpDesc').value.trim(),valor_parcela:+g('cpValor').value||0,total_parcelas:Math.max(1,Math.round(+g('cpTot').value||1)),
+    primeira_competencia:mes?mes+'-01':null,categoria:g('cpCat').value.trim()||'Outros',cartao_id:g('cpCart').value,escopo:g('cpEsc').value};
+  if(!patch.descricao)return toast('Informe a descrição.',true);
+  if(!patch.valor_parcela)return toast('Informe o valor da parcela.',true);
+  if(!patch.primeira_competencia)return toast('Informe o mês da 1ª parcela.',true);
+  if(await salvarTudo('parcelamentos',id,patch,'Compra atualizada.')){CART_LINHA=null;CART_ABERTO=patch.cartao_id;desenhar();}
+}
+async function salvarAssinatura(id){
+  const g=k=>document.getElementById(k);
+  const patch={descricao:g('asDescE').value.trim(),valor:+g('asValE').value||0,cartao_id:g('asCartE').value,ativo:g('asAtivoE').value==='1'};
+  if(!patch.descricao)return toast('Informe a descrição.',true);
+  if(!patch.valor)return toast('Informe o valor.',true);
+  if(await salvarTudo('assinaturas',id,patch,'Assinatura atualizada.')){CART_LINHA=null;CART_ABERTO=patch.cartao_id;if(!patch.ativo)CART_INATIVAS=patch.cartao_id;desenhar();}
+}
+async function salvarCartao(id){
+  const g=k=>document.getElementById(k+'_'+id);
+  const patch={nome:g('kcNome').value.trim(),bandeira:g('kcBand').value.trim()||null,dia_vencimento:Math.min(28,Math.max(1,+g('kcDia').value||10)),escopo:g('kcEsc').value};
+  if(!patch.nome)return toast('Informe o nome do cartão.',true);
+  if(await salvarTudo('cartoes',id,patch,'Cartão atualizado.')){CART_EDIT=null;desenhar();}
+}
 function lerFaturaDe(id){const s=document.getElementById('impCart');if(s){s.value=id;document.getElementById('zona').scrollIntoView({behavior:'smooth',block:'center'});}}
 function novoParcelamentoEm(id){FORMS['fParc']=true;verCartoes();const s=document.getElementById('pCart');if(s){s.value=id;document.getElementById('fParc').scrollIntoView({behavior:'smooth',block:'center'});document.getElementById('pDesc').focus();}}
 async function novaAssinatura(cartao_id){
@@ -1513,7 +1923,7 @@ function verCartoes(){
   </div>
   <h2>Cada cartão <span class="rotulo">fatura do mês, o que está parcelado e quando fica livre</span></h2>
   ${D.cartoes.length?`<div class="ctrs">${D.cartoes.map(cardCartao).join('')}</div>`:'<div class="cartao vazio">Nenhum cartão cadastrado. Cadastre abaixo.</div>'}
-  <p class="nota">“Ver compras” abre os parcelamentos (com a barra de quanto já foi pago) e as assinaturas do cartão — valores e número de parcelas editáveis ali mesmo. A fatura projetada some sozinha quando a última parcela é paga.</p>
+  <p class="nota">“Ver compras” abre os parcelamentos (com a barra de quanto já foi pago) e as assinaturas do cartão. As linhas são só para leitura: para mudar valor, número de parcelas, mês da 1ª parcela ou trocar de cartão, clique em <b>Editar</b> na linha e depois em <b>Salvar</b> — nada muda por engano. A fatura projetada some sozinha quando a última parcela é paga.</p>
 
   <h2>Ler fatura pelo print <span class="rotulo">a IA separa parcelamento de assinatura</span></h2>
   <div class="cartao">
@@ -1753,7 +2163,7 @@ function verConfig(){
       <div class="campo" style="flex:0 1 160px"><label>Aba (gid)</label><input value="${PLANILHA.gid}" readonly></div>
       <div class="campo" style="flex:0 1 120px"><label>Ano</label><input value="${PLANILHA.ano}" readonly></div>
     </div>
-    <p class="nota">Última sincronização: ${q}. Entram as três receitas, todas as despesas e a meta (linha Objetivo) da aba financeira, até o mês atual, com a etiqueta <b>planilha</b>. O que você editar no painel (situação, categoria, descrição) fica; só o valor acompanha a planilha. Para trocar de planilha, edite a constante <code>PLANILHA</code> no topo do arquivo <code>index.html</code>.</p>
+    <p class="nota">Última sincronização: ${q}. Entram as três receitas, todas as despesas e a meta (linha Objetivo) da aba financeira, até o mês atual, com a etiqueta <b>planilha</b>. O que você editar no painel (situação, categoria, descrição) fica; só o valor acompanha a planilha. A aba de alunos (gid ${PLANILHA.gidAlunos}) é lida só para a conferência de Recebíveis: ${ALUNOS.estado==='ok'?ALUNOS.linhas.length+' alunos lidos':ALUNOS.estado==='erro'?'erro: '+esc(ALUNOS.erro):'ainda não lida'} — nada dela vira lançamento. Para trocar de planilha, edite a constante <code>PLANILHA</code> no topo do arquivo <code>index.html</code>.</p>
   </div>
 
   <h2>Produtos</h2>
@@ -2057,8 +2467,41 @@ async function recarregar(tabelas){
   desenhar();
 }
 function atualizarSync(){ document.querySelectorAll('.sync').forEach(el=>{el.outerHTML=syncHtml();}); }
+
+/* ---------- aba de alunos: um aluno por linha, meses nas colunas B..M ----------
+   Só leitura e só em memória: serve para a conferência de Recebíveis sugerir quais parcelas
+   vencidas a planilha já mostra com valor. Nada daqui vira lançamento (o faturamento vem da aba financeira). */
+const limparAluno=s=>norm(s).replace(/\(.*?\)/g,' ').replace(/-\s*\d+\s*aulas?/g,' ').replace(/\d{1,2}\/\d{1,2}(\/\d{2,4})?/g,' ').replace(/[^a-z ]+/g,' ').replace(/\s+/g,' ').trim();
+function lerAlunos(rows){
+  const out=[];let bloco=null;
+  for(const r of rows){
+    const label=String(r[0]||'').replace(/\s+/g,' ').trim(), L=label.toUpperCase();
+    if(!label) continue;
+    if(/^MENTORIA\s+(RHINO|FRAMEWORK)$/.test(L)){bloco=label;continue;}
+    if(/^(TOTAL|ENTRADAS|RECEBIMENTO|CAIXA|MENTORIA \+)/.test(L)) continue;
+    if(!bloco) continue;
+    const vals=r.slice(1,13).map(brl);
+    if(!vals.some(v=>v>0)) continue;
+    out.push({nome:label,chave:limparAluno(label),bloco,vals});
+  }
+  return out;
+}
+async function lerAbaAlunos(){
+  if(!PLANILHA.gidAlunos) return;
+  try{
+    const r=await fetch(`https://docs.google.com/spreadsheets/d/${PLANILHA.id}/gviz/tq?tqx=out:csv&gid=${PLANILHA.gidAlunos}&t=${Date.now()}`,{cache:'no-store'});
+    if(!r.ok) throw new Error(`a aba não respondeu (${r.status})`);
+    const txt=await r.text();
+    if(/<html/i.test(txt.slice(0,300))) throw new Error('a aba não está pública');
+    const linhas=lerAlunos(csvParse(txt));
+    if(!linhas.length) throw new Error('não achei os blocos “Mentoria RHINO” / “Mentoria FrameWork”');
+    ALUNOS={estado:'ok',linhas,erro:''};
+  }catch(e){ ALUNOS={estado:'erro',linhas:[],erro:String(e.message||e)}; }
+  if(ABA==='receb') verRecebiveis();
+}
 async function sincronizarPlanilha({auto,manual}={}){
   if(!PLANILHA.id||SYNC.estado==='rodando') return;
+  lerAbaAlunos(); // em paralelo; não grava nada
   let ult=0,resumoAnt=''; try{ult=+localStorage.getItem('rhino-sync-ts')||0;resumoAnt=localStorage.getItem('rhino-sync-resumo')||'';}catch(e){}
   if(auto&&Date.now()-ult<PLANILHA.segundos*1000){ SYNC={estado:'ok',quando:new Date(ult),resumo:resumoAnt,erro:''}; atualizarSync(); return; }
   SYNC={estado:'rodando',quando:SYNC.quando,resumo:'',erro:''}; atualizarSync();
