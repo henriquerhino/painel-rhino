@@ -542,7 +542,7 @@ const chave=(a,m)=>`${a}-${String(m+1).padStart(2,'0')}`;
 const noMes=(s,a,m)=>{if(!s)return false;const[y,mm]=String(s).slice(0,10).split('-').map(Number);return y===a&&mm===m+1;};
 const dObj=s=>{const[y,m,d]=String(s).slice(0,10).split('-').map(Number);return new Date(y,m-1,d);};
 const dif=(a,b)=>(b.getFullYear()-a.getFullYear())*12+(b.getMonth()-a.getMonth());
-const dias=v=>Math.floor((dObj(v)-HOJE)/86400000);
+const dias=v=>Math.round((dObj(v)-new Date(HOJE.getFullYear(),HOJE.getMonth(),HOJE.getDate()))/86400000); // meia-noite de hoje: vence hoje = 0, não -1
 const dbr=s=>{if(!s)return '—';const[y,m,d]=String(s).slice(0,10).split('-');return `${d}/${m}/${y.slice(2)}`;};
 const prod=id=>D.produtos.find(p=>p.id===id);
 const nomeProd=id=>prod(id)?.nome||'Sem produto';
@@ -2813,7 +2813,8 @@ function lerFinanceira(rows){
     const vals=r.slice(1,13).map(brl);
     const temValor=vals.some(v=>v!=null), L=label.toUpperCase();
     if(!label&&!temValor) continue;
-    if(/^PLANILHA FINANCEIRA|^RECEITAS$/.test(L)){sec='rec';continue;}
+    // o gviz pode juntar linhas do topo no cabeçalho ("--- RECEITAS"): aceita RECEITAS no fim da célula
+    if(/^PLANILHA FINANCEIRA|(^|\s)RECEITAS$/.test(L)){sec='rec';continue;}
     if(L==='DESPESAS'){sec='desp';grupo=null;continue;}
     if(/^META/.test(L)){sec='meta';continue;}
     // fim da parte financeira: "BALANÇO" ou o cabeçalho "Carteiras de investimento" (sem valores;
@@ -2910,13 +2911,14 @@ async function gravarPlanilha(dados){
   const linhas=todas;
   await garantirCategorias(cats);
 
-  const {data:ex,error:e0}=await sb.from('lancamentos').select('id,origem_id,valor').eq('origem','planilha');
+  const {data:ex,error:e0}=await sb.from('lancamentos').select('id,origem_id,valor,pago').eq('origem','planilha');
   if(e0) throw new Error(/origem/.test(e0.message)?'rode o arquivo supabase-migracao-v5-planilha.sql no Supabase':e0.message);
   const mapa=new Map((ex||[]).map(x=>[x.origem_id,x]));
   const idsTodas=new Set(todas.map(l=>l.origem_id));
   const novos=linhas.filter(l=>!mapa.has(l.origem_id));
-  const mudados=linhas.filter(l=>mapa.has(l.origem_id)&&Math.abs(+mapa.get(l.origem_id).valor-l.valor)>0.005)
-    .map(l=>({id:mapa.get(l.origem_id).id,valor:l.valor}));
+  // valor mudou, ou a data da despesa já passou e ela ainda está em aberto (nunca desmarca um pago feito à mão)
+  const mudados=linhas.filter(l=>{const x=mapa.get(l.origem_id);return x&&(Math.abs(+x.valor-l.valor)>0.005||(l.pago&&!x.pago));})
+    .map(l=>({id:mapa.get(l.origem_id).id,valor:l.valor,pago:l.pago||!!mapa.get(l.origem_id).pago}));
   // linha do tempo: o que a planilha mudou na receita (a primeira importação não conta)
   const nomeMes=l=>MESES[+l.origem_id.slice(-2)-1];
   const avisos=(ex||[]).length?[
@@ -2929,7 +2931,7 @@ async function gravarPlanilha(dados){
 
   if(novos.length){const {error}=await sb.from('lancamentos').upsert(novos,{onConflict:'origem_id'}); if(error) throw new Error(error.message);}
   if(mudados.length){ // update linha a linha: upsert parcial esbarra nas colunas obrigatórias (data, tipo…)
-    const rs=await Promise.all(mudados.map(m=>sb.from('lancamentos').update({valor:m.valor}).eq('id',m.id)));
+    const rs=await Promise.all(mudados.map(m=>sb.from('lancamentos').update({valor:m.valor,pago:m.pago}).eq('id',m.id)));
     const falha=rs.find(r=>r.error); if(falha) throw new Error(falha.error.message); }
   if(sobras.length){const {error}=await sb.from('lancamentos').delete().in('id',sobras.map(x=>x.id)); if(error) throw new Error(error.message);}
 
@@ -2992,7 +2994,7 @@ async function sincronizarPlanilha({auto,manual}={}){
   if(auto&&Date.now()-ult<PLANILHA.segundos*1000){ SYNC={estado:'ok',quando:new Date(ult),resumo:resumoAnt,erro:''}; atualizarSync(); return; }
   SYNC={estado:'rodando',quando:SYNC.quando,resumo:'',erro:''}; atualizarSync();
   try{
-    const url=`https://docs.google.com/spreadsheets/d/${PLANILHA.id}/gviz/tq?tqx=out:csv&gid=${PLANILHA.gid}&t=${Date.now()}`;
+    const url=`https://docs.google.com/spreadsheets/d/${PLANILHA.id}/gviz/tq?tqx=out:csv&headers=0&gid=${PLANILHA.gid}&t=${Date.now()}`;
     const r=await fetch(url,{cache:'no-store'});
     if(!r.ok) throw new Error(`a planilha não respondeu (${r.status}). Ela precisa estar compartilhada como “qualquer pessoa com o link”.`);
     const txt=await r.text();
