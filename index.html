@@ -233,7 +233,7 @@ const idx=(rows,pref,de=0)=>{const p=norm(pref);for(let i=de;i<rows.length;i++)i
 const lin=(rows,pref,de=0)=>{const i=idx(rows,pref,de);return i<0?null:rows[i].slice(1,13).map(brl);};
 const vazio12=()=>Array(12).fill(0);
 
-function interpretar(a1,a2){
+function interpretar(a1,a2,cores1){
   // FATURAMENTO: a linha TOTAL do bloco RECEITAS da aba 1 e a unica fonte.
   // As linhas por produto so abrem o total. A aba 2 entra apenas no previsto (a receber).
   const iR=idx(a1,'receitas');
@@ -257,7 +257,10 @@ function interpretar(a1,a2){
     if(!label)continue;
     if(!temValor){bloco={nome:label,itens:[]};continue;}
     if(!bloco)bloco={nome:'Extras e provisões',itens:[]};
-    bloco.itens.push({nome:label,valores:nums});
+    const cr=cores1?(cores1[i]||[]):null;
+    // pago = celula pintada de verde; sem pintura = a pagar; null = sem informacao de cor
+    const pago=cr?nums.map((v,k)=>v>0?(cr[k+1]==='verde'):null):nums.map(()=>null);
+    bloco.itens.push({nome:label,valores:nums,pago});
   }
   if(bloco){bloco.total=bloco.itens.reduce((a,it)=>a.map((v,i)=>v+it.valores[i]),vazio12());blocos.push(bloco);}
   const despTotal=lin(a1,'total das despesas')||vazio12();
@@ -281,12 +284,41 @@ function interpretar(a1,a2){
           desp:{blocos,total:despTotal}, meta, bal, lidoEm:new Date()};
 }
 
+/* Classifica a cor de fundo de uma celula: verde = pago, sem pintura = a pagar. */
+function corCelula(bg){
+  if(!bg) return 'nenhum';
+  const r=bg.red||0, g=bg.green||0, b=bg.blue||0;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
+  if(max>0.95&&d<0.04) return 'nenhum';                 // branco ou quase
+  if(d<0.04) return 'outro';                            // cinza
+  let h=max===r?60*(((g-b)/d)%6):max===g?60*((b-r)/d+2):60*((r-g)/d+4);
+  if(h<0)h+=360;
+  return (h>=70&&h<=170)?'verde':'outro';               // faixa do verde, do limão ao verde-água
+}
+/* Com chave da API do Google: valores e cores numa chamada so. Sem chave: CSV, sem cores. */
 async function lerPlanilha(){
   const c=D.config; if(!c.planilha_id) throw new Error('Informe o ID da planilha em Configurações.');
+  const aba1=c.aba_resultado||'Planilha financeira - RESULTADO', aba2=c.aba_mentorados||'FRAMEWORK';
+  if(c.sheets_api_key){
+    const campos='sheets(properties.title,data(rowData.values(formattedValue,effectiveFormat.backgroundColor)))';
+    const u=`https://sheets.googleapis.com/v4/spreadsheets/${c.planilha_id}?includeGridData=true`
+      +`&ranges=${encodeURIComponent("'"+aba1+"'!A1:M200")}&ranges=${encodeURIComponent("'"+aba2+"'!A1:M200")}`
+      +`&fields=${encodeURIComponent(campos)}&key=${encodeURIComponent(c.sheets_api_key)}`;
+    const r=await fetch(u);
+    if(!r.ok){const t=await r.text().catch(()=>'');
+      throw new Error(r.status===403?'A chave da API foi recusada. Confira se a Google Sheets API está ativada e se a chave permite o endereço do painel.':`Google Sheets API respondeu ${r.status}. ${t.slice(0,120)}`);}
+    const j=await r.json();
+    const grade=s=>{const rows=[],cores=[];(s?.data?.[0]?.rowData||[]).forEach(rd=>{
+      const vals=rd.values||[];rows.push(vals.map(v=>v.formattedValue??''));cores.push(vals.map(v=>corCelula(v.effectiveFormat?.backgroundColor)));});
+      return {rows,cores};};
+    const s1=(j.sheets||[]).find(s=>s.properties?.title===aba1)||j.sheets?.[0], s2=(j.sheets||[]).find(s=>s.properties?.title===aba2)||j.sheets?.[1];
+    const g1=grade(s1), g2=grade(s2);
+    P=interpretar(g1.rows,g2.rows,g1.cores); P.comCores=true; return;
+  }
   const url=aba=>`https://docs.google.com/spreadsheets/d/${c.planilha_id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(aba)}&_=${Date.now()}`;
-  const [r1,r2]=await Promise.all([fetch(url(c.aba_resultado||'Planilha financeira - RESULTADO')),fetch(url(c.aba_mentorados||'FRAMEWORK'))]);
+  const [r1,r2]=await Promise.all([fetch(url(aba1)),fetch(url(aba2))]);
   if(!r1.ok||!r2.ok) throw new Error('A planilha não respondeu. Ela precisa estar compartilhada como "qualquer pessoa com o link pode ver".');
-  P=interpretar(csvParse(await r1.text()),csvParse(await r2.text()));
+  P=interpretar(csvParse(await r1.text()),csvParse(await r2.text()),null); P.comCores=false;
 }
 
 /* ================= CÁLCULOS ================= */
@@ -295,6 +327,18 @@ const despMes=m=>P?P.desp.total[m]:0;
 const metaMes=m=>(P&&P.meta.objetivo[m])||(+D.config.meta_mensal||100000);
 const aReceberMes=m=>P?Math.max(0,P.rec.previsto.mentoria[m]-P.rec.mentoria[m])+Math.max(0,P.rec.previsto.framework[m]-P.rec.framework[m]):0;
 const cartoesMes=m=>{const b=P?.desp.blocos.find(x=>/cart/i.test(x.nome));return b?b.total[m]:0;};
+/* Pago e a pagar do mes. Com cores: soma das celulas verdes e das sem pintura. Sem cores: linhas do balanco. */
+function pagamentos(m){
+  if(!P) return {pago:0,aPagar:0,fonte:'nenhuma',itensAPagar:[]};
+  if(P.comCores){
+    let pago=0,aPagar=0;const itens=[];
+    P.desp.blocos.forEach(b=>b.itens.forEach(i=>{const v=i.valores[m];if(!(v>0))return;
+      if(i.pago[m]===true)pago+=v;else{aPagar+=v;itens.push({nome:i.nome,bloco:b.nome,valor:v});}}));
+    itens.sort((a,b)=>b.valor-a.valor);
+    return {pago,aPagar,fonte:'cores',itensAPagar:itens};
+  }
+  return {pago:P.bal.pagas[m],aPagar:P.bal.aPagar[m],fonte:'balanco',itensAPagar:[]};
+}
 const totalInvestido=()=>D.investimentos.reduce((s,i)=>s+ +i.valor,0);
 
 /* semanas de segunda a domingo que tocam o mes; recebido vem das fotos diarias */
@@ -395,7 +439,7 @@ function verDash(){
   if(!P){el.innerHTML=semPlanilha();return;}
   const m=MES, r=recMes(m), desp=despMes(m), res=r.total-desp, meta=metaMes(m);
   const pct=meta?Math.min(100,r.total/meta*100):0;
-  const aRec=aReceberMes(m), aPagar=P.bal.aPagar[m], caixaAc=P.meta.caixaRes[m];
+  const aRec=aReceberMes(m), pg=pagamentos(m), aPagar=pg.aPagar, caixaAc=P.meta.caixaRes[m];
   const sm=semanas(ANO,m);
   const prev=m>0?recMes(m-1).total:0, prevD=m>0?despMes(m-1):0;
   const varRec=prev?((r.total-prev)/prev*100):null, varDesp=prevD?((desp-prevD)/prevD*100):null;
@@ -406,7 +450,7 @@ function verDash(){
     <div><span>Mentoria RHINO</span><span>${rsc(r.mentoria)}</span></div>
     ${P.rec.divergencia[m]?'<div><span class="dif">⚑ a soma dos produtos não fecha com a linha TOTAL da planilha</span><span></span></div>':''}</div>`;
 
-  let h=`<h2><span class="q"></span>${MESES[m]} ${ANO}<span class="dir">faturamento = linha TOTAL da aba 1</span></h2>
+  let h=`<h2><span class="q"></span>${MESES[m]} ${ANO}<span class="dir">faturamento = linha TOTAL da aba 1${P.comCores?' · pago e a pagar pela cor das células':''}</span></h2>
   <div class="grade g3">
     ${hero('Recebido no mês',rsc(r.total),`${pct.toFixed(0)}% da meta de ${rsc(meta)} ${sinal(varRec)}`,'big',quebra)}
     ${hero('Despesas do mês',rsc(desp),`${sinal(varDesp)||'conforme a planilha'}`,'a')}
@@ -414,7 +458,7 @@ function verDash(){
   </div>
   <div class="grade g4" style="margin-top:12px">
     ${kpi('A receber no mês',rsc(aRec),'previsto na aba 2 ainda não recebido',aRec?'av':'')}
-    ${kpi('Ainda a pagar',rsc(aPagar),'saldo a pagar do balanço',aPagar>0?'av':'')}
+    ${kpi('Ainda a pagar',rsc(aPagar),pg.fonte==='cores'?`${pg.itensAPagar.length} linhas sem pintura na planilha`:'saldo a pagar do balanço',aPagar>0?'av':'',"irPara('desp')")}
     ${kpi('Caixa acumulado',rsc(caixaAc),'caixa + resultado, acumulado no ano')}
     ${kpi('Reserva real',rsc(totalInvestido()+(+D.config.caixa_empresa||0)),'conta + investimentos','',"irPara('inv')")}
   </div>
@@ -521,8 +565,10 @@ function agenteLocal(){
     P.desp.blocos.forEach(b=>{const a=b.total[m-1],c=b.total[m];if(a>0&&c>a*1.25&&c-a>1500)A.push(['atencao',`<strong>${esc(b.nome)} cresceu ${rsc(c-a)}</strong> de ${MESES[m-1]} para ${MESES[m]}.`]);});}
   const blocos=P.desp.blocos.map(b=>[b.nome,b.total[m]]).sort((a,b)=>b[1]-a[1]);
   if(blocos.length&&desp)A.push(['info',`<strong>Maior bloco: ${esc(blocos[0][0])}, ${rs(blocos[0][1])}</strong>, ${(blocos[0][1]/desp*100).toFixed(0)}% do mês.`]);
-  const ap=P.bal.aPagar[m];if(ap>0)A.push(['atencao',`<strong>${rs(ap)} ainda a pagar</strong> em ${MESES[m]}.`]);
+  const pg=pagamentos(m), ap=pg.aPagar;
+  if(ap>0)A.push(['atencao',`<strong>${rs(ap)} ainda a pagar</strong> em ${MESES[m]}${pg.itensAPagar.length?`: ${pg.itensAPagar.slice(0,3).map(i=>`${esc(i.nome)} (${rsc(i.valor)})`).join(', ')}${pg.itensAPagar.length>3?` e mais ${pg.itensAPagar.length-3}`:''}`:''}.`]);
   if(ap<0)A.push(['info',`<strong>Pagou ${rs(-ap)} a mais do que a despesa do mês.</strong> Provavelmente conta de mês anterior. Vale conferir na planilha.`]);
+  if(pg.fonte==='cores'&&Math.abs(pg.aPagar-P.bal.aPagar[m])>1)A.push(['info',`<strong>Cores e balanço discordam.</strong> Pelas células sem pintura faltam ${rsc(pg.aPagar)}; a linha SALDO A PAGAR diz ${rsc(P.bal.aPagar[m])}. Uma das duas não foi atualizada.`]);
   if(P.rec.divergencia[m])A.push(['atencao',`<strong>A soma dos três produtos não bate com a linha TOTAL da planilha</strong> em ${MESES[m]}. O painel usa a linha TOTAL. Vale conferir a fórmula.`]);
   const custo=desp||1, reserva=totalInvestido()+(+D.config.caixa_empresa||0);
   if(reserva>0){const mm=reserva/custo;A.push([mm<3?'atencao':'bom',`<strong>Reserva real de ${mm.toFixed(1)} mês(es)</strong>: ${rsc(reserva)} contra ${rsc(custo)} de custo. Alvo de 3 meses seria ${rsc(custo*3)}.`]);}
@@ -539,7 +585,7 @@ function dadosParaIA(){
     maiores_itens:P.desp.blocos.flatMap(b=>b.itens.map(i=>[i.nome,i.valores[m]])).filter(x=>x[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>({item:x[0],valor:Math.round(x[1])})),
     meta:metaMes(m),semanas:semanas(ANO,m).map(w=>({semana:w.n,status:w.status,recebido:Math.round(w.recebido),alvo:Math.round(w.alvo)})),
     ano:MESC.map((x,i)=>({mes:x,recebido:Math.round(P.rec.total[i]),despesa:Math.round(P.desp.total[i]),resultado:Math.round(P.rec.total[i]-P.desp.total[i])})).slice(0,Math.max(m,HOJE.getMonth())+1),
-    a_pagar:Math.round(P.bal.aPagar[m]),caixa_acumulado_planilha:Math.round(P.meta.caixaRes[m]),
+    a_pagar:Math.round(pagamentos(m).aPagar),itens_a_pagar:pagamentos(m).itensAPagar.slice(0,8).map(i=>({item:i.nome,valor:Math.round(i.valor)})),caixa_acumulado_planilha:Math.round(P.meta.caixaRes[m]),
     reserva_real:{investimentos:Math.round(totalInvestido()),conta:Math.round(+D.config.caixa_empresa||0)},
     cartoes_mes:Math.round(cartoesMes(m))};
 }
@@ -579,26 +625,27 @@ async function apagarAnalise(id){if(!confirm('Apagar esta análise?'))return;
 /* ================= DESPESAS ================= */
 function verDespesas(){
   const el=document.getElementById('v-desp');if(!P){el.innerHTML=semPlanilha();return;}
-  const m=MES, tot=despMes(m), pagas=P.bal.pagas[m], ap=P.bal.aPagar[m];
+  const m=MES, tot=despMes(m), pg=pagamentos(m), pagas=pg.pago, ap=pg.aPagar;
+  const balAp=P.bal.aPagar[m];
   const d=(a,c)=>a?`<span class="delta ${c>a*1.1?'neg':c<a*0.9?'pos':''}" style="color:${c>a*1.1?'var(--vermelho)':c<a*0.9?'var(--verde)':'var(--fraco)'}">${c>=a?'+':''}${rsc(c-a)}</span>`:(c?'<span class="tag al">novo</span>':'');
   let h=`<h2><span class="q"></span>Despesas de ${MESES[m]}<span class="dir">linha a linha, como na planilha</span></h2>
   <div class="grade g4">
     ${kpi('Total do mês',rsc(tot),`${P.desp.blocos.reduce((s,b)=>s+b.itens.filter(i=>i.valores[m]>0).length,0)} linhas com valor`)}
-    ${kpi('Já pago',rsc(pagas),'despesas pagas no balanço')}
-    ${kpi('A pagar',rsc(ap),'saldo do balanço',ap>0?'av':ap<0?'neg':'')}
+    ${kpi('Já pago',rsc(pagas),pg.fonte==='cores'?'células verdes da planilha':'despesas pagas no balanço')}
+    ${kpi('A pagar',rsc(ap),pg.fonte==='cores'?(Math.abs(ap-balAp)>1?`sem pintura · balanço diz ${rsc(balAp)}`:'sem pintura, bate com o balanço'):'saldo do balanço',ap>0?'av':ap<0?'neg':'')}
     ${kpi('Cartões',rsc(cartoesMes(m)),'bloco de cartões',"irPara('cart')")}
   </div>
   <h2><span class="q"></span>Por bloco · clique para abrir</h2>`;
   [...P.desp.blocos].sort((a,b)=>b.total[m]-a.total[m]).forEach(b=>{
     const aberto=DESP_ABERTO===b.nome, itens=b.itens.filter(i=>i.valores[m]>0||(m>0&&i.valores[m-1]>0)).sort((x,y)=>y.valores[m]-x.valores[m]);
     h+=`<div class="cartao" style="margin-bottom:8px;padding:0"><button class="cabecalho" onclick="DESP_ABERTO=DESP_ABERTO==='${esc(b.nome).replace(/'/g,"&#39;")}'?null:'${esc(b.nome).replace(/'/g,"&#39;")}';verDespesas()" aria-expanded="${aberto}">
-      <span class="seta ${aberto?'on':''}">▸</span><span style="flex:1;text-align:left"><strong>${esc(b.nome)}</strong><span class="rotulo" style="font-size:10px;display:block;margin-top:2px">${itens.filter(i=>i.valores[m]>0).length} linhas · ${tot?(b.total[m]/tot*100).toFixed(0):0}% do mês${m>0?' · '+(d(b.total[m-1],b.total[m])||'')+' vs '+MESC[m-1]:''}</span></span>
+      <span class="seta ${aberto?'on':''}">▸</span><span style="flex:1;text-align:left"><strong>${esc(b.nome)}</strong><span class="rotulo" style="font-size:10px;display:block;margin-top:2px">${itens.filter(i=>i.valores[m]>0).length} linhas${P.comCores?` · ${itens.filter(i=>i.pago[m]===true).length} pagas`:''} · ${tot?(b.total[m]/tot*100).toFixed(0):0}% do mês${m>0?' · '+(d(b.total[m-1],b.total[m])||'')+' vs '+MESC[m-1]:''}</span></span>
       <span class="num" style="font-size:18px;white-space:nowrap">${rs(b.total[m])}</span></button>
       <div class="corpo ${aberto?'':'oculto'}">${aberto?`<table><thead><tr><th>Item</th>${m>0?`<th class="d">${MESC[m-1]}</th>`:''}<th class="d">${MESC[m]}</th><th>Variação</th></tr></thead><tbody>
-        ${itens.map(i=>`<tr><td>${esc(i.nome)}</td>${m>0?`<td class="d" style="color:var(--fraco)">${i.valores[m-1]?rs(i.valores[m-1]):'—'}</td>`:''}<td class="d">${i.valores[m]?rs(i.valores[m]):'<span style="color:var(--fraco)">—</span>'}</td><td>${m>0?d(i.valores[m-1],i.valores[m]):''}</td></tr>`).join('')}
+        ${itens.map(i=>`<tr><td>${esc(i.nome)}${i.pago[m]===true?' <span class="tag ok">pago</span>':i.pago[m]===false?' <span class="tag al">a pagar</span>':''}</td>${m>0?`<td class="d" style="color:var(--fraco)">${i.valores[m-1]?rs(i.valores[m-1]):'—'}</td>`:''}<td class="d">${i.valores[m]?rs(i.valores[m]):'<span style="color:var(--fraco)">—</span>'}</td><td>${m>0?d(i.valores[m-1],i.valores[m]):''}</td></tr>`).join('')}
         <tr class="tot"><td>Total do bloco</td>${m>0?`<td class="d">${rs(b.total[m-1])}</td>`:''}<td class="d">${rs(b.total[m])}</td><td></td></tr></tbody></table>`:''}</div></div>`;
   });
-  h+=`<p class="nota">Para mudar qualquer valor, edite a planilha. O painel relê sozinho na próxima abertura, ou no botão ↻ no topo. Linhas marcadas em vermelho subiram mais de 10% sobre o mês anterior.</p>`;
+  h+=`<p class="nota">${P.comCores?'Pago e a pagar vêm da cor das células: verde é pago, sem pintura é a pagar.':'Sem a chave da API do Google o painel não enxerga a cor das células, e usa as linhas do balanço para pago e a pagar. Configure a chave em Configurações.'} Para mudar qualquer valor, edite a planilha. Linhas em vermelho subiram mais de 10% sobre o mês anterior.</p>`;
   el.innerHTML=h;
 }
 
@@ -738,7 +785,10 @@ function verConfig(){
     <div class="campo" style="flex:2"><label>ID da planilha</label><input id="cPlan" value="${esc(c.planilha_id||'')}" placeholder="o trecho entre /d/ e /edit no link"></div>
     <div class="campo"><label>Aba de resultado</label><input id="cAba1" value="${esc(c.aba_resultado||'Planilha financeira - RESULTADO')}"></div>
     <div class="campo"><label>Aba de mentorados</label><input id="cAba2" value="${esc(c.aba_mentorados||'FRAMEWORK')}"></div>
-  </div><p class="nota">A planilha precisa estar compartilhada como "qualquer pessoa com o link pode ver". O painel lê as duas abas a cada abertura e tira a foto diária do recebido.</p></div>
+  </div>
+  <div class="formlinha" style="margin-top:12px"><div class="campo" style="flex:2"><label>Chave da API do Google Sheets (para ler a cor das células)</label><input id="cSheetsKey" type="password" value="${esc(c.sheets_api_key||'')}" placeholder="AIza..."></div>
+    <span class="tag ${c.sheets_api_key?'ok':''}">${c.sheets_api_key?(P?.comCores?'lendo cores':'chave salva'):'sem chave'}</span></div>
+  <p class="nota">A planilha precisa estar compartilhada como "qualquer pessoa com o link pode ver". Sem a chave, o painel lê os valores pelo CSV e usa as linhas do balanço para pago e a pagar. Com a chave, lê também a cor: verde é pago, sem pintura é a pagar. A chave é gratuita, criada em console.cloud.google.com, restrita à Google Sheets API e ao endereço deste painel.</p></div>
   <h2><span class="q"></span>Identidade</h2>
   <div class="cartao"><div class="formlinha">
     <div class="campo"><label>Nome do negócio</label><input id="cNome" value="${esc(c.negocio||'')}"></div>
@@ -763,6 +813,7 @@ async function subirLogo(file){if(!file)return;const nome=`logo-${Date.now()}.${
   const {data}=sb.storage.from('branding').getPublicUrl(nome);await sb.from('config').update({logo_url:data.publicUrl}).eq('id',1);D.config.logo_url=data.publicUrl;marca();toast('Logo atualizada.');}
 async function salvarConfig(){
   const r={planilha_id:document.getElementById('cPlan').value.trim().replace(/.*\/d\/([^/]+).*/,'$1')||null,
+    sheets_api_key:document.getElementById('cSheetsKey').value.trim()||null,
     aba_resultado:document.getElementById('cAba1').value.trim()||'Planilha financeira - RESULTADO',aba_mentorados:document.getElementById('cAba2').value.trim()||'FRAMEWORK',
     negocio:document.getElementById('cNome').value.trim()||'Painel RHINO',cor_primaria:document.getElementById('cCor').value,assinatura:document.getElementById('cAssin').value.trim(),
     meta_mensal:+document.getElementById('cMeta').value||100000,caixa_empresa:+document.getElementById('cCaixa').value||0,
